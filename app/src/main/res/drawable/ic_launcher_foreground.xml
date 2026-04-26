@@ -1,0 +1,134 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="690"
+    android:viewportHeight="690">
+
+    <!-- Headband -->
+    <path
+        android:strokeColor="#7C6FF7"
+        android:strokeWidth="22"
+        android:strokeLineCap="round"
+        android:pathData="M 158,318 C 158,112 522,112 522,318" />
+
+    <!-- Head -->
+    <path
+        android:fillColor="#FFF3EC"
+        android:pathData="M 340,136 a 182,182 0 1,1 0,364 a 182,182 0 1,1 0,-364 Z" />
+
+    <!-- Left Earmuff -->
+    <path
+        android:fillColor="#7C6FF7"
+        android:pathData="M 158,278 a 40,40 0 1,1 0,80 a 40,40 0 1,1 0,-80 Z" />
+    <path
+        android:fillColor="#B3A8FC"
+        android:pathData="M 158,293 a 25,25 0 1,1 0,50 a 25,25 0 1,1 0,-50 Z" />
+
+    <!-- Right Earmuff -->
+    <path
+        android:fillColor="#7C6FF7"
+        android:pathData="M 522,278 a 40,40 0 1,1 0,80 a 40,40 0 1,1 0,-80 Z" />
+    <path
+        android:fillColor="#B3A8FC"
+        android:pathData="M 522,293 a 25,25 0 1,1 0,50 a 25,25 0 1,1 0,-50 Z" />
+
+    <!-- Eyes -->
+    <path
+        android:fillColor="#1C1010"
+        android:pathData="M 295,283 a 20,20 0 1,1 0,40 a 20,20 0 1,1 0,-40 Z" />
+    <path
+        android:fillColor="#1C1010"
+        android:pathData="M 385,283 a 20,20 0 1,1 0,40 a 20,20 0 1,1 0,-40 Z" />
+
+    <!-- Eye Sparkles -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 304,285 a 8,8 0 1,1 0,16 a 8,8 0 1,1 0,-16 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 394,285 a 8,8 0 1,1 0,16 a 8,8 0 1,1 0,-16 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 299,305 a 3,3 0 1,1 0,6 a 3,3 0 1,1 0,-6 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 389,305 a 3,3 0 1,1 0,6 a 3,3 0 1,1 0,-6 Z" />
+
+    <!-- Nose -->
+    <path
+        android:fillColor="#F0937A"
+        android:pathData="M 340,327 a 6,6 0 1,1 0,12 a 6,6 0 1,1 0,-12 Z" />
+
+    <!-- Cheeks -->
+    <path
+        android:fillColor="#FFAA96"
+        android:fillAlpha="0.6"
+        android:pathData="M 248,329 a 31,18 0 1,1 0,36 a 31,18 0 1,1 0,-36 Z" />
+    <path
+        android:fillColor="#FFAA96"
+        android:fillAlpha="0.6"
+        android:pathData="M 432,329 a 31,18 0 1,1 0,36 a 31,18 0 1,1 0,-36 Z" />
+
+    <!-- Mouth -->
+    <path
+        android:strokeColor="#1C1010"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:pathData="M 298,362 Q 340,398 382,362" />
+
+    <!-- Download Badge -->
+    <path
+        android:fillColor="#7C6FF7"
+        android:pathData="M 329,407 h 22 a 13,13 0 0,1 13,13 v 22 a 13,13 0 0,1 -13,13 h -22 a 13,13 0 0,1 -13,-13 v -22 a 13,13 0 0,1 13,-13 Z" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 340,419 L 340,440" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 330,432 L 340,446 L 350,432" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 331,447 L 349,447" />
+
+    <!-- Decorative Stars -->
+    <path
+        android:fillColor="#FFB830"
+        android:pathData="M 152,172 L 156,180.5 L 164.5,184 L 156,187.5 L 152,196 L 148,187.5 L 139.5,184 L 148,180.5 Z" />
+    <path
+        android:fillColor="#FFB830"
+        android:pathData="M 536,184 L 539.5,191 L 547,194 L 539.5,197 L 536,204 L 532.5,197 L 525,194 L 532.5,191 Z" />
+    <path
+        android:fillColor="#FFB830"
+        android:pathData="M 118,447 L 121,453.5 L 127.5,456 L 121,458.5 L 118,465 L 115,458.5 L 108.5,456 L 115,453.5 Z" />
+    <path
+        android:fillColor="#FFB830"
+        android:pathData="M 558,437 L 561.5,444 L 569,447 L 561.5,450 L 558,457 L 554.5,450 L 547,447 L 554.5,444 Z" />
+
+    <!-- Decorative Spots -->
+    <path
+        android:fillColor="#FFB830"
+        android:fillAlpha="0.7"
+        android:pathData="M 195,470 a 5,5 0 1,1 0,10 a 5,5 0 1,1 0,-10 Z" />
+    <path
+        android:fillColor="#FFB830"
+        android:fillAlpha="0.7"
+        android:pathData="M 490,464 a 4,4 0 1,1 0,8 a 4,4 0 1,1 0,-8 Z" />
+    <path
+        android:fillColor="#FFB830"
+        android:fillAlpha="0.6"
+        android:pathData="M 88,305 a 5,5 0 1,1 0,10 a 5,5 0 1,1 0,-10 Z" />
+    <path
+        android:fillColor="#FFB830"
+        android:fillAlpha="0.6"
+        android:pathData="M 590,301 a 4,4 0 1,1 0,8 a 4,4 0 1,1 0,-8 Z" />
+
+</vector>
