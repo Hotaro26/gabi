@@ -1,7 +1,7 @@
 <p align="center">
   <img width="220" height="220" src="https://github.com/user-attachments/assets/15810915-ab15-4ada-aa6b-7383a110aa14"/>
 </p>
-# Gabi 🎧
+## Gabi 🎧
 
 **Gabi** is a crisp, fast, and secure media downloader for Android. Built with a modern Material 3 interface, it allows you to download videos, audio, and image galleries from over 1000+ supported sites with ease.
 
