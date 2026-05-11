@@ -2,13 +2,13 @@
   <img width="220" height="220" src="https://github.com/user-attachments/assets/15810915-ab15-4ada-aa6b-7383a110aa14"/>
 </p>
 
-## Gabi 🎧
+## [Gabi](https://hotaro26.github.io/gabi/) 
 
-**Gabi** is a crisp, fast, and secure media downloader for Android. Built with a modern Material 3 interface, it allows you to download videos, audio, and image galleries from over 1000+ supported sites with ease.
+[Gabi](https://hotaro26.github.io/gabi/) is a crisp, fast, and secure media downloader for Android. Built with a modern Material 3 interface, it allows you to download videos, audio, and image galleries from over 1000+ supported sites with ease.
 
 ---
 
-## ✨ Features
+##  Features
 
 -   **Wide Support**: Powered by `yt-dlp` and `gallery-dl`, Gabi supports YouTube, TikTok, Instagram, Twitter/X, Reddit, Facebook, Twitch, SoundCloud, Pixiv, Pinterest, and many more.
 -   **Media Flexibility**: 
@@ -41,7 +41,7 @@
   </tr>
 </table>
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 -   **Language**: Kotlin
 -   **UI Framework**: Jetpack Compose (Material 3)
@@ -53,7 +53,7 @@
 
 ---
 
-## 🚀 How to Use
+##  How to Use
 
 1.  **Paste & Fetch**: Paste a link in the home screen and wait for the metadata preview.
 2.  **Configure**: Choose between "Media" (Video/Audio) or "Gallery" mode, then select your desired quality.
@@ -63,7 +63,7 @@
 
 ---
 
-## 📦 Building from Source
+##  Building from Source
 
 To build Gabi yourself:
 
@@ -86,7 +86,7 @@ Gabi is built with ❤️ by **hotaro**. If you find the app useful, consider su
 
 ---
 
-## ⚖️ License
+##  License
 
 Gabi uses several open-source libraries. Please check the "Licenses" section in the app settings for full details. 
 - `yt-dlp`: Unlicense
