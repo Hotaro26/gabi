@@ -8,7 +8,7 @@
 
 ---
 > [!TIP]
-> Refer to pre-release section for experimental feature.
+> Refer to [pre-release](https://github.com/Hotaro26/gabi/releases/tag/v3.4) section for experimental feature.
 
 ##  Features
 
