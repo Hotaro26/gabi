@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gabi — Universal Media Downloader</title>
+  <style>
+    :root {
+      --bg:      oklch(97% 0.018 70);
+      --surface: oklch(99% 0.008 70);
+      --fg:      oklch(22% 0.02 50);
+      --muted:   oklch(50% 0.018 50);
+      --border:  oklch(90% 0.014 70);
+      --accent:  oklch(64% 0.13 28);
+
+      --font-display: 'Tiempos Headline', 'Newsreader', 'Iowan Old Style', Georgia, serif;
+      --font-body:    'Söhne', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      --font-mono:    ui-monospace, 'IBM Plex Mono', 'JetBrains Mono', Menlo, monospace;
+
+      --radius: 20px;
+      --container: 900px;
+    }
+
+    [data-theme="dark"] {
+      --bg:      oklch(20% 0.01 250);
+      --surface: oklch(25% 0.01 250);
+      --fg:      oklch(95% 0.005 250);
+      --muted:   oklch(70% 0.005 250);
+      --border:  oklch(35% 0.01 250);
+    }
+
+    * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-body);
+      line-height: 1.6;
+      text-align: center;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    /* Typography */
+    h1, h2, h3 { 
+      font-family: var(--font-display); 
+      margin: 0 auto; 
+      font-weight: 500;
+      line-height: 1.1;
+    }
+
+    h1 { font-size: clamp(40px, 8vw, 96px); letter-spacing: -0.03em; margin-bottom: 24px; }
+    h2 { font-size: clamp(28px, 5vw, 48px); letter-spacing: -0.01em; margin-bottom: 24px; }
+    h3 { font-size: clamp(20px, 3vw, 24px); margin-bottom: 16px; }
+
+    p { font-size: clamp(16px, 2vw, 20px); color: var(--muted); max-width: 60ch; margin-left: auto; margin-right: auto; }
+
+    .caps {
+      font-family: var(--font-mono);
+      font-size: clamp(11px, 1.5vw, 13px);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      display: block;
+      margin-bottom: 20px;
+    }
+
+    /* Layout */
+    .section {
+      padding: clamp(60px, 15vw, 140px) 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: var(--container);
+    }
+
+    /* Nav */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 24px;
+      z-index: 100;
+      display: flex;
+      justify-content: center;
+    }
+
+    .nav-inner {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px);
+      padding: 12px 24px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      transition: background 0.3s ease, border 0.3s ease;
+    }
+
+    [data-theme="dark"] .nav-inner {
+      background: rgba(40, 40, 50, 0.7);
+    }
+
+    .logo {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 600;
+      text-decoration: none;
+      color: var(--fg);
+    }
+
+    .nav-links { 
+      display: flex; 
+      gap: clamp(16px, 3vw, 32px); 
+    }
+    
+    .nav-links a { 
+      text-decoration: none; 
+      color: var(--muted); 
+      font-size: 14px; 
+      font-weight: 500;
+      transition: color 0.2s;
+      white-space: nowrap;
+    }
+    .nav-links a:hover { color: var(--fg); }
+
+    /* Theme Toggle */
+    .theme-toggle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      margin-left: 16px;
+    }
+    .theme-toggle:hover { color: var(--fg); background: var(--surface); }
+
+    /* Hero */
+    .hero {
+      padding-top: clamp(160px, 20vw, 220px);
+      padding-bottom: clamp(60px, 10vw, 100px);
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-top: 56px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      padding: clamp(14px, 2vw, 18px) clamp(24px, 4vw, 36px);
+      background: var(--accent);
+      color: white;
+      text-decoration: none;
+      border-radius: 100px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      border: none;
+      cursor: pointer;
+      font-size: clamp(14px, 2vw, 16px);
+      white-space: nowrap;
+    }
+    .btn:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+    .btn:active { transform: translateY(-1px); }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--fg);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { background: var(--surface); border-color: var(--accent); color: var(--accent); }
+
+    /* Carousel */
+    .gallery-container {
+      width: 100%;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease, padding 0.6s ease;
+      opacity: 0;
+      margin-top: 60px;
+      pointer-events: none;
+    }
+
+    .gallery-container.open {
+      max-height: 800px;
+      opacity: 1;
+      padding-top: 60px;
+      border-top: 1px solid var(--border);
+      pointer-events: auto;
+    }
+
+    .carousel-wrapper {
+      position: relative;
+      max-width: 380px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 60px;
+    }
+
+    .carousel-inner {
+      overflow: hidden;
+      border-radius: 24px;
+      position: relative;
+      width: 100%;
+      aspect-ratio: 9 / 19.5; /* Phone aspect ratio */
+      background: var(--surface);
+    }
+
+    .carousel-track {
+      display: flex;
+      height: 100%;
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .carousel-track img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+      background: var(--surface);
+    }
+
+    .carousel-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      backdrop-filter: blur(12px);
+      color: var(--fg);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      z-index: 10;
+    }
+    .carousel-btn:hover { 
+      background: var(--accent); 
+      color: white; 
+      border-color: var(--accent);
+      transform: translateY(-50%) scale(1.1);
+    }
+    .carousel-btn.prev { left: 0; }
+    .carousel-btn.next { right: 0; }
+
+    .carousel-dots {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 24px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .dot.active { 
+      background: var(--accent); 
+      width: 24px; 
+      border-radius: 4px;
+    }
+
+    /* Features */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: clamp(20px, 3vw, 32px);
+      margin-top: 80px;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      padding: clamp(30px, 5vw, 40px);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: all 0.3s ease;
+    }
+    .feature-card:hover { transform: translateY(-8px); border-color: var(--accent); }
+
+    .icon-box {
+      width: 60px;
+      height: 60px;
+      border-radius: 12px;
+      background: var(--accent);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      opacity: 0.8;
+      transition: opacity 0.3s ease;
+    }
+    .feature-card:hover .icon-box { opacity: 1; }
+
+    /* Themes */
+    .theme-preview {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 20px;
+      margin-top: 60px;
+    }
+
+    .theme-swatch {
+      height: 120px;
+      border-radius: var(--radius);
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 16px;
+      font-weight: 500;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    .theme-swatch:hover { transform: translateY(-4px); border-color: var(--fg); }
+
+    /* Tech Stack */
+    .tech-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+      align-items: center;
+      margin-top: 80px;
+    }
+
+    .code-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: clamp(20px, 4vw, 32px);
+      font-family: var(--font-mono);
+      font-size: clamp(12px, 2vw, 14px);
+      text-align: left;
+      line-height: 1.8;
+      color: var(--fg);
+      max-width: 100%;
+      overflow-x: auto;
+    }
+
+    .stats-row {
+      display: flex;
+      gap: clamp(24px, 5vw, 60px);
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .stats-row > div {
+      text-align: center;
+      min-width: 120px;
+    }
+
+    /* Footer */
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: clamp(40px, 8vw, 80px) 24px;
+      text-align: center;
+        display: flex;
+  flex-direction: column; /* Stacks items vertically */
+  align-items: center;    /* Centers them horizontally */
+  justify-content: center; /* Centers them vertically */
+  text-align: center;
+    }
+
+    .github-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+    .github-link:hover { gap: 16px; }
+
+    /* Mobile Optimizations */
+    @media (max-width: 768px) {
+      nav { padding: 16px; }
+      .nav-inner { padding: 10px 16px; }
+      .nav-links { display: none; }
+      
+      .carousel-wrapper { 
+        padding: 0 50px; 
+        max-width: 90%;
+      }
+      .carousel-btn { width: 36px; height: 36px; }
+      
+      .gallery-container.open { max-height: 700px; }
+      
+      .hero-actions { flex-direction: column; align-items: stretch; }
+      .btn { justify-content: center; }
+    }
+
+    @media (max-width: 480px) {
+      .carousel-wrapper { 
+        padding: 0 40px;
+        max-width: 100%;
+      }
+      .carousel-btn { width: 32px; height: 32px; }
+      h1 { font-size: 36px; }
+      .gallery-container.open { max-height: 600px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="nav-inner">
+      <a href="#" class="logo">Gabi</a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#themes">Themes</a>
+        <a href="#tech">Tech</a>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <a href="https://github.com/Hotaro26/gabi" class="btn" style="padding: 10px 24px; font-size: 14px;">Download</a>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <section class="section hero">
+    <div class="container">
+      <span class="caps">Material Expressive 3</span>
+      <h1>All your media,<br>right in your pocket.</h1>
+      <p>A high-performance media downloader for Android. Powered by yt-dlp and gallery-dl, wrapped in a beautiful Material You experience.</p>
+      
+      <div class="hero-actions">
+        <a href="https://github.com/Hotaro26/gabi/releases" class="btn">Get the latest APK</a>
+        <button id="show-gallery" class="btn btn-secondary">View Interface</button>
+      </div>
+
+      <div id="gallery-reveal" class="gallery-container">
+        <div class="carousel-wrapper">
+          <button class="carousel-btn prev" id="prev-btn" aria-label="Previous">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </button>
+          
+          <div class="carousel-inner">
+            <div class="carousel-track" id="carousel-track">
+              <img src="https://github.com/user-attachments/assets/8dc91593-854e-4c7f-b41f-3b2bf470f3b0" alt="Gabi Screenshot 1">
+              <img src="https://github.com/user-attachments/assets/fd34b92a-5d9c-4273-ad41-4d890f76bf0d" alt="Gabi Screenshot 2">
+              <img src="https://github.com/user-attachments/assets/15d170e5-e465-49fa-bbdd-ed6335527fe5" alt="Gabi Screenshot 3">
+              <img src="https://github.com/user-attachments/assets/65daa539-6e07-466a-b88d-5a740de0abbf" alt="Gabi Screenshot 4">
+            </div>
+          </div>
+
+          <button class="carousel-btn next" id="next-btn" aria-label="Next">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </div>
+
+        <div class="carousel-dots" id="carousel-dots"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="features">
+    <div class="container">
+      <span class="caps">Capabilities</span>
+      <h2>Powerful engines,<br>simplified workflow.</h2>
+      <p>Gabi handles the complexity of 1000+ sites so you don't have to. Video, audio, or entire galleries—downloaded with one tap.</p>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="icon-box">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+          </div>
+          <h3>Instant Bolt</h3>
+          <p>Download links directly from your clipboard with a single tap. No pasting required.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon-box">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="15" x="2" y="3" rx="2"/><circle cx="12" cy="10.5" r="2.5"/><path d="M10.5 18H5a2 2 0 0 1-2-2V5"/><path d="M13.5 18H19a2 2 0 0 0 2-2V5"/></svg>
+          </div>
+          <h3>1000+ Sites</h3>
+          <p>From YouTube and TikTok to Pixiv and Pinterest. If it's on the web, Gabi can fetch it.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon-box">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          </div>
+          <h3>Audio Extraction</h3>
+          <p>One-click high-quality MP3 conversion. Perfect for saving your favorite tracks.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon-box">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+          </div>
+          <h3>Gallery Support</h3>
+          <p>Batch download full image sets from supported art and social platforms effortlessly.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="themes">
+    <div class="container">
+      <span class="caps">Personalization</span>
+      <h2>A theme for every mood.</h2>
+      <p>Full support for Material You dynamic color, plus curated palettes for when you want a specific look.</p>
+      
+      <div class="theme-preview">
+        <div class="theme-swatch" style="background: oklch(90% 0.05 280); color: oklch(30% 0.1 280);">
+          <span>Lavender</span>
+        </div>
+        <div class="theme-swatch" style="background: oklch(92% 0.04 140); color: oklch(30% 0.08 140);">
+          <span>Forest</span>
+        </div>
+        <div class="theme-swatch" style="background: oklch(90% 0.06 20); color: oklch(30% 0.1 20);">
+          <span>Rose</span>
+        </div>
+        <div class="theme-swatch" style="background: oklch(20% 0.01 250); color: white; border-color: #333;">
+          <span>Midnight</span>
+        </div>
+        <div class="theme-swatch" style="background: white; color: black;">
+          <span>Monochrome</span>
+        </div>
+        <div class="theme-swatch" style="background: linear-gradient(45deg, #a1c4fd, #c2e9fb); color: #222;">
+          <span>Dynamic</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="tech">
+    <div class="container">
+      <span class="caps">Foundation</span>
+      <h2>Open source at the core.</h2>
+      <p>Gabi is built on the most reliable engines in the industry: yt-dlp and gallery-dl. No proprietary tracking, just pure performance.</p>
+
+      <div class="tech-stack">
+        <div class="code-block">
+          <span style="color: #569cd6;">data class</span> <span style="color: #4ec9b0;">MediaInfo</span>(<br>
+          &nbsp;&nbsp;<span style="color: #9cdcfe;">val</span> title: <span style="color: #4ec9b0;">String</span>,<br>
+          &nbsp;&nbsp;<span style="color: #9cdcfe;">val</span> url: <span style="color: #4ec9b0;">String</span>,<br>
+          &nbsp;&nbsp;<span style="color: #9cdcfe;">val</span> engine: <span style="color: #4ec9b0;">Engine</span> = <span style="color: #4ec9b0;">Engine</span>.YtDlp<br>
+          )
+        </div>
+
+        <div class="stats-row">
+          <div>
+            <div style="font-weight: 600; font-size: 28px;">Kotlin</div>
+            <div style="font-size: 16px; color: var(--muted);">Native Android</div>
+          </div>
+          <div>
+            <div style="font-weight: 600; font-size: 28px;">Compose</div>
+            <div style="font-size: 16px; color: var(--muted);">Declarative UI</div>
+          </div>
+          <div>
+            <div style="font-weight: 600; font-size: 28px;">Chaquopy</div>
+            <div style="font-size: 16px; color: var(--muted);">Python Bridge</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer-center">
+    <div class="container">
+      <div class="logo" style="font-size: 48px; margin-bottom: 16px;">Gabi</div>
+      <p style="margin-bottom: 40px;">Made for the open web.</p>
+      <a href="https://github.com/Hotaro26/gabi" class="github-link">
+        <svg height="24" width="24" viewBox="0 0 16 16"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+        View on GitHub
+      </a>
+      <div style="margin-top: 60px; font-size: 14px; color: var(--border);">
+        &copy; 2026 Hotaro. Not affiliated with Google or ByteDance.
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Theme Toggle
+    const themeToggle = document.getElementById('theme-toggle');
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+
+    themeToggle.addEventListener('click', () => {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    });
+
+    // Gallery Toggle
+    const showGalleryBtn = document.getElementById('show-gallery');
+    const galleryReveal = document.getElementById('gallery-reveal');
+
+    showGalleryBtn.addEventListener('click', () => {
+      galleryReveal.classList.toggle('open');
+      showGalleryBtn.textContent = galleryReveal.classList.contains('open') ? 'Hide Interface' : 'View Interface';
+    });
+
+    // Carousel
+    const track = document.getElementById('carousel-track');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const dotsContainer = document.getElementById('carousel-dots');
+    const totalSlides = track.children.length;
+    let currentIndex = 0;
+
+    // Create dots
+    for (let i = 0; i < totalSlides; i++) {
+      const dot = document.createElement('div');
+      dot.classList.add('dot');
+      if (i === 0) dot.classList.add('active');
+      dot.addEventListener('click', () => goToSlide(i));
+      dotsContainer.appendChild(dot);
+    }
+
+    function updateCarousel() {
+      track.style.transform = `translateX(-${currentIndex * 100}%)`;
+      
+      // Update dots
+      document.querySelectorAll('.dot').forEach((dot, index) => {
+        dot.classList.toggle('active', index === currentIndex);
+      });
+    }
+
+    function goToSlide(index) {
+      currentIndex = index;
+      updateCarousel();
+    }
+
+    function nextSlide() {
+      currentIndex = (currentIndex + 1) % totalSlides;
+      updateCarousel();
+    }
+
+    function prevSlide() {
+      currentIndex = (currentIndex - 1 + totalSlides) % totalSlides;
+      updateCarousel();
+    }
+
+    nextBtn.addEventListener('click', nextSlide);
+    prevBtn.addEventListener('click', prevSlide);
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      if (!galleryReveal.classList.contains('open')) return;
+      if (e.key === 'ArrowLeft') prevSlide();
+      if (e.key === 'ArrowRight') nextSlide();
+    });
+  </script>
+</body>
+</html>
