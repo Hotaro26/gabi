@@ -4,6 +4,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Gabi — Universal Media Downloader</title>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="https://github.com/user-attachments/assets/15810915-ab15-4ada-aa6b-7383a110aa14">
+
+  <!-- Social Sharing (Open Graph) -->
+  <meta property="og:title" content="Gabi — Universal Media Downloader">
+  <meta property="og:description" content="A high-performance media downloader for Android. Beautiful, fast, and open source.">
+  <meta property="og:image" content="https://github.com/user-attachments/assets/15810915-ab15-4ada-aa6b-7383a110aa14">
+  <meta property="og:type" content="website">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Gabi — Universal Media Downloader">
+  <meta name="twitter:description" content="A high-performance media downloader for Android. Beautiful, fast, and open source.">
+  <meta name="twitter:image" content="https://github.com/user-attachments/assets/15810915-ab15-4ada-aa6b-7383a110aa14">
+
   <style>
     :root {
       --bg:      oklch(97% 0.018 70);
@@ -57,12 +73,17 @@
 
     .caps {
       font-family: var(--font-mono);
-      font-size: clamp(11px, 1.5vw, 13px);
+      font-size: clamp(10px, 1.2vw, 11px);
       text-transform: uppercase;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.1em;
       color: var(--accent);
-      display: block;
-      margin-bottom: 20px;
+      display: inline-block;
+      padding: 6px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      margin-bottom: 24px;
+      font-weight: 600;
     }
 
     /* Layout */
@@ -71,6 +92,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      scroll-margin-top: 100px;
     }
 
     .container {
@@ -187,23 +209,55 @@
     }
     .btn-secondary:hover { background: var(--surface); border-color: var(--accent); color: var(--accent); }
 
-    /* Carousel */
+    /* Modal Pop-up Gallery */
     .gallery-container {
+      position: fixed;
+      top: 0;
+      left: 0;
       width: 100%;
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease, padding 0.6s ease;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      backdrop-filter: blur(12px);
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       opacity: 0;
-      margin-top: 60px;
+      visibility: hidden;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 40px 24px;
       pointer-events: none;
     }
 
     .gallery-container.open {
-      max-height: 800px;
       opacity: 1;
-      padding-top: 60px;
-      border-top: 1px solid var(--border);
+      visibility: visible;
       pointer-events: auto;
+    }
+
+    .close-gallery {
+      position: absolute;
+      top: 32px;
+      right: 32px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      z-index: 2010;
+    }
+
+    .close-gallery:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      transform: rotate(90deg);
     }
 
     .carousel-wrapper {
@@ -211,16 +265,24 @@
       max-width: 380px;
       width: 100%;
       margin: 0 auto;
-      padding: 0 60px;
+      padding: 0;
+      transform: translateY(20px);
+      transition: transform 0.4s ease;
+    }
+
+    .gallery-container.open .carousel-wrapper {
+      transform: translateY(0);
     }
 
     .carousel-inner {
       overflow: hidden;
-      border-radius: 24px;
+      border-radius: 32px;
       position: relative;
       width: 100%;
       aspect-ratio: 9 / 19.5; /* Phone aspect ratio */
       background: var(--surface);
+      border: 4px solid #1a1a1a;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.5);
     }
 
     .carousel-track {
@@ -234,22 +296,20 @@
       height: 100%;
       object-fit: contain;
       flex-shrink: 0;
-      border: 1px solid var(--border);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.1);
-      background: var(--surface);
+      background: #000;
     }
 
     .carousel-btn {
       position: absolute;
       top: 50%;
       transform: translateY(-50%);
-      width: 44px;
-      height: 44px;
+      width: 56px;
+      height: 56px;
       border-radius: 50%;
-      border: 1px solid var(--border);
-      background: var(--surface);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.1);
       backdrop-filter: blur(12px);
-      color: var(--fg);
+      color: white;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -257,34 +317,42 @@
       transition: all 0.3s ease;
       z-index: 10;
     }
+    
     .carousel-btn:hover { 
       background: var(--accent); 
       color: white; 
       border-color: var(--accent);
-      transform: translateY(-50%) scale(1.1);
     }
-    .carousel-btn.prev { left: 0; }
-    .carousel-btn.next { right: 0; }
+
+    .carousel-btn.prev { left: -80px; }
+    .carousel-btn.next { right: -80px; }
 
     .carousel-dots {
       display: flex;
-      gap: 8px;
+      gap: 12px;
       justify-content: center;
-      margin-top: 24px;
+      margin-top: 32px;
     }
 
     .dot {
-      width: 8px;
-      height: 8px;
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
-      background: var(--border);
+      background: rgba(255, 255, 255, 0.3);
       cursor: pointer;
       transition: all 0.3s ease;
     }
     .dot.active { 
       background: var(--accent); 
-      width: 24px; 
-      border-radius: 4px;
+      width: 32px; 
+      border-radius: 5px;
+    }
+
+    /* Adjust mobile buttons */
+    @media (max-width: 768px) {
+      .carousel-btn.prev { left: 10px; }
+      .carousel-btn.next { right: 10px; }
+      .carousel-btn { width: 44px; height: 44px; }
     }
 
     /* Features */
@@ -345,6 +413,119 @@
     }
     .theme-swatch:hover { transform: translateY(-4px); border-color: var(--fg); }
 
+    /* Download Notification (Toast) */
+    .dl-notif {
+      position: fixed;
+      bottom: 32px;
+      right: -500px; /* Hidden off-screen to the right */
+      width: 90%;
+      max-width: 400px;
+      background: var(--surface);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      padding: 16px;
+      z-index: 5000;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 15px 45px rgba(0,0,0,0.15);
+      transition: right 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .dl-notif.show {
+      right: 32px;
+    }
+
+    /* Update Notification (Toast) */
+    .update-notif {
+      position: fixed;
+      bottom: -150px; /* Hidden off-screen */
+      right: 32px;
+      width: 90%;
+      max-width: 400px;
+      background: var(--surface);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      padding: 16px;
+      z-index: 5001;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 15px 45px rgba(0,0,0,0.15);
+      transition: bottom 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .update-notif.show {
+      bottom: 150px; /* Positioned above the download notif */
+    }
+
+    .dl-notif-icon {
+      width: 44px;
+      height: 44px;
+      background: transparent;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .dl-notif-content {
+      flex: 1;
+    }
+
+    .dl-notif-content h4 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    .dl-notif-content p {
+      margin: 4px 0 0;
+      font-size: 13px;
+      color: var(--muted);
+      text-align: left;
+      line-height: 1.3;
+    }
+
+    .dl-notif-close {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      transition: color 0.2s;
+    }
+    .dl-notif-close:hover { color: var(--fg); }
+
+    /* Adjust for mobile */
+    @media (max-width: 480px) {
+      .dl-notif {
+        bottom: 16px;
+        right: -110%;
+        left: 16px;
+        width: calc(100% - 32px);
+      }
+      .dl-notif.show {
+        right: 16px;
+      }
+      
+      .update-notif {
+        bottom: -150px;
+        right: 16px;
+        left: 16px;
+        width: calc(100% - 32px);
+      }
+      .update-notif.show {
+        bottom: 130px;
+      }
+    }
+
     /* Tech Stack */
     .tech-stack {
       display: flex;
@@ -378,6 +559,122 @@
     .stats-row > div {
       text-align: center;
       min-width: 120px;
+    }
+
+    /* Update Form */
+    .update-form {
+      margin-top: 48px;
+      max-width: 500px;
+      width: 100%;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 12px;
+      background: var(--surface);
+      padding: 8px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      transition: border-color 0.3s ease;
+    }
+    .input-group:focus-within { border-color: var(--accent); }
+
+    .input-group input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      padding: 0 24px;
+      color: var(--fg);
+      font-size: 16px;
+      outline: none;
+    }
+
+    .form-options {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-top: 24px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .form-options label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .form-options input[type="checkbox"] {
+      accent-color: var(--accent);
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Feature Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(12px);
+      z-index: 3000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-content {
+      background: var(--surface);
+      padding: 40px;
+      border-radius: 32px;
+      width: 100%;
+      max-width: 500px;
+      border: 1px solid var(--border);
+      position: relative;
+      transform: scale(0.9);
+      transition: transform 0.3s ease;
+    }
+
+    .modal-overlay.open .modal-content {
+      transform: scale(1);
+    }
+
+    .modal-content h3 { margin-bottom: 12px; }
+    
+    .modal-content textarea {
+      width: 100%;
+      height: 150px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      color: var(--fg);
+      font-family: inherit;
+      font-size: 16px;
+      resize: none;
+      outline: none;
+      margin: 20px 0;
+      transition: border-color 0.3s ease;
+    }
+    .modal-content textarea:focus { border-color: var(--accent); }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
     }
 
     /* Footer */
@@ -420,6 +717,20 @@
       
       .hero-actions { flex-direction: column; align-items: stretch; }
       .btn { justify-content: center; }
+
+      .input-group {
+        flex-direction: column;
+        background: transparent;
+        border: none;
+        padding: 0;
+        gap: 16px;
+      }
+      .input-group input {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        padding: 18px 24px;
+        border-radius: 100px;
+      }
     }
 
     @media (max-width: 480px) {
@@ -435,13 +746,48 @@
 </head>
 <body>
 
+  <div id="dl-notif" class="dl-notif">
+    <div class="dl-notif-icon">
+      <img src="https://github.com/user-attachments/assets/15810915-ab15-4ada-aa6b-7383a110aa14" alt="Gabi Icon" style="width: 100%; height: 100%; object-fit: cover; border-radius: inherit;">
+    </div>
+    <div class="dl-notif-content">
+      <h4>Ready to level up?</h4>
+      <p>Get Gabi and carry the web's media in your pocket.</p>
+    </div>
+    <a href="https://github.com/Hotaro26/gabi/releases" class="btn" style="padding: 8px 16px; font-size: 13px;">Get APK</a>
+    <button class="dl-notif-close" id="close-dl-notif" aria-label="Dismiss">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+  <div id="update-notif" class="update-notif">
+    <div class="dl-notif-icon" style="background: oklch(85% 0.15 150);">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+      </svg>
+    </div>
+    <div class="dl-notif-content">
+      <h4>Stay Updated</h4>
+      <p>Never miss a new version or a requested feature.</p>
+    </div>
+    <a href="#updates" class="btn" id="notif-opt-in" style="padding: 8px 16px; font-size: 13px;">Opt In</a>
+    <button class="dl-notif-close" id="close-update-notif" aria-label="Dismiss">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
   <nav>
     <div class="nav-inner">
       <a href="#" class="logo">Gabi</a>
       <div class="nav-links">
         <a href="#features">Features</a>
         <a href="#themes">Themes</a>
-        <a href="#tech">Tech</a>
+        <a href="#stack">Stack</a>
+        <a href="#updates">Community</a>
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
         <a href="https://github.com/Hotaro26/gabi" class="btn" style="padding: 10px 24px; font-size: 14px;">Download</a>
@@ -471,33 +817,6 @@
       <div class="hero-actions">
         <a href="https://github.com/Hotaro26/gabi/releases" class="btn">Get the latest APK</a>
         <button id="show-gallery" class="btn btn-secondary">View Interface</button>
-      </div>
-
-      <div id="gallery-reveal" class="gallery-container">
-        <div class="carousel-wrapper">
-          <button class="carousel-btn prev" id="prev-btn" aria-label="Previous">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="15 18 9 12 15 6"></polyline>
-            </svg>
-          </button>
-          
-          <div class="carousel-inner">
-            <div class="carousel-track" id="carousel-track">
-              <img src="https://github.com/user-attachments/assets/8dc91593-854e-4c7f-b41f-3b2bf470f3b0" alt="Gabi Screenshot 1">
-              <img src="https://github.com/user-attachments/assets/fd34b92a-5d9c-4273-ad41-4d890f76bf0d" alt="Gabi Screenshot 2">
-              <img src="https://github.com/user-attachments/assets/15d170e5-e465-49fa-bbdd-ed6335527fe5" alt="Gabi Screenshot 3">
-              <img src="https://github.com/user-attachments/assets/65daa539-6e07-466a-b88d-5a740de0abbf" alt="Gabi Screenshot 4">
-            </div>
-          </div>
-
-          <button class="carousel-btn next" id="next-btn" aria-label="Next">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-          </button>
-        </div>
-
-        <div class="carousel-dots" id="carousel-dots"></div>
       </div>
     </div>
   </section>
@@ -548,29 +867,29 @@
       <p>Full support for Material You dynamic color, plus curated palettes for when you want a specific look.</p>
       
       <div class="theme-preview">
-        <div class="theme-swatch" style="background: oklch(90% 0.05 280); color: oklch(30% 0.1 280);">
+        <div class="theme-swatch" data-color="oklch(65% 0.12 280)" style="background: oklch(90% 0.05 280); color: oklch(30% 0.1 280);">
           <span>Lavender</span>
         </div>
-        <div class="theme-swatch" style="background: oklch(92% 0.04 140); color: oklch(30% 0.08 140);">
+        <div class="theme-swatch" data-color="oklch(60% 0.12 145)" style="background: oklch(92% 0.04 140); color: oklch(30% 0.08 140);">
           <span>Forest</span>
         </div>
-        <div class="theme-swatch" style="background: oklch(90% 0.06 20); color: oklch(30% 0.1 20);">
+        <div class="theme-swatch" data-color="oklch(70% 0.15 340)" style="background: oklch(92% 0.03 340); color: oklch(40% 0.1 340);">
           <span>Rose</span>
         </div>
-        <div class="theme-swatch" style="background: oklch(20% 0.01 250); color: white; border-color: #333;">
+        <div class="theme-swatch" data-color="oklch(35% 0 0)" style="background: oklch(20% 0 0); color: white; border-color: #333;">
           <span>Midnight</span>
         </div>
-        <div class="theme-swatch" style="background: white; color: black;">
-          <span>Monochrome</span>
+        <div class="theme-swatch" data-color="oklch(62% 0.13 45)" style="background: oklch(62% 0.13 45); color: white; border-color: oklch(50% 0.1 45);">
+          <span>Claude</span>
         </div>
-        <div class="theme-swatch" style="background: linear-gradient(45deg, #a1c4fd, #c2e9fb); color: #222;">
+        <div class="theme-swatch" data-color="oklch(65% 0.15 220)" style="background: linear-gradient(45deg, #a1c4fd, #c2e9fb); color: #222;">
           <span>Dynamic</span>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="section" id="tech">
+  <section class="section" id="stack">
     <div class="container">
       <span class="caps">Foundation</span>
       <h2>Open source at the core.</h2>
@@ -603,6 +922,39 @@
     </div>
   </section>
 
+  <section class="section" id="updates">
+    <div class="container">
+      <span class="caps">Community</span>
+      <h2>Stay in the loop.</h2>
+      <p>Get notified about new releases or suggest features you'd like to see in Gabi.</p>
+      
+      <form class="update-form" id="update-form">
+        <div class="input-group">
+          <input type="email" placeholder="your@email.com" required aria-label="Email address">
+          <button type="submit" class="btn" style="padding: 12px 32px;">Opt In</button>
+        </div>
+        <div class="form-options">
+          <label><input type="checkbox" checked> App Updates</label>
+          <label><input type="checkbox" id="feature-request-check"> Feature Requests</label>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- Feature Request Modal -->
+  <div id="feature-modal" class="modal-overlay">
+    <div class="modal-content">
+      <h3>Suggest a Feature</h3>
+      <p style="font-size: 14px;">What would you like to see in Gabi?</p>
+      <input type="email" id="feature-email" placeholder="your@email.com" required style="width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 16px 24px; color: var(--fg); font-family: inherit; font-size: 16px; outline: none; margin-top: 16px; transition: border-color 0.3s ease;">
+      <textarea id="feature-text" placeholder="Type your suggestion here..."></textarea>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="close-feature-modal" style="padding: 10px 24px;">Cancel</button>
+        <button class="btn" id="submit-feature" style="padding: 10px 24px;">Submit</button>
+      </div>
+    </div>
+  </div>
+
   <footer class="footer-center">
     <div class="container">
       <div class="logo" style="font-size: 48px; margin-bottom: 16px;">Gabi</div>
@@ -617,26 +969,193 @@
     </div>
   </footer>
 
+  <div id="gallery-reveal" class="gallery-container">
+    <button class="close-gallery" id="close-gallery" aria-label="Close Gallery">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+
+    <div class="carousel-wrapper">
+      <button class="carousel-btn prev" id="prev-btn" aria-label="Previous">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+      
+      <div class="carousel-inner">
+        <div class="carousel-track" id="carousel-track">
+          <img src="https://github.com/user-attachments/assets/8dc91593-854e-4c7f-b41f-3b2bf470f3b0" alt="Gabi Screenshot 1">
+          <img src="https://github.com/user-attachments/assets/fd34b92a-5d9c-4273-ad41-4d890f76bf0d" alt="Gabi Screenshot 2">
+          <img src="https://github.com/user-attachments/assets/15d170e5-e465-49fa-bbdd-ed6335527fe5" alt="Gabi Screenshot 3">
+          <img src="https://github.com/user-attachments/assets/65daa539-6e07-466a-b88d-5a740de0abbf" alt="Gabi Screenshot 4">
+        </div>
+      </div>
+
+      <button class="carousel-btn next" id="next-btn" aria-label="Next">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
+    </div>
+
+    <div class="carousel-dots" id="carousel-dots"></div>
+  </div>
+
   <script>
     // Theme Toggle
     const themeToggle = document.getElementById('theme-toggle');
+    const root = document.documentElement;
+    
+    // Load saved preferences
     const savedTheme = localStorage.getItem('theme') || 'light';
-    document.documentElement.setAttribute('data-theme', savedTheme);
+    const savedAccent = localStorage.getItem('accent-color');
+    
+    root.setAttribute('data-theme', savedTheme);
+    if (savedAccent) {
+      root.style.setProperty('--accent', savedAccent);
+    }
 
     themeToggle.addEventListener('click', () => {
-      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const currentTheme = root.getAttribute('data-theme');
       const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-      document.documentElement.setAttribute('data-theme', newTheme);
+      root.setAttribute('data-theme', newTheme);
       localStorage.setItem('theme', newTheme);
     });
 
-    // Gallery Toggle
+    // Theme Swatches
+    const swatches = document.querySelectorAll('.theme-swatch');
+    swatches.forEach(swatch => {
+      swatch.addEventListener('click', () => {
+        const newAccent = swatch.getAttribute('data-color');
+        const themeName = swatch.querySelector('span').textContent.toLowerCase();
+        
+        // Update accent color
+        root.style.setProperty('--accent', newAccent);
+        localStorage.setItem('accent-color', newAccent);
+        
+        // Visual feedback
+        swatch.style.transform = 'scale(0.95)';
+        setTimeout(() => swatch.style.transform = '', 100);
+      });
+    });
+
+    // Download Notification Logic
+    const dlNotif = document.getElementById('dl-notif');
+    const closeDlNotif = document.getElementById('close-dl-notif');
+
+    setTimeout(() => {
+      dlNotif.classList.add('show');
+    }, 5000);
+
+    closeDlNotif.addEventListener('click', () => {
+      dlNotif.classList.remove('show');
+      sessionStorage.setItem('notif-dismissed', 'true');
+    });
+
+    // Update Notification Logic
+    const updateNotif = document.getElementById('update-notif');
+    const closeUpdateNotif = document.getElementById('close-update-notif');
+    const notifOptInBtn = document.getElementById('notif-opt-in');
+
+    setTimeout(() => {
+      if (!sessionStorage.getItem('update-notif-dismissed')) {
+        updateNotif.classList.add('show');
+      }
+    }, 10000);
+
+    function dismissUpdateNotif() {
+      updateNotif.classList.remove('show');
+      sessionStorage.setItem('update-notif-dismissed', 'true');
+    }
+
+    closeUpdateNotif.addEventListener('click', dismissUpdateNotif);
+    notifOptInBtn.addEventListener('click', dismissUpdateNotif);
+
+    // Feature Modal Logic
+    const featureCheck = document.getElementById('feature-request-check');
+    const featureModal = document.getElementById('feature-modal');
+    const closeFeatureBtn = document.getElementById('close-feature-modal');
+    const submitFeatureBtn = document.getElementById('submit-feature');
+    const featureText = document.getElementById('feature-text');
+
+    featureCheck.addEventListener('change', () => {
+      if (featureCheck.checked) {
+        featureModal.classList.add('open');
+        document.body.style.overflow = 'hidden';
+      }
+    });
+
+    function closeFeatureModal() {
+      featureModal.classList.remove('open');
+      featureCheck.checked = false;
+      document.body.style.overflow = '';
+      featureText.value = '';
+    }
+
+    closeFeatureBtn.addEventListener('click', closeFeatureModal);
+    
+    submitFeatureBtn.addEventListener('click', () => {
+      const emailInput = document.getElementById('feature-email').value;
+      const suggestion = featureText.value;
+
+      if (emailInput.trim() && suggestion.trim()) {
+        const originalText = submitFeatureBtn.textContent;
+        submitFeatureBtn.textContent = 'Sending...';
+
+        fetch('https://formsubmit.co/ajax/sakibreza035@gmail.com', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                _subject: "New Feature Request for Gabi",
+                email: emailInput,
+                suggestion: suggestion
+            })
+        }).then(response => response.json())
+          .then(data => {
+              submitFeatureBtn.textContent = 'Submitted!';
+              submitFeatureBtn.style.background = '#4CAF50';
+              setTimeout(() => {
+                closeFeatureModal();
+                submitFeatureBtn.textContent = originalText;
+                submitFeatureBtn.style.background = '';
+                featureCheck.checked = true; 
+              }, 1500);
+          })
+          .catch(error => {
+              submitFeatureBtn.textContent = 'Error';
+              setTimeout(() => submitFeatureBtn.textContent = originalText, 1500);
+          });
+      } else {
+        alert("Please provide both your email and a suggestion.");
+      }
+    });
+
+    // Gallery Modal Logic
     const showGalleryBtn = document.getElementById('show-gallery');
+    const closeGalleryBtn = document.getElementById('close-gallery');
     const galleryReveal = document.getElementById('gallery-reveal');
 
-    showGalleryBtn.addEventListener('click', () => {
-      galleryReveal.classList.toggle('open');
-      showGalleryBtn.textContent = galleryReveal.classList.contains('open') ? 'Hide Interface' : 'View Interface';
+    function openModal() {
+      galleryReveal.classList.add('open');
+      document.body.style.overflow = 'hidden'; // Lock scroll
+    }
+
+    function closeModal() {
+      galleryReveal.classList.remove('open');
+      document.body.style.overflow = ''; // Unlock scroll
+    }
+
+    showGalleryBtn.addEventListener('click', openModal);
+    closeGalleryBtn.addEventListener('click', closeModal);
+
+    // Close on background click
+    galleryReveal.addEventListener('click', (e) => {
+      if (e.target === galleryReveal) closeModal();
     });
 
     // Carousel
@@ -683,11 +1202,69 @@
     nextBtn.addEventListener('click', nextSlide);
     prevBtn.addEventListener('click', prevSlide);
 
+    // Update Form
+    const updateForm = document.getElementById('update-form');
+    updateForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = updateForm.querySelector('input[type="email"]').value;
+      const appUpdates = updateForm.querySelectorAll('input[type="checkbox"]')[0].checked;
+      const featureReq = updateForm.querySelectorAll('input[type="checkbox"]')[1].checked;
+      const btn = updateForm.querySelector('button');
+      
+      const originalText = btn.textContent;
+      btn.textContent = 'Sending...';
+
+      fetch('https://formsubmit.co/ajax/sakibreza035@gmail.com', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+              _subject: "New Gabi App Opt-In",
+              email: email,
+              app_updates: appUpdates,
+              feature_requests: featureReq
+          })
+      }).then(response => response.json())
+        .then(data => {
+            btn.textContent = 'Subscribed!';
+            btn.style.background = '#4CAF50';
+            updateForm.reset();
+            setTimeout(() => {
+              btn.textContent = originalText;
+              btn.style.background = '';
+            }, 3000);
+        })
+        .catch(error => {
+            btn.textContent = 'Error';
+            setTimeout(() => btn.textContent = originalText, 1500);
+        });
+    });
+
     // Keyboard navigation
     document.addEventListener('keydown', (e) => {
       if (!galleryReveal.classList.contains('open')) return;
       if (e.key === 'ArrowLeft') prevSlide();
       if (e.key === 'ArrowRight') nextSlide();
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // Smooth Scroll Fallback for Navigation
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const targetId = this.getAttribute('href');
+        if (targetId === '#') return;
+        
+        const targetElement = document.querySelector(targetId);
+        if (targetElement) {
+          targetElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      });
     });
   </script>
 </body>
