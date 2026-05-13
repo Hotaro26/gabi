@@ -15,8 +15,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.rotate
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -149,19 +152,38 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                         NavigationBarItem(
                             selected = selectedTab == 0,
                             onClick = { selectedTab = 0 },
-                            icon = { Icon(Icons.Default.Home, null) },
+                            icon = { 
+                                Icon(
+                                    if (selectedTab == 0) Icons.Filled.Home else Icons.Outlined.Home,
+                                    contentDescription = "Home"
+                                ) 
+                            },
                             label = { Text("Home") }
                         )
                         NavigationBarItem(
                             selected = selectedTab == 1,
                             onClick = { selectedTab = 1 },
-                            icon = { Icon(Icons.Default.History, null) },
+                            icon = { 
+                                val rotation by animateFloatAsState(
+                                    targetValue = if (selectedTab == 1) 360f else 0f,
+                                    animationSpec = androidx.compose.animation.core.tween(500),
+                                    label = "rotation"
+                                )
+                                Icon(Icons.Default.History, null, modifier = Modifier.rotate(rotation)) 
+                            },
                             label = { Text("Logs") }
                         )
                         NavigationBarItem(
                             selected = selectedTab == 2,
                             onClick = { selectedTab = 2 },
-                            icon = { Icon(Icons.Default.Settings, null) },
+                            icon = { 
+                                val rotation by animateFloatAsState(
+                                    targetValue = if (selectedTab == 2) 360f else 0f,
+                                    animationSpec = androidx.compose.animation.core.tween(500),
+                                    label = "rotation"
+                                )
+                                Icon(Icons.Default.Settings, null, modifier = Modifier.rotate(rotation)) 
+                            },
                             label = { Text("Settings") }
                         )
                     }
