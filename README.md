@@ -34,14 +34,27 @@
 
 <table>
   <tr>
-    <td><img width="270" src="https://github.com/user-attachments/assets/8dc91593-854e-4c7f-b41f-3b2bf470f3b0"/></td>
-    <td><img width="270" src="https://github.com/user-attachments/assets/fd34b92a-5d9c-4273-ad41-4d890f76bf0d"/></td>
-  </tr>
-  <tr>
-    <td><img width="270" src="https://github.com/user-attachments/assets/15d170e5-e465-49fa-bbdd-ed6335527fe5"/></td>
-    <td><img width="270" src="https://github.com/user-attachments/assets/65daa539-6e07-466a-b88d-5a740de0abbf"/></td>
+    <td><img width="430" alt="Screenshot_20260630-102122_Gabi" src="https://github.com/user-attachments/assets/85727742-fc5c-44dc-8f56-6f9056605cb5" /></td>
+    <td><img width="430" alt="Screenshot_20260630-102131_Gabi" src="https://github.com/user-attachments/assets/80a94b9f-a480-4e95-b333-14b5befe287d" /></td>
   </tr>
 </table>
+
+
+<details>
+  <summary>📸 Old Screenshots</summary>
+  <br>
+
+  <table>
+    <tr>
+      <td><img width="270" src="https://github.com/user-attachments/assets/8dc91593-854e-4c7f-b41f-3b2bf470f3b0"/></td>
+      <td><img width="270" src="https://github.com/user-attachments/assets/fd34b92a-5d9c-4273-ad41-4d890f76bf0d"/></td>
+    </tr>
+    <tr>
+      <td><img width="270" src="https://github.com/user-attachments/assets/15d170e5-e465-49fa-bbdd-ed6335527fe5"/></td>
+      <td><img width="270" src="https://github.com/user-attachments/assets/65daa539-6e07-466a-b88d-5a740de0abbf"/></td>
+    </tr>
+  </table>
+</details>
 
 ##  Tech Stack
 
