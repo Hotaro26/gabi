@@ -14,7 +14,7 @@
 
 ##  Features
 
--   **Wide Support**: Powered by `yt-dlp` and `gallery-dl`, Gabi supports YouTube, TikTok, Instagram, Twitter/X, Reddit, Facebook, Twitch, SoundCloud, Pixiv, Pinterest, and many more.
+-   **Wide Support**: Powered by `yt-dlp` and `gallery-dl` and `cobalt`Gabi supports YouTube, TikTok, Instagram, Twitter/X, Reddit, Facebook, Twitch, SoundCloud, Pixiv, Pinterest, and many more.
 -   **Media Flexibility**: 
     -   **Video**: Download in various qualities up to 1080p/Max.
     -   **Audio**: Extract high-quality MP3s from any video source.
@@ -77,7 +77,7 @@
 -   **Language**: Kotlin
 -   **UI Framework**: Jetpack Compose (Material 3)
 -   **Backend Logic**: Python (integrated via [Chaquopy](https://chaquo.com/))
--   **Download Engines**: `yt-dlp`, `gallery-dl`
+-   **Download Engines**: `yt-dlp`, `gallery-dl` `cobalt`
 -   **Networking**: Ktor Client
 -   **Database**: Room (for download history)
 -   **Image Loading**: Coil
