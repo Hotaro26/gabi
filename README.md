@@ -4,9 +4,11 @@
 
 ## [Gabi](https://hotaro26.github.io/gabi/) 
 
-[Gabi](https://hotaro26.github.io/gabi/) is a crisp, fast, and secure media downloader for Android. Built with a modern Material 3 interface, it allows you to download videos, audio, and image galleries from over 1000+ supported sites with ease.
+[Gabi](https://hotaro26.github.io/gabi/) is a minimal, fast, and secure media downloader for Android. Built with a modern Material 3 interface, it allows you to download videos, audio, and image galleries from over 1000+ supported sites with ease. Right now, it has 3 engines, **yt-dlp**, **gallery-dl** and **cobalt api**!!
 
 ---
+> PLEASE CONSIDER GIVING A ⭐STAR TO THIS PROJECT! (to support a teenage dev)
+ 
 > [!TIP]
 > Refer to [pre-release](https://github.com/Hotaro26/gabi/releases/tag/v3.4) section for experimental feature.
 
@@ -118,7 +120,7 @@ Gabi uses several open-source libraries. Please check the "Licenses" section in 
 - `yt-dlp`: Unlicense
 - `gallery-dl`: GPLv2
 - `Chaquopy`: BSD 3-Clause
-
+- `cobalt` : open source
 
 
 
