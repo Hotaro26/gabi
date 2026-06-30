@@ -67,39 +67,65 @@ class FileDownloader(private val context: Context, private val client: HttpClien
         }
     }
 
+    private fun getMimeTypeFromExtension(fileName: String): String {
+        val ext = fileName.substringAfterLast('.', "").lowercase()
+        return when (ext) {
+            "jpg", "jpeg" -> "image/jpeg"
+            "png" -> "image/png"
+            "gif" -> "image/gif"
+            "webp" -> "image/webp"
+            "mp3" -> "audio/mpeg"
+            "wav" -> "audio/wav"
+            "ogg" -> "audio/ogg"
+            "m4a" -> "audio/mp4"
+            "mp4" -> "video/mp4"
+            "mkv" -> "video/x-matroska"
+            "webm" -> "video/webm"
+            else -> "*/*"
+        }
+    }
+
     private fun createMediaStoreUri(fileName: String, relativePath: String): Uri? {
+        val mimeType = getMimeTypeFromExtension(fileName)
         val contentValues = ContentValues().apply {
-            put(MediaStore.Video.Media.DISPLAY_NAME, fileName)
-            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                put(MediaStore.Video.Media.RELATIVE_PATH, relativePath)
-                put(MediaStore.Video.Media.IS_PENDING, 1)
+                put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
             }
         }
 
         val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            if (relativePath.startsWith("Download", ignoreCase = true)) {
-                MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-            } else {
-                MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+            val volume = MediaStore.VOLUME_EXTERNAL_PRIMARY
+            when {
+                mimeType.startsWith("image/") -> MediaStore.Images.Media.getContentUri(volume)
+                mimeType.startsWith("audio/") -> MediaStore.Audio.Media.getContentUri(volume)
+                else -> MediaStore.Video.Media.getContentUri(volume)
             }
         } else {
-            MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            when {
+                mimeType.startsWith("image/") -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                mimeType.startsWith("audio/") -> MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+                else -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            }
         }
 
         return context.contentResolver.insert(collection, contentValues)
     }
 
     private fun createSafUri(folderUri: Uri, fileName: String): Uri? {
+        val mimeType = getMimeTypeFromExtension(fileName)
         val directory = DocumentFile.fromTreeUri(context, folderUri)
-        val file = directory?.createFile("video/mp4", fileName)
+        val file = directory?.createFile(mimeType, fileName)
         return file?.uri
     }
 
-    suspend fun finalizeVideo(uri: Uri) {
+    suspend fun finalizeFile(uri: Uri, fileName: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val mimeType = getMimeTypeFromExtension(fileName)
             val contentValues = ContentValues().apply {
-                put(MediaStore.Video.Media.IS_PENDING, 0)
+                put(MediaStore.MediaColumns.IS_PENDING, 0)
             }
             try {
                 context.contentResolver.update(uri, contentValues, null, null)

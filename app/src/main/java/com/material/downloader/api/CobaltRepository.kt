@@ -34,9 +34,19 @@ class CobaltRepository {
         }
     }
 
-    suspend fun fetchMediaLink(url: String, quality: String): CobaltResponse {
-        val requestBody = CobaltRequest(url = url, videoQuality = quality)
-        val response = client.post("https://api.cobalt.tools") {
+    suspend fun fetchMediaLink(
+        url: String,
+        quality: String,
+        audioFormat: String = "mp3",
+        downloadMode: String = "auto"
+    ): CobaltResponse {
+        val requestBody = CobaltRequest(
+            url = url,
+            videoQuality = quality,
+            audioFormat = audioFormat,
+            downloadMode = downloadMode
+        )
+        val response = client.post("https://hotaro344yy-cobalt-api.hf.space") {
             headers {
                 set("Accept", "application/json")
                 set("Content-Type", "application/json")
