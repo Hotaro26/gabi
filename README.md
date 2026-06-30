@@ -38,8 +38,11 @@
   <tr>
     <td><img width="430" alt="Screenshot_20260630-102122_Gabi" src="https://github.com/user-attachments/assets/85727742-fc5c-44dc-8f56-6f9056605cb5" /></td>
     <td><img width="430" alt="Screenshot_20260630-102131_Gabi" src="https://github.com/user-attachments/assets/80a94b9f-a480-4e95-b333-14b5befe287d" /></td>
+    <td><img width="430" alt="Screenshot_20260630-105536_Gabi" src="https://github.com/user-attachments/assets/7cae2796-a4d2-42a0-8b28-ed07d7f5a324" /></td>
   </tr>
 </table>
+
+
 
 <table>
   <tr>
