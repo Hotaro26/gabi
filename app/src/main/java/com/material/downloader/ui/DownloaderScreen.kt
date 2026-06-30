@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 package com.material.downloader.ui
 
 import android.content.Intent
@@ -16,11 +17,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.rotate
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import kotlinx.coroutines.delay
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.material.downloader.R
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.ui.draw.scale
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,6 +41,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
@@ -66,12 +79,14 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
     var url by remember { mutableStateOf("") }
     var quality by remember { mutableStateOf("720") }
     var downloadMode by remember { mutableStateOf("auto") }
-    var engine by remember { mutableStateOf("yt-dlp") }
+    var engine by remember { mutableStateOf("dynamic") }
     var showClearLogsDialog by remember { mutableStateOf(false) }
-
     val uiState by viewModel.uiState.collectAsState()
-    val history by viewModel.downloadHistory.collectAsState(initial = emptyList())
     val preview by viewModel.previewMetadata.collectAsState()
+    val history by viewModel.downloadHistory.collectAsState(initial = emptyList())
+    
+    var showSupportedSitesDialog by remember { mutableStateOf(false) }
+    var selectedHelpTab by remember { mutableStateOf("yt-dlp") }
     val externalUrl by viewModel.externalUrl.collectAsState()
     val clipboardManager = LocalClipboardManager.current
     
@@ -110,6 +125,13 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
         }
     }
 
+    LaunchedEffect(url, engine, quality, downloadMode) {
+        if (url.isNotBlank() && url.startsWith("http")) {
+            delay(1000) // Debounce for 1 second
+            viewModel.fetchPreview(url, quality, downloadMode, engine)
+        }
+    }
+
     if (showClearLogsDialog) {
         AlertDialog(
             onDismissRequest = { showClearLogsDialog = false },
@@ -132,28 +154,78 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
 
     Row(modifier = Modifier.fillMaxSize()) {
         if (isExpanded) {
-            NavigationRail(
-                containerColor = MaterialTheme.colorScheme.surface,
-                header = {
-                    Icon(Icons.Default.Movie, null, modifier = Modifier.padding(vertical = 12.dp))
-                }
-            ) {
+            NavigationRail(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)) {
+                Spacer(Modifier.height(12.dp))
                 NavigationRailItem(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    icon = { Icon(Icons.Default.Home, null) },
+                    icon = { 
+                        val scale by animateFloatAsState(
+                            targetValue = if (selectedTab == 0) 1.2f else 1.0f,
+                            animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
+                            label = "home_scale"
+                        )
+                        Icon(
+                            if (selectedTab == 0) Icons.Filled.Home else Icons.Outlined.Home, 
+                            null,
+                            modifier = Modifier.graphicsLayer {
+                                scaleX = scale
+                                scaleY = scale
+                            }
+                        ) 
+                    },
                     label = { Text("Home") }
                 )
                 NavigationRailItem(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.Default.History, null) },
+                    icon = { 
+                        val rotation by animateFloatAsState(
+                            targetValue = if (selectedTab == 1) 360f else 0f,
+                            animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
+                            label = "rotation"
+                        )
+                        val scale by animateFloatAsState(
+                            targetValue = if (selectedTab == 1) 1.2f else 1.0f,
+                            animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
+                            label = "scale"
+                        )
+                        Icon(
+                            Icons.Default.History, 
+                            null,
+                            modifier = Modifier.graphicsLayer {
+                                rotationZ = rotation
+                                scaleX = scale
+                                scaleY = scale
+                            }
+                        ) 
+                    },
                     label = { Text("Logs") }
                 )
                 NavigationRailItem(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
-                    icon = { Icon(Icons.Default.Settings, null) },
+                    icon = { 
+                        val rotation by animateFloatAsState(
+                            targetValue = if (selectedTab == 2) 360f else 0f,
+                            animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
+                            label = "rotation"
+                        )
+                        val scale by animateFloatAsState(
+                            targetValue = if (selectedTab == 2) 1.2f else 1.0f,
+                            animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
+                            label = "scale"
+                        )
+                        Icon(
+                            Icons.Default.Settings, 
+                            null,
+                            modifier = Modifier.graphicsLayer {
+                                rotationZ = rotation
+                                scaleX = scale
+                                scaleY = scale
+                            }
+                        ) 
+                    },
                     label = { Text("Settings") }
                 )
             }
@@ -162,26 +234,41 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
         Scaffold(
             floatingActionButton = {
                 if (selectedTab == 0 && uiState !is DownloadState.Downloading) {
-                    ExtendedFloatingActionButton(
-                        onClick = {
-                            clipboardManager.getText()?.let { 
-                                val text = it.text
-                                url = text
-                                viewModel.fetchPreview(text, quality, downloadMode, engine)
-                                viewModel.downloadMedia(text, quality, downloadMode, engine)
-                            }
-                        },
-                        modifier = Modifier.graphicsLayer {
-                            scaleX = instantScale
-                            scaleY = instantScale
-                        },
-                        interactionSource = instantInteractionSource,
-                        shape = RoundedCornerShape(instantCorner),
-                        icon = { Icon(Icons.Default.Bolt, null) },
-                        text = { Text("Instant") },
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        FloatingActionButton(
+                            onClick = { showSupportedSitesDialog = true },
+                            shape = RoundedCornerShape(50),
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Icon(Icons.Default.HelpOutline, contentDescription = "Supported Sites", modifier = Modifier.size(22.dp))
+                        }
+                        
+                        ExtendedFloatingActionButton(
+                            onClick = {
+                                clipboardManager.getText()?.let { 
+                                    val text = it.text
+                                    url = text
+                                    viewModel.fetchPreview(text, quality, downloadMode, engine)
+                                    viewModel.downloadMedia(text, quality, downloadMode, engine)
+                                }
+                            },
+                            modifier = Modifier.graphicsLayer {
+                                scaleX = instantScale
+                                scaleY = instantScale
+                            },
+                            interactionSource = instantInteractionSource,
+                            shape = RoundedCornerShape(instantCorner),
+                            icon = { Icon(Icons.Default.Bolt, null) },
+                            text = { Text("Instant") },
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
                 } else if (selectedTab == 1 && history.isNotEmpty()) {
                     FloatingActionButton(
                         onClick = { showClearLogsDialog = true },
@@ -208,9 +295,18 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             selected = selectedTab == 0,
                             onClick = { selectedTab = 0 },
                             icon = { 
+                                val scale by animateFloatAsState(
+                                    targetValue = if (selectedTab == 0) 1.2f else 1.0f,
+                                    animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
+                                    label = "home_scale"
+                                )
                                 Icon(
                                     if (selectedTab == 0) Icons.Filled.Home else Icons.Outlined.Home,
-                                    contentDescription = "Home"
+                                    contentDescription = "Home",
+                                    modifier = Modifier.graphicsLayer {
+                                        scaleX = scale
+                                        scaleY = scale
+                                    }
                                 ) 
                             },
                             label = { Text("Home") }
@@ -221,10 +317,23 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             icon = { 
                                 val rotation by animateFloatAsState(
                                     targetValue = if (selectedTab == 1) 360f else 0f,
-                                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                                    animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
                                     label = "rotation"
                                 )
-                                Icon(Icons.Default.History, null, modifier = Modifier.rotate(rotation)) 
+                                val scale by animateFloatAsState(
+                                    targetValue = if (selectedTab == 1) 1.2f else 1.0f,
+                                    animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
+                                    label = "scale"
+                                )
+                                Icon(
+                                    Icons.Default.History, 
+                                    null, 
+                                    modifier = Modifier.graphicsLayer {
+                                        rotationZ = rotation
+                                        scaleX = scale
+                                        scaleY = scale
+                                    }
+                                ) 
                             },
                             label = { Text("Logs") }
                         )
@@ -234,10 +343,23 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             icon = { 
                                 val rotation by animateFloatAsState(
                                     targetValue = if (selectedTab == 2) 360f else 0f,
-                                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                                    animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
                                     label = "rotation"
                                 )
-                                Icon(Icons.Default.Settings, null, modifier = Modifier.rotate(rotation)) 
+                                val scale by animateFloatAsState(
+                                    targetValue = if (selectedTab == 2) 1.2f else 1.0f,
+                                    animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
+                                    label = "scale"
+                                )
+                                Icon(
+                                    Icons.Default.Settings, 
+                                    null, 
+                                    modifier = Modifier.graphicsLayer {
+                                        rotationZ = rotation
+                                        scaleX = scale
+                                        scaleY = scale
+                                    }
+                                ) 
                             },
                             label = { Text("Settings") }
                         )
@@ -270,6 +392,100 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                 }
             }
         }
+
+        if (showSupportedSitesDialog) {
+            AlertDialog(
+                onDismissRequest = { showSupportedSitesDialog = false },
+                title = { Text("Supported Sites", style = MaterialTheme.typography.titleLarge) },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            listOf("yt-dlp" to "Media", "gallery-dl" to "Gallery", "cobalt" to "Cobalt").forEach { (id, label) ->
+                                FilterChip(
+                                    selected = selectedHelpTab == id,
+                                    onClick = { selectedHelpTab = id },
+                                    label = { Text(label) },
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                            }
+                        }
+                        
+                        val sites = when (selectedHelpTab) {
+                            "gallery-dl" -> listOf(
+                                "Pixiv (Artwork, Manga)",
+                                "Twitter/X (Images, Gifs)",
+                                "Instagram (Photos, Carousels)",
+                                "Reddit (Image posts)",
+                                "Pinterest (Pins, Boards)",
+                                "DeviantArt (Illustrations)",
+                                "ArtStation (Portfolios)",
+                                "Tumblr (Photo posts)",
+                                "Flickr (Photos, Albums)"
+                            )
+                            "cobalt" -> listOf(
+                                "YouTube (Videos, Shorts, Music)",
+                                "TikTok (Videos, Photos)",
+                                "Instagram (Reels, Stories, Posts)",
+                                "Twitter/X (Videos, Gifs)",
+                                "Reddit (Videos, Gifs)",
+                                "Facebook (Videos, Reels)",
+                                "Vimeo (Videos)",
+                                "SoundCloud (Audio tracks)",
+                                "Bilibili (Videos)",
+                                "Dailymotion (Videos)",
+                                "VK (Videos)"
+                            )
+                            else -> listOf(
+                                "YouTube (Videos, Audio, Playlists)",
+                                "TikTok (Videos, Audio, Slideshows)",
+                                "Instagram (Reels, Stories, TV)",
+                                "Twitter/X (Videos, Gifs)",
+                                "Reddit (Videos, Audio)",
+                                "Facebook (Videos, Reels)",
+                                "Twitch (Clips, VODs)",
+                                "SoundCloud (Tracks, Playlists)",
+                                "Vimeo (Videos)",
+                                "1000+ other websites..."
+                            )
+                        }
+                        
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(sites) { site ->
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = site,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showSupportedSitesDialog = false }) {
+                        Text("Close")
+                    }
+                },
+                shape = RoundedCornerShape(28.dp)
+            )
+        }
     }
 }
 
@@ -292,8 +508,16 @@ fun MainDownloaderTab(
     var qualityExpanded by remember { mutableStateOf(false) }
     var modeExpanded by remember { mutableStateOf(false) }
     var engineExpanded by remember { mutableStateOf(false) }
+    var showSuccessDialog by remember { mutableStateOf(false) }
     
     val clipboardManager = LocalClipboardManager.current
+    val consoleLogs by viewModel.consoleLogs.collectAsState()
+
+    LaunchedEffect(uiState) {
+        if (uiState is DownloadState.Success) {
+            showSuccessDialog = true
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -341,27 +565,110 @@ fun MainDownloaderTab(
         // Metadata Preview Box
         AnimatedVisibility(visible = preview != null) {
             preview?.let { meta ->
+                val isImageOrGallery = meta.is_gallery == true || 
+                                       meta.ext in listOf("jpg", "jpeg", "png", "webp", "gif") || 
+                                       engine == "gallery-dl"
+                
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                    shape = RoundedCornerShape(24.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        AsyncImage(
-                            model = meta.thumbnail,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(100.dp, 60.dp)
-                                .clip(MaterialTheme.shapes.medium),
-                            contentScale = ContentScale.Crop
-                        )
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(meta.title ?: "Unknown Title", style = MaterialTheme.typography.labelLarge, maxLines = 1, fontWeight = FontWeight.Bold)
-                            Text(meta.author ?: "Unknown Author", style = MaterialTheme.typography.bodySmall, maxLines = 1)
-                            if (meta.size != null && meta.size > 0) {
-                                Text("${"%.1f".format(meta.size / 1024f / 1024f)} MB", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    if (isImageOrGallery) {
+                        Column {
+                            val imageUrls = meta.urls ?: listOf(meta.thumbnail ?: meta.url ?: "")
+                            val validImageUrls = imageUrls.filter { !it.isNullOrBlank() }
+                            
+                            if (validImageUrls.isNotEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(220.dp)
+                                        .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                                ) {
+                                    val pagerState = rememberPagerState(pageCount = { validImageUrls.size })
+                                    HorizontalPager(
+                                        state = pagerState,
+                                        modifier = Modifier.fillMaxSize()
+                                    ) { page ->
+                                        AsyncImage(
+                                            model = validImageUrls[page],
+                                            contentDescription = null,
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    }
+                                    
+                                    if (validImageUrls.size > 1) {
+                                        Surface(
+                                            color = Color.Black.copy(alpha = 0.6f),
+                                            shape = RoundedCornerShape(12.dp),
+                                            modifier = Modifier
+                                                .padding(12.dp)
+                                                .align(Alignment.TopEnd)
+                                        ) {
+                                            Text(
+                                                text = "${pagerState.currentPage + 1} / ${validImageUrls.size}",
+                                                color = Color.White,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(meta.title ?: "Gallery Image", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2)
+                                Spacer(Modifier.height(4.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(meta.author ?: "Unknown Author", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    if (meta.urls != null && meta.urls.size > 1) {
+                                        Text("${meta.urls.size} images", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(110.dp, 70.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                            ) {
+                                if (!meta.thumbnail.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model = meta.thumbnail,
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = if (meta.ext == "mp3") Icons.Default.MusicNote else Icons.Default.PlayArrow,
+                                        contentDescription = null,
+                                        modifier = Modifier.align(Alignment.Center).size(32.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(meta.title ?: "Unknown Title", style = MaterialTheme.typography.titleSmall, maxLines = 2, fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.height(4.dp))
+                                Text(meta.author ?: "Unknown Author", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                if (meta.size != null && meta.size > 0) {
+                                    Spacer(Modifier.height(4.dp))
+                                    Text("${"%.1f".format(meta.size / 1024f / 1024f)} MB", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
@@ -386,20 +693,62 @@ fun MainDownloaderTab(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(if (engine == "yt-dlp") Icons.Default.Movie else Icons.Default.Image, null, modifier = Modifier.size(16.dp))
-                            Text(if (engine == "yt-dlp") "Media" else "Gallery", style = MaterialTheme.typography.bodySmall)
+                            val engineIcon = when (engine) {
+                                "dynamic" -> Icons.Default.Bolt
+                                "yt-dlp" -> Icons.Default.Movie
+                                "gallery-dl" -> Icons.Default.Image
+                                else -> Icons.Default.CloudDownload
+                            }
+                            val engineLabel = when (engine) {
+                                "dynamic" -> "Dynamic (Auto)"
+                                "yt-dlp" -> "yt-dlp"
+                                "gallery-dl" -> "gallery-dl"
+                                else -> "Cobalt"
+                            }
+                            Icon(engineIcon, null, modifier = Modifier.size(16.dp))
+                            Text(engineLabel, style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     DropdownMenu(expanded = engineExpanded, onDismissRequest = { engineExpanded = false }) {
                         DropdownMenuItem(
-                            text = { Text("Video / Audio") },
-                            leadingIcon = { Icon(Icons.Default.Movie, null, modifier = Modifier.size(18.dp)) },
-                            onClick = { onEngineChange("yt-dlp"); engineExpanded = false }
+                            text = { Text("Dynamic (Auto)") },
+                            leadingIcon = { Icon(Icons.Default.Bolt, null, modifier = Modifier.size(18.dp)) },
+                            onClick = { 
+                                onEngineChange("dynamic")
+                                engineExpanded = false
+                                viewModel.clearPreview()
+                                viewModel.logToConsole("Switched engine to: Dynamic")
+                            }
                         )
                         DropdownMenuItem(
-                            text = { Text("Image Gallery") },
+                            text = { Text("yt-dlp") },
+                            leadingIcon = { Icon(Icons.Default.Movie, null, modifier = Modifier.size(18.dp)) },
+                            onClick = { 
+                                onEngineChange("yt-dlp")
+                                engineExpanded = false
+                                viewModel.clearPreview()
+                                viewModel.logToConsole("Switched engine to: yt-dlp")
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("gallery-dl") },
                             leadingIcon = { Icon(Icons.Default.Image, null, modifier = Modifier.size(18.dp)) },
-                            onClick = { onEngineChange("gallery-dl"); engineExpanded = false }
+                            onClick = { 
+                                onEngineChange("gallery-dl")
+                                engineExpanded = false
+                                viewModel.clearPreview()
+                                viewModel.logToConsole("Switched engine to: gallery-dl")
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Cobalt") },
+                            leadingIcon = { Icon(Icons.Default.CloudDownload, null, modifier = Modifier.size(18.dp)) },
+                            onClick = { 
+                                onEngineChange("cobalt")
+                                engineExpanded = false
+                                viewModel.clearPreview()
+                                viewModel.logToConsole("Switched engine to: Cobalt")
+                            }
                         )
                     }
                 }
@@ -409,13 +758,13 @@ fun MainDownloaderTab(
                 // Mode/Quality Selector
                 Box(modifier = Modifier.weight(1f)) {
                     TextButton(
-                        onClick = { if (engine == "yt-dlp") modeExpanded = true },
+                        onClick = { if (engine == "yt-dlp" || engine == "cobalt") modeExpanded = true },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = engine == "yt-dlp"
+                        enabled = engine == "yt-dlp" || engine == "cobalt"
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Icon(Icons.Default.Settings, null, modifier = Modifier.size(16.dp))
-                            Text(if (engine == "yt-dlp") downloadMode.replaceFirstChar { it.uppercase() } else "Original", style = MaterialTheme.typography.bodySmall)
+                            Text(if (engine == "yt-dlp" || engine == "cobalt") downloadMode.replaceFirstChar { it.uppercase() } else "Original", style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     DropdownMenu(expanded = modeExpanded, onDismissRequest = { modeExpanded = false }) {
@@ -433,9 +782,9 @@ fun MainDownloaderTab(
                 // Quality Selector
                 Box(modifier = Modifier.weight(1f)) {
                     TextButton(
-                        onClick = { if (engine == "yt-dlp") qualityExpanded = true },
+                        onClick = { if (engine == "yt-dlp" || engine == "cobalt") qualityExpanded = true },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = engine == "yt-dlp"
+                        enabled = engine == "yt-dlp" || engine == "cobalt"
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             val label = if (downloadMode == "audio") {
@@ -503,6 +852,142 @@ fun MainDownloaderTab(
         AnimatedVisibility(visible = uiState is DownloadState.Success || uiState is DownloadState.Error) {
             StatusInfo(uiState, viewModel::openSavedFolder)
         }
+
+        Spacer(Modifier.height(16.dp))
+
+        // Terminal CLI Component
+        val currentTerminalTheme = viewModel.terminalTheme.value
+        Card(
+            modifier = Modifier.fillMaxWidth().height(180.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(currentTerminalTheme.background)),
+            border = BorderStroke(1.dp, Color(currentTerminalTheme.header)),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Header (macOS style window control dots)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(currentTerminalTheme.header))
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Box(Modifier.size(8.dp).background(Color(0xFFFF5F56), CircleShape))
+                        Box(Modifier.size(8.dp).background(Color(0xFFFFBD2E), CircleShape))
+                        Box(Modifier.size(8.dp).background(Color(0xFF27C93F), CircleShape))
+                    }
+                    Text(
+                        text = "gabi@terminal: ~",
+                        color = Color(currentTerminalTheme.text).copy(alpha = 0.6f),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = FontFamily.Monospace
+                    )
+                    IconButton(
+                        onClick = { viewModel.clearConsole() },
+                        modifier = Modifier.size(16.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Clear Console",
+                            tint = Color(currentTerminalTheme.text).copy(alpha = 0.6f),
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
+                }
+                
+                Divider(color = Color(currentTerminalTheme.header), thickness = 1.dp)
+                
+                // Logs Box
+                val lazyListState = rememberLazyListState()
+                LaunchedEffect(consoleLogs.size) {
+                    if (consoleLogs.isNotEmpty()) {
+                        lazyListState.animateScrollToItem(consoleLogs.size - 1)
+                    }
+                }
+                
+                LazyColumn(
+                    state = lazyListState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    items(consoleLogs) { log ->
+                        Text(
+                            text = log,
+                            color = Color(currentTerminalTheme.text),
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            lineHeight = 14.sp
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showSuccessDialog) {
+        AlertDialog(
+            onDismissRequest = { 
+                showSuccessDialog = false
+                viewModel.resetDownloadState()
+            },
+            text = {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.download_success_girl),
+                        contentDescription = "Download Success Illustration",
+                        modifier = Modifier
+                            .size(100.dp, 100.dp)
+                            .clip(RoundedCornerShape(16.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Finished!",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Your media has been downloaded successfully.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showSuccessDialog = false
+                        onUrlChange("") // Reset the URL placeholder
+                        viewModel.clearPreview() // Clear preview
+                        viewModel.resetDownloadState() // Revert to Idle
+                    },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Download Again")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showSuccessDialog = false
+                        viewModel.resetDownloadState()
+                    }
+                ) {
+                    Text("Close")
+                }
+            },
+            shape = RoundedCornerShape(28.dp)
+        )
     }
 }
 
@@ -657,10 +1142,33 @@ fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = 
                         )
                     }
                 }
+
+                Spacer(Modifier.height(24.dp))
+                Text("Terminal Theme", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(12.dp))
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TerminalTheme.values().forEach { theme ->
+                        FilterChip(
+                            selected = viewModel.terminalTheme.value == theme,
+                            onClick = { viewModel.updateTerminalTheme(theme) },
+                            label = { Text(theme.displayName) },
+                            leadingIcon = if (viewModel.terminalTheme.value == theme) {
+                                { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
+                            } else null,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    }
+                }
             }
         }
 
         Spacer(Modifier.height(24.dp))
+
+
 
         // Repository Section
         Card(

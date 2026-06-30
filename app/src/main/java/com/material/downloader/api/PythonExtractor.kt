@@ -23,10 +23,12 @@ class PythonExtractor {
 data class ExtractionResult(
     val status: String,
     val url: String? = null,
+    val urls: List<String>? = null,
     val title: String? = null,
     val author: String? = null,
     val thumbnail: String? = null,
     val size: Long? = null,
     val ext: String? = null,
+    val is_gallery: Boolean? = null,
     val message: String? = null
 )
