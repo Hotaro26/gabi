@@ -39,6 +39,17 @@
   </tr>
 </table>
 
+<table>
+  <tr>
+    <td><img width="430" alt="Screenshot_20260630-101533" src="https://github.com/user-attachments/assets/2a75481c-b350-41c5-811c-7d89e4818ca1" /></td>
+    <td><img width="430" alt="Screenshot_20260630-101700" src="https://github.com/user-attachments/assets/f135ce83-a2c5-44f0-9b49-b04c49fd49fd" /></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img width="430" alt="Screenshot_20260630-103157" src="https://github.com/user-attachments/assets/9fac9ea2-6060-4465-8be5-2501844d0379" /></td>
+  </tr>
+</table>
+
+
 
 <details>
   <summary>📸 Old Screenshots</summary>
