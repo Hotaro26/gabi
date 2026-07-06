@@ -142,68 +142,91 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
         _externalUrl.value = null
     }
 
+    private suspend fun performExtraction(url: String, quality: String, mode: String, engine: String): ExtractionResult {
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            if (engine == "cobalt") {
+                val cobaltMode = if (mode == "video") "auto" else mode
+                logToConsole("Calling Cobalt API...")
+                val cobaltRes = cobaltRepository.fetchMediaLink(
+                    url = url,
+                    quality = quality,
+                    downloadMode = cobaltMode
+                )
+                if (cobaltRes.status == "error") {
+                    logToConsole("Cobalt API returned error: ${cobaltRes.text}")
+                    com.material.downloader.api.ExtractionResult(status = "error", message = cobaltRes.text ?: "Cobalt error")
+                } else {
+                    val resolvedUrl = cobaltRes.url ?: cobaltRes.picker?.firstOrNull()?.url
+                    val path = resolvedUrl?.let { android.net.Uri.parse(it).path?.lowercase() } ?: ""
+                    val detectedExt = when {
+                        path.endsWith(".jpg") || path.endsWith(".jpeg") -> "jpg"
+                        path.endsWith(".png") -> "png"
+                        path.endsWith(".webp") -> "webp"
+                        path.endsWith(".gif") -> "gif"
+                        mode == "audio" -> "mp3"
+                        else -> "mp4"
+                    }
+                    val isImage = detectedExt in listOf("jpg", "jpeg", "png", "webp", "gif")
+                    logToConsole("Cobalt resolved URL successfully. Extracted format: $detectedExt")
+                    
+                    com.material.downloader.api.ExtractionResult(
+                        status = "success",
+                        url = resolvedUrl,
+                        title = cobaltRes.filename ?: "Cobalt Download",
+                        author = "Cobalt API",
+                        thumbnail = cobaltRes.picker?.firstOrNull()?.thumb ?: resolvedUrl,
+                        ext = detectedExt
+                    )
+                }
+            } else {
+                logToConsole("Executing $engine extractor in Python...")
+                val res = extractor.extract(url, quality, mode, engine)
+                if (res.status == "success") {
+                    if (res.is_gallery == true) {
+                        logToConsole("Python extractor found gallery with ${res.urls?.size ?: 0} items")
+                    } else {
+                        logToConsole("Python extractor resolved URL successfully. Format: ${res.ext}")
+                    }
+                } else {
+                    logToConsole("Python extractor failed: ${res.message}")
+                }
+                res
+            }
+        }
+    }
+
     fun fetchPreview(url: String, quality: String, mode: String = "auto", engine: String = "dynamic") {
         viewModelScope.launch {
-            val resolvedEngine = if (engine == "dynamic") getDynamicEngine(url) else engine
-            logToConsole("Fetching preview: $url (Engine: $engine, Resolved: $resolvedEngine, Mode: $mode)")
+            logToConsole("Fetching preview: $url (Engine: $engine, Mode: $mode)")
             try {
-                val result = withContext(Dispatchers.IO) {
-                    if (resolvedEngine == "cobalt") {
-                        val cobaltMode = if (mode == "video") "auto" else mode
-                        logToConsole("Calling Cobalt API...")
-                        val cobaltRes = cobaltRepository.fetchMediaLink(
-                            url = url,
-                            quality = quality,
-                            downloadMode = cobaltMode
-                        )
-                        if (cobaltRes.status == "error") {
-                            logToConsole("Cobalt API returned error: ${cobaltRes.text}")
-                            ExtractionResult(status = "error", message = cobaltRes.text ?: "Cobalt error")
-                        } else {
-                            val resolvedUrl = cobaltRes.url ?: cobaltRes.picker?.firstOrNull()?.url
-                            val path = resolvedUrl?.let { Uri.parse(it).path?.lowercase() } ?: ""
-                            val detectedExt = when {
-                                path.endsWith(".jpg") || path.endsWith(".jpeg") -> "jpg"
-                                path.endsWith(".png") -> "png"
-                                path.endsWith(".webp") -> "webp"
-                                path.endsWith(".gif") -> "gif"
-                                mode == "audio" -> "mp3"
-                                else -> "mp4"
-                            }
-                            val isImage = detectedExt in listOf("jpg", "jpeg", "png", "webp", "gif")
-                            logToConsole("Cobalt resolved URL successfully. Extracted format: $detectedExt")
-                            
-                            ExtractionResult(
-                                status = "success",
-                                url = resolvedUrl,
-                                title = "Cobalt Download",
-                                author = "Cobalt API",
-                                thumbnail = if (isImage) resolvedUrl else cobaltRes.picker?.firstOrNull()?.thumb,
-                                ext = detectedExt
-                            )
-                        }
+                var result: com.material.downloader.api.ExtractionResult? = null
+                val enginesToTry = if (engine == "dynamic") {
+                    val firstEngine = getDynamicEngine(url)
+                    val allEngines = listOf("cobalt", "yt-dlp", "gallery-dl")
+                    listOf(firstEngine) + allEngines.filter { it != firstEngine }
+                } else {
+                    listOf(engine)
+                }
+
+                for (currentEngine in enginesToTry) {
+                    logToConsole("Trying engine: $currentEngine")
+                    val currentResult = performExtraction(url, quality, mode, currentEngine)
+                    if (currentResult.status == "success") {
+                        result = currentResult
+                        break
                     } else {
-                        logToConsole("Executing $resolvedEngine extractor in Python...")
-                        val res = extractor.extract(url, quality, mode, resolvedEngine)
-                        if (res.status == "success") {
-                            if (res.is_gallery == true) {
-                                logToConsole("Python extractor found gallery with ${res.urls?.size ?: 0} items")
-                            } else {
-                                logToConsole("Python extractor resolved URL successfully. Format: ${res.ext}")
-                            }
-                        } else {
-                            logToConsole("Python extractor failed: ${res.message}")
-                        }
-                        res
+                        logToConsole("Engine $currentEngine failed. ${if (enginesToTry.last() != currentEngine) "Trying next..." else "No more engines to try."}")
+                        result = currentResult
                     }
                 }
-                if (result.status == "success") {
-                    logToConsole("Preview loaded: '${result.title}' by ${result.author}")
+
+                if (result?.status == "success") {
+                    logToConsole("Preview loaded: '${result?.title}' by ${result?.author}")
                 }
                 _previewMetadata.value = result
             } catch (e: Exception) {
                 logToConsole("Preview exception: ${e.message}")
-                _previewMetadata.value = ExtractionResult(status = "error", message = e.message ?: "Extraction failed")
+                _previewMetadata.value = com.material.downloader.api.ExtractionResult(status = "error", message = e.message ?: "Extraction failed")
             }
         }
     }
@@ -219,49 +242,34 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
             _uiState.value = DownloadState.Downloading(0f)
             val notificationId = System.currentTimeMillis().toInt()
             lastNotificationId = notificationId
-            val resolvedEngine = if (engine == "dynamic") getDynamicEngine(url) else engine
-            logToConsole("Starting download process for $url (Engine: $engine, Resolved: $resolvedEngine)")
+            logToConsole("Starting download process for $url (Engine: $engine)")
             
             try {
-                val result = _previewMetadata.value ?: withContext(Dispatchers.IO) {
+                var result = _previewMetadata.value
+                if (result == null) {
                     logToConsole("No cached preview. Performing extraction first...")
-                    if (resolvedEngine == "cobalt") {
-                        val cobaltMode = if (mode == "video") "auto" else mode
-                        val cobaltRes = cobaltRepository.fetchMediaLink(
-                            url = url,
-                            quality = quality,
-                            downloadMode = cobaltMode
-                        )
-                        if (cobaltRes.status == "error") {
-                            ExtractionResult(status = "error", message = cobaltRes.text ?: "Cobalt error")
-                        } else {
-                            val resolvedUrl = cobaltRes.url ?: cobaltRes.picker?.firstOrNull()?.url
-                            val path = resolvedUrl?.let { Uri.parse(it).path?.lowercase() } ?: ""
-                            val detectedExt = when {
-                                path.endsWith(".jpg") || path.endsWith(".jpeg") -> "jpg"
-                                path.endsWith(".png") -> "png"
-                                path.endsWith(".webp") -> "webp"
-                                path.endsWith(".gif") -> "gif"
-                                mode == "audio" -> "mp3"
-                                else -> "mp4"
-                            }
-                            val isImage = detectedExt in listOf("jpg", "jpeg", "png", "webp", "gif")
-                            
-                            ExtractionResult(
-                                status = "success",
-                                url = resolvedUrl,
-                                title = "Cobalt Download",
-                                author = "Cobalt API",
-                                thumbnail = if (isImage) resolvedUrl else cobaltRes.picker?.firstOrNull()?.thumb,
-                                ext = detectedExt
-                            )
-                        }
+                    val enginesToTry = if (engine == "dynamic") {
+                        val firstEngine = getDynamicEngine(url)
+                        val allEngines = listOf("cobalt", "yt-dlp", "gallery-dl")
+                        listOf(firstEngine) + allEngines.filter { it != firstEngine }
                     } else {
-                        extractor.extract(url, quality, mode, resolvedEngine)
+                        listOf(engine)
+                    }
+
+                    for (currentEngine in enginesToTry) {
+                        logToConsole("Trying engine: $currentEngine")
+                        val currentResult = performExtraction(url, quality, mode, currentEngine)
+                        if (currentResult.status == "success") {
+                            result = currentResult
+                            break
+                        } else {
+                            logToConsole("Engine $currentEngine failed. ${if (enginesToTry.last() != currentEngine) "Trying next..." else "No more engines to try."}")
+                            result = currentResult
+                        }
                     }
                 }
                 
-                if (result.status == "success") {
+                if (result?.status == "success") {
                     val isGallery = result.is_gallery == true
                     val urlsToDownload = result.urls ?: listOf(result.url ?: throw Exception("No download URL found"))
                     val totalFiles = urlsToDownload.size
@@ -314,12 +322,12 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                     } else {
                         // Single file download
                         val downloadUrl = urlsToDownload.first()
-                        val extension = result.ext ?: (if (resolvedEngine == "gallery-dl") "jpg" else "mp4")
-                        val title = result.title ?: (if (resolvedEngine == "gallery-dl") "image" else "video")
+                        val extension = result.ext ?: (if (isGallery) "jpg" else "mp4")
+                        val title = result.title ?: (if (isGallery) "image" else "video")
                         val sanitizedTitle = title.replace(Regex("[^a-zA-Z0-9]"), "_")
                         val fileName = "${sanitizedTitle}_${System.currentTimeMillis()}.$extension"
                         
-                        val targetPath = if ((resolvedEngine == "gallery-dl" || isGallery) && downloadPath.value == "Movies/Gabi") "Pictures/Gabi" else downloadPath.value
+                        val targetPath = if (isGallery && downloadPath.value == "Movies/Gabi") "Pictures/Gabi" else downloadPath.value
                         logToConsole("Downloading file: $fileName")
                         
                         downloader.downloadFile(
@@ -358,7 +366,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                         }
                     }
                 } else {
-                    val errorMsg = result.message ?: "Extraction failed"
+                    val errorMsg = result?.message ?: "Extraction failed"
                     _uiState.value = DownloadState.Error(errorMsg)
                     logDao.insertLog(DownloadLog(title = "Failed Download", url = url, status = "Error: $errorMsg"))
                     logToConsole("Download failed: $errorMsg")

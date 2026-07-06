@@ -14,8 +14,8 @@ android {
         applicationId = "com.material.downloader"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "3.4"
+        versionCode = 3
+        versionName = "3.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
 
@@ -97,6 +97,7 @@ dependencies {
 
     // Coil for images
     implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("io.coil-kt:coil-video:2.6.0")
 
     // Ktor
     val ktor_version = "2.3.8"
