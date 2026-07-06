@@ -407,7 +407,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            listOf("yt-dlp" to "Media", "gallery-dl" to "Gallery", "cobalt" to "Cobalt").forEach { (id, label) ->
+                            listOf("yt-dlp" to "yt-dlp", "gallery-dl" to "gallery-dl", "cobalt" to "Cobalt").forEach { (id, label) ->
                                 FilterChip(
                                     selected = selectedHelpTab == id,
                                     onClick = { selectedHelpTab = id },

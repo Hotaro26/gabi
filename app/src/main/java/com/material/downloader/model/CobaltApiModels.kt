@@ -15,6 +15,7 @@ data class CobaltResponse(
     val status: String,
     val url: String? = null,
     val text: String? = null,
+    val filename: String? = null,
     val picker: List<PickerItem>? = null
 )
 
