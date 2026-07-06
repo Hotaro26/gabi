@@ -72,7 +72,7 @@ class MainActivity : ComponentActivity() {
                             val json = org.json.JSONObject(response)
                             val tagName = json.getString("tag_name")
                             val htmlUrl = json.getString("html_url")
-                            val currentVersion = "v${"3.5"}"
+                            val currentVersion = "v${BuildConfig.VERSION_NAME}"
                             if (tagName != currentVersion) {
                                 updateVersion.value = tagName
                                 updateUrl.value = htmlUrl
