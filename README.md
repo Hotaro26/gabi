@@ -1,5 +1,7 @@
 <p align="center">
-  <img width="220" height="220" src="https://github.com/user-attachments/assets/15810915-ab15-4ada-aa6b-7383a110aa14"/>
+<img width="300" height="300" alt="gabi11" src="https://github.com/user-attachments/assets/c1435762-4f08-431b-b485-202ffae1800a" />
+
+
 </p>
 
 ## [Gabi](https://hotaro26.github.io/gabi/) 
