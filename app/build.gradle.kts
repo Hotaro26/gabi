@@ -40,12 +40,20 @@ kotlin {
             // Kotlinx Serialization & Coroutines
             implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+            
+            // Koin Dependency Injection
+            implementation("io.insert-koin:koin-core:3.5.3")
+            implementation("io.insert-koin:koin-compose:1.1.2")
         }
         
         androidMain.dependencies {
             implementation("androidx.core:core-ktx:1.12.0")
             implementation("androidx.core:core-splashscreen:1.0.1")
             implementation("androidx.activity:activity-compose:1.8.2")
+            
+            // Koin Android
+            implementation("io.insert-koin:koin-android:3.5.3")
+            implementation("io.insert-koin:koin-androidx-compose:3.5.3")
             
             // Old Android-only dependencies (will break if moved to commonMain)
             implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
