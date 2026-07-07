@@ -58,53 +58,6 @@ class MainActivity : ComponentActivity() {
                 handleIntent(intent, viewModel)
             }
 
-            val updateUrl = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
-            val updateVersion = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
-
-            LaunchedEffect(Unit) {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    try {
-                        val url = java.net.URL("https://api.github.com/repos/Hotaro26/gabi/releases/latest")
-                        val connection = url.openConnection() as java.net.HttpURLConnection
-                        connection.requestMethod = "GET"
-                        if (connection.responseCode == 200) {
-                            val response = connection.inputStream.bufferedReader().use { it.readText() }
-                            val json = org.json.JSONObject(response)
-                            val tagName = json.getString("tag_name")
-                            val htmlUrl = json.getString("html_url")
-                            val currentVersion = "v${BuildConfig.VERSION_NAME}"
-                            if (tagName != currentVersion) {
-                                updateVersion.value = tagName
-                                updateUrl.value = htmlUrl
-                            }
-                        }
-                    } catch (e: Exception) { e.printStackTrace() }
-                }
-            }
-
-            if (updateUrl.value != null && updateVersion.value != null) {
-                androidx.compose.material3.AlertDialog(
-                    onDismissRequest = { updateUrl.value = null },
-                    title = { androidx.compose.material3.Text("Update Available") },
-                    text = { androidx.compose.material3.Text("A new version (${updateVersion.value}) of Gabi is available. Would you like to update?") },
-                    confirmButton = {
-                        androidx.compose.material3.TextButton(onClick = {
-                            val updateIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(updateUrl.value))
-                            updateIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                            startActivity(updateIntent)
-                            updateUrl.value = null
-                        }) {
-                            androidx.compose.material3.Text("Update")
-                        }
-                    },
-                    dismissButton = {
-                        androidx.compose.material3.TextButton(onClick = { updateUrl.value = null }) {
-                            androidx.compose.material3.Text("Dismiss")
-                        }
-                    }
-                )
-            }
-
 
             val darkTheme = when (viewModel.themeMode.intValue) {
                 1 -> false
