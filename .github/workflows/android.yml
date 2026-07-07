@@ -2,9 +2,9 @@ name: Android Build APK
 
 on:
   push:
-    branches: [ "experimental", "main" ]
+    branches: [ "experimental", "main", "master" ]
   pull_request:
-    branches: [ "experimental", "main" ]
+    branches: [ "experimental", "main", "master" ]
   workflow_dispatch: # Allows manual triggering from the Actions tab
 
 jobs:
