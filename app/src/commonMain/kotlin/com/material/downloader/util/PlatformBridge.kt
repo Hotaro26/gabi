@@ -11,4 +11,7 @@ interface PlatformBridge {
         onComplete: (String) -> Unit,
         onError: (String) -> Unit
     )
+    fun openSavedFolder(path: String)
+    fun saveSetting(key: String, value: String)
+    fun getSetting(key: String, defaultValue: String): String
 }
