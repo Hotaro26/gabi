@@ -1,9 +1,74 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.multiplatform")
+    id("org.jetbrains.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
     id("com.chaquo.python")
-    id("kotlin-kapt")
+    id("com.google.devtools.ksp") version "1.9.22-1.0.17"
+}
+
+kotlin {
+    androidTarget {
+        compilations.all {
+            kotlinOptions {
+                jvmTarget = "17"
+            }
+        }
+    }
+    
+    jvm("desktop")
+    
+    sourceSets {
+        val desktopMain by getting
+        
+        commonMain.dependencies {
+            implementation(compose.runtime)
+            implementation(compose.foundation)
+            implementation(compose.material3)
+            implementation(compose.ui)
+            implementation(compose.components.resources)
+            implementation(compose.components.uiToolingPreview)
+            
+            // Ktor
+            val ktor_version = "2.3.8"
+            implementation("io.ktor:ktor-client-core:$ktor_version")
+            implementation("io.ktor:ktor-client-cio:$ktor_version")
+            implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
+            implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
+            implementation("io.ktor:ktor-client-logging:$ktor_version")
+            
+            // Kotlinx Serialization & Coroutines
+            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+        }
+        
+        androidMain.dependencies {
+            implementation("androidx.core:core-ktx:1.12.0")
+            implementation("androidx.core:core-splashscreen:1.0.1")
+            implementation("androidx.activity:activity-compose:1.8.2")
+            
+            // Old Android-only dependencies (will break if moved to commonMain)
+            implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+            implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+            implementation("androidx.compose.material:material-icons-extended:1.6.0")
+            implementation("com.google.android.material:material:1.11.0")
+            implementation("androidx.compose.material3:material3-window-size-class:1.2.0")
+            
+            val room_version = "2.6.1"
+            implementation("androidx.room:room-runtime:$room_version")
+            implementation("androidx.room:room-ktx:$room_version")
+            
+            implementation("io.coil-kt:coil-compose:2.6.0")
+            implementation("io.coil-kt:coil-video:2.6.0")
+            
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+        }
+        
+        desktopMain.dependencies {
+            implementation(compose.desktop.currentOs)
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.7.3")
+        }
+    }
 }
 
 android {
@@ -48,21 +113,20 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
+    
     buildFeatures {
-        compose = true
         buildConfig = true
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.8"
-    }
+    
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+}
+
+dependencies {
+    add("kspAndroid", "androidx.room:room-compiler:2.6.1")
 }
 
 chaquopy {
@@ -75,44 +139,13 @@ chaquopy {
     }
 }
 
-dependencies {
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.core:core-splashscreen:1.0.1")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
-    implementation("androidx.activity:activity-compose:1.8.2")
-    implementation(platform("androidx.compose:compose-bom:2023.10.01"))
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation("com.google.android.material:material:1.11.0")
-    implementation("androidx.compose.material3:material3-window-size-class")
-
-    // Room for History
-    val room_version = "2.6.1"
-    implementation("androidx.room:room-runtime:$room_version")
-    implementation("androidx.room:room-ktx:$room_version")
-    kapt("androidx.room:room-compiler:$room_version")
-
-    // Coil for images
-    implementation("io.coil-kt:coil-compose:2.6.0")
-    implementation("io.coil-kt:coil-video:2.6.0")
-
-    // Ktor
-    val ktor_version = "2.3.8"
-    implementation("io.ktor:ktor-client-core:$ktor_version")
-    implementation("io.ktor:ktor-client-cio:$ktor_version")
-    implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
-    implementation("io.ktor:ktor-client-logging:$ktor_version")
-
-    // Kotlinx Serialization
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
-
-    // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-
-    debugImplementation("androidx.compose.ui:ui-tooling")
+compose.desktop {
+    application {
+        mainClass = "com.material.downloader.MainKt"
+        nativeDistributions {
+            targetFormats(org.jetbrains.compose.desktop.application.dsl.TargetFormat.Dmg, org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi, org.jetbrains.compose.desktop.application.dsl.TargetFormat.Deb)
+            packageName = "Gabi"
+            packageVersion = "3.5.0"
+        }
+    }
 }
