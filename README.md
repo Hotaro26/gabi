@@ -127,5 +127,13 @@ Gabi uses several open-source libraries. Please check the "Licenses" section in 
 - `Chaquopy`: BSD 3-Clause
 - `cobalt` : open source
 
+## Star History
 
+<a href="https://www.star-history.com/?repos=Hotaro26%2Fgabi&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Hotaro26/gabi&type=date&theme=dark&legend=top-left&sealed_token=vBaJLd7cVa5eqo_uk972owipwGjs6zMU_0vVyPAY9ACBSIi8qz8en2-XvFkQyExOpSAmSiuMBeWCbYGSVAW_X6LOL_1rmMlvVO0Q3lhTr2lxPiHXvmp94VJVOE32CxN1HuRo204CJ-2r-_-EMJ3OhxIwp7dKJD5AReCCuwkQikV-3ItegHpZWRvDBdQ2" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Hotaro26/gabi&type=date&legend=top-left&sealed_token=vBaJLd7cVa5eqo_uk972owipwGjs6zMU_0vVyPAY9ACBSIi8qz8en2-XvFkQyExOpSAmSiuMBeWCbYGSVAW_X6LOL_1rmMlvVO0Q3lhTr2lxPiHXvmp94VJVOE32CxN1HuRo204CJ-2r-_-EMJ3OhxIwp7dKJD5AReCCuwkQikV-3ItegHpZWRvDBdQ2" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Hotaro26/gabi&type=date&legend=top-left&sealed_token=vBaJLd7cVa5eqo_uk972owipwGjs6zMU_0vVyPAY9ACBSIi8qz8en2-XvFkQyExOpSAmSiuMBeWCbYGSVAW_X6LOL_1rmMlvVO0Q3lhTr2lxPiHXvmp94VJVOE32CxN1HuRo204CJ-2r-_-EMJ3OhxIwp7dKJD5AReCCuwkQikV-3ItegHpZWRvDBdQ2" />
+ </picture>
+</a>
 
