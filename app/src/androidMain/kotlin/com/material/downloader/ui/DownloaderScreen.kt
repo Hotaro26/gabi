@@ -16,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.draw.rotate
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -79,13 +80,14 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
     var url by remember { mutableStateOf("") }
     var quality by remember { mutableStateOf("720") }
     var downloadMode by remember { mutableStateOf("auto") }
-    var engine by remember { mutableStateOf("dynamic") }
+    var engine by remember { mutableStateOf("newpipe") }
     var showClearLogsDialog by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
     val preview by viewModel.previewMetadata.collectAsState()
     val history by viewModel.downloadHistory.collectAsState(initial = emptyList())
     
     var showSupportedSitesDialog by remember { mutableStateOf(false) }
+    var showTipsDialog by remember { mutableStateOf(false) }
     var selectedHelpTab by remember { mutableStateOf("yt-dlp") }
     val externalUrl by viewModel.externalUrl.collectAsState()
     val clipboardManager = LocalClipboardManager.current
@@ -152,6 +154,22 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
         )
     }
 
+    var playingUrl by remember { mutableStateOf<String?>(null) }
+    
+    if (playingUrl != null) {
+        PlayerScreen(
+            url = playingUrl!!,
+            onBack = { playingUrl = null },
+            onDownload = { dlUrl ->
+                playingUrl = null
+                url = dlUrl
+                engine = "newpipe"
+                selectedTab = 0
+            }
+        )
+        return
+    }
+
     Row(modifier = Modifier.fillMaxSize()) {
         if (isExpanded) {
             NavigationRail(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)) {
@@ -180,8 +198,28 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
                     icon = { 
+                        val scale by animateFloatAsState(
+                            targetValue = if (selectedTab == 1) 1.2f else 1.0f,
+                            animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
+                            label = "newpipe_scale"
+                        )
+                        Icon(
+                            Icons.Default.PlayArrow, 
+                            null,
+                            modifier = Modifier.graphicsLayer {
+                                scaleX = scale
+                                scaleY = scale
+                            }
+                        ) 
+                    },
+                    label = { Text("NewPipe") }
+                )
+                NavigationRailItem(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    icon = { 
                         val rotation by animateFloatAsState(
-                            targetValue = if (selectedTab == 1) 360f else 0f,
+                            targetValue = if (selectedTab == 2) 360f else 0f,
                             animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
                             label = "rotation"
                         )
@@ -212,7 +250,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             label = "rotation"
                         )
                         val scale by animateFloatAsState(
-                            targetValue = if (selectedTab == 2) 1.2f else 1.0f,
+                            targetValue = if (selectedTab == 3) 1.2f else 1.0f,
                             animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
                             label = "scale"
                         )
@@ -269,7 +307,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
-                } else if (selectedTab == 1 && history.isNotEmpty()) {
+                } else if (selectedTab == 2 && history.isNotEmpty()) {
                     FloatingActionButton(
                         onClick = { showClearLogsDialog = true },
                         modifier = Modifier.graphicsLayer {
@@ -315,13 +353,33 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             selected = selectedTab == 1,
                             onClick = { selectedTab = 1 },
                             icon = { 
+                                val scale by animateFloatAsState(
+                                    targetValue = if (selectedTab == 1) 1.2f else 1.0f,
+                                    animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
+                                    label = "newpipe_scale"
+                                )
+                                Icon(
+                                    Icons.Default.PlayArrow, 
+                                    null, 
+                                    modifier = Modifier.graphicsLayer {
+                                        scaleX = scale
+                                        scaleY = scale
+                                    }
+                                ) 
+                            },
+                            label = { Text("NewPipe") }
+                        )
+                        NavigationBarItem(
+                            selected = selectedTab == 2,
+                            onClick = { selectedTab = 2 },
+                            icon = { 
                                 val rotation by animateFloatAsState(
-                                    targetValue = if (selectedTab == 1) 360f else 0f,
+                                    targetValue = if (selectedTab == 2) 360f else 0f,
                                     animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
                                     label = "rotation"
                                 )
                                 val scale by animateFloatAsState(
-                                    targetValue = if (selectedTab == 1) 1.2f else 1.0f,
+                                    targetValue = if (selectedTab == 2) 1.2f else 1.0f,
                                     animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
                                     label = "scale"
                                 )
@@ -338,16 +396,16 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             label = { Text("Logs") }
                         )
                         NavigationBarItem(
-                            selected = selectedTab == 2,
-                            onClick = { selectedTab = 2 },
+                            selected = selectedTab == 3,
+                            onClick = { selectedTab = 3 },
                             icon = { 
                                 val rotation by animateFloatAsState(
-                                    targetValue = if (selectedTab == 2) 360f else 0f,
+                                    targetValue = if (selectedTab == 3) 360f else 0f,
                                     animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
                                     label = "rotation"
                                 )
                                 val scale by animateFloatAsState(
-                                    targetValue = if (selectedTab == 2) 1.2f else 1.0f,
+                                    targetValue = if (selectedTab == 3) 1.2f else 1.0f,
                                     animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
                                     label = "scale"
                                 )
@@ -387,8 +445,15 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                         onEngineChange = { engine = it },
                         contentPadding = padding
                     )
-                    1 -> LogsTab(history, viewModel::deleteLog, contentPadding = padding)
-                    2 -> SettingsTab(viewModel, contentPadding = padding)
+                    1 -> NewPipeTab(
+                        viewModel = viewModel,
+                        contentPadding = padding,
+                        onUrlSelected = { selectedUrl ->
+                            playingUrl = selectedUrl
+                        }
+                    )
+                    2 -> LogsTab(history, viewModel::deleteLog, contentPadding = padding)
+                    3 -> SettingsTab(viewModel, contentPadding = padding)
                 }
             }
         }
@@ -403,11 +468,11 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            listOf("yt-dlp" to "yt-dlp", "gallery-dl" to "gallery-dl", "cobalt" to "Cobalt").forEach { (id, label) ->
+                            listOf("yt-dlp" to "yt-dlp", "gallery-dl" to "gallery-dl", "cobalt" to "Cobalt", "newpipe" to "NewPipe").forEach { (id, label) ->
                                 FilterChip(
                                     selected = selectedHelpTab == id,
                                     onClick = { selectedHelpTab = id },
@@ -418,6 +483,13 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                         }
                         
                         val sites = when (selectedHelpTab) {
+                            "newpipe" -> listOf(
+                                "YouTube (Videos, Audio, Shorts, Playlists)",
+                                "SoundCloud (Tracks, Playlists)",
+                                "Bandcamp (Tracks, Albums)",
+                                "PeerTube (Videos)",
+                                "media.ccc.de (Videos)"
+                            )
                             "gallery-dl" -> listOf(
                                 "Pixiv (Artwork, Manga)",
                                 "Twitter/X (Images, Gifs)",
@@ -481,6 +553,33 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                 confirmButton = {
                     TextButton(onClick = { showSupportedSitesDialog = false }) {
                         Text("Close")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showTipsDialog = true }) {
+                        Text("Help me")
+                    }
+                },
+                shape = RoundedCornerShape(28.dp)
+            )
+        }
+        
+        if (showTipsDialog) {
+            AlertDialog(
+                onDismissRequest = { showTipsDialog = false },
+                title = { Text("Downloading Tips") },
+                text = {
+                    Text(
+                        "• Use NewPipe for YouTube downloads.\n" +
+                        "• Use yt-dlp as a fallback (audio extraction might take some time, so be patient).\n" +
+                        "• For Pinterest and similar short-video/social sites, use Cobalt.\n" +
+                        "• For images and galleries, use gallery-dl.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = { showTipsDialog = false }) {
+                        Text("Got it")
                     }
                 },
                 shape = RoundedCornerShape(28.dp)
@@ -547,6 +646,14 @@ fun MainDownloaderTab(
             leadingIcon = { Icon(Icons.Default.Movie, null, modifier = Modifier.size(20.dp)) },
             trailingIcon = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (url.isNotEmpty()) {
+                        IconButton(onClick = { 
+                            onUrlChange("")
+                            viewModel.clearPreview()
+                        }) {
+                            Icon(Icons.Default.Clear, "Clear URL", modifier = Modifier.size(20.dp))
+                        }
+                    }
                     IconButton(onClick = { 
                         clipboardManager.getText()?.let { 
                             onUrlChange(it.text)
@@ -694,13 +801,13 @@ fun MainDownloaderTab(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             val engineIcon = when (engine) {
-                                "dynamic" -> Icons.Default.Bolt
+                                "newpipe" -> Icons.Default.PlayArrow
                                 "yt-dlp" -> Icons.Default.Movie
                                 "gallery-dl" -> Icons.Default.Image
                                 else -> Icons.Default.CloudDownload
                             }
                             val engineLabel = when (engine) {
-                                "dynamic" -> "Dynamic (Auto)"
+                                "newpipe" -> "NewPipe"
                                 "yt-dlp" -> "yt-dlp"
                                 "gallery-dl" -> "gallery-dl"
                                 else -> "Cobalt"
@@ -711,13 +818,13 @@ fun MainDownloaderTab(
                     }
                     DropdownMenu(expanded = engineExpanded, onDismissRequest = { engineExpanded = false }) {
                         DropdownMenuItem(
-                            text = { Text("Dynamic (Auto)") },
-                            leadingIcon = { Icon(Icons.Default.Bolt, null, modifier = Modifier.size(18.dp)) },
+                            text = { Text("NewPipe") },
+                            leadingIcon = { Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp)) },
                             onClick = { 
-                                onEngineChange("dynamic")
+                                onEngineChange("newpipe")
                                 engineExpanded = false
                                 viewModel.clearPreview()
-                                viewModel.logToConsole("Switched engine to: Dynamic")
+                                viewModel.logToConsole("Switched engine to: NewPipe")
                             }
                         )
                         DropdownMenuItem(
@@ -758,13 +865,13 @@ fun MainDownloaderTab(
                 // Mode/Quality Selector
                 Box(modifier = Modifier.weight(1f)) {
                     TextButton(
-                        onClick = { if (engine == "yt-dlp" || engine == "cobalt") modeExpanded = true },
+                        onClick = { if (engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe") modeExpanded = true },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = engine == "yt-dlp" || engine == "cobalt"
+                        enabled = engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe"
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Icon(Icons.Default.Settings, null, modifier = Modifier.size(16.dp))
-                            Text(if (engine == "yt-dlp" || engine == "cobalt") downloadMode.replaceFirstChar { it.uppercase() } else "Original", style = MaterialTheme.typography.bodySmall)
+                            Text(if (engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe") downloadMode.replaceFirstChar { it.uppercase() } else "Original", style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     DropdownMenu(expanded = modeExpanded, onDismissRequest = { modeExpanded = false }) {
@@ -782,9 +889,9 @@ fun MainDownloaderTab(
                 // Quality Selector
                 Box(modifier = Modifier.weight(1f)) {
                     TextButton(
-                        onClick = { if (engine == "yt-dlp" || engine == "cobalt") qualityExpanded = true },
+                        onClick = { if (engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe") qualityExpanded = true },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = engine == "yt-dlp" || engine == "cobalt"
+                        enabled = engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe"
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             val label = if (downloadMode == "audio") {
@@ -1022,7 +1129,7 @@ fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = 
     var showSupportDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val scrollState = rememberScrollState()
-    val myUpiId = "sakibreza035@okaxis"
+    val myUpiId = "9693703723@fam"
     
     val folderPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
