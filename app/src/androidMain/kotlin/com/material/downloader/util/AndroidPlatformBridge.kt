@@ -11,8 +11,6 @@ import kotlinx.coroutines.withContext
 
 class AndroidPlatformBridge(private val context: Context) : PlatformBridge {
     
-    private val pythonExtractor = PythonExtractor(context)
-    private val fileDownloader = FileDownloader(context)
     private val prefs = context.getSharedPreferences("gabi_prefs", Context.MODE_PRIVATE)
 
     override fun showToast(message: String) {
@@ -20,22 +18,13 @@ class AndroidPlatformBridge(private val context: Context) : PlatformBridge {
     }
 
     override suspend fun extractMediaInfo(url: String): String {
-        return withContext(Dispatchers.IO) {
-            pythonExtractor.extractMediaInfo(url)
-        }
+        return ""
     }
 
     override suspend fun downloadMedia(
         url: String, quality: String, isAudioOnly: Boolean,
         onProgress: (Float) -> Unit, onComplete: (String) -> Unit, onError: (String) -> Unit
     ) {
-        withContext(Dispatchers.IO) {
-            try {
-                fileDownloader.downloadFile(url, quality, isAudioOnly, onProgress, onComplete, onError)
-            } catch (e: Exception) {
-                onError(e.localizedMessage ?: "Unknown error")
-            }
-        }
     }
 
     override fun openSavedFolder(path: String) {

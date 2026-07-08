@@ -20,3 +20,7 @@
 -keepclassmembers class * {
     @kotlinx.serialization.Serializable *;
 }
+
+# Rhino rules
+-dontwarn java.beans.**
+-dontwarn javax.script.**

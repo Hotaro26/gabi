@@ -78,6 +78,8 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
             lowerUrl.contains("tumblr.com") ||
             lowerUrl.contains("flickr.com") -> "gallery-dl"
             
+            lowerUrl.contains("youtube.com") || lowerUrl.contains("youtu.be") || lowerUrl.contains("soundcloud.com") -> "newpipe"
+            
             else -> "yt-dlp"
         }
     }
@@ -107,9 +109,12 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     private val _previewMetadata = MutableStateFlow<ExtractionResult?>(null)
     val previewMetadata: StateFlow<ExtractionResult?> = _previewMetadata
 
-    var downloadPath = mutableStateOf("Movies/Gabi")
+    var downloadPath = mutableStateOf("Download/Gabi")
     var selectedFolderUri = mutableStateOf<String?>(null)
     var selectedFolderName = mutableStateOf<String?>(null)
+
+    var newPipeQuery = mutableStateOf("")
+    var newPipeResults = mutableStateOf<List<org.schabi.newpipe.extractor.stream.StreamInfoItem>>(emptyList())
 
     // Appearance Settings
     var themeMode = mutableIntStateOf(0)
@@ -178,6 +183,47 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                         ext = detectedExt
                     )
                 }
+            } else if (engine == "newpipe") {
+                logToConsole("Executing NewPipeExtractor...")
+                try {
+                    val service = org.schabi.newpipe.extractor.NewPipe.getServiceByUrl(url)
+                    val urlObj = service.getStreamExtractor(url)
+                    urlObj.fetchPage()
+                    
+                    val allVideos = urlObj.videoStreams
+                    val bestVideo = if (quality == "best" || quality.isBlank()) {
+                        allVideos.maxByOrNull { it.resolution.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0 }
+                    } else {
+                        // Attempt to match the exact quality string (e.g. "1080", "720")
+                        allVideos.filter { it.resolution.contains(quality.replace("p", "")) }
+                            .maxByOrNull { it.resolution.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0 } 
+                            ?: allVideos.maxByOrNull { it.resolution.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0 }
+                    }
+                    val englishAudio = urlObj.audioStreams.filter { it.audioLocale?.language == "en" }
+                    val defaultAudio = urlObj.audioStreams.filter { it.audioLocale == null }
+                    
+                    val bestAudio = englishAudio.maxByOrNull { it.averageBitrate }
+                        ?: defaultAudio.maxByOrNull { it.averageBitrate }
+                        ?: urlObj.audioStreams.maxByOrNull { it.averageBitrate }
+                    
+                    val streamUrl = if (mode == "audio") bestAudio?.content else bestVideo?.content ?: bestAudio?.content
+                    val ext = if (mode == "audio") "m4a" else bestVideo?.getFormat()?.suffix ?: "mp4"
+                    
+                    if (streamUrl != null) {
+                        com.material.downloader.api.ExtractionResult(
+                            status = "success",
+                            url = streamUrl,
+                            title = urlObj.name,
+                            author = urlObj.uploaderName,
+                            thumbnail = urlObj.thumbnails?.firstOrNull()?.url ?: "",
+                            ext = ext
+                        )
+                    } else {
+                        com.material.downloader.api.ExtractionResult(status = "error", message = "No streams found")
+                    }
+                } catch (e: Exception) {
+                    com.material.downloader.api.ExtractionResult(status = "error", message = e.message ?: "NewPipe extraction failed")
+                }
             } else {
                 logToConsole("Executing $engine extractor in Python...")
                 val res = extractor.extract(url, quality, mode, engine)
@@ -202,7 +248,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                 var result: com.material.downloader.api.ExtractionResult? = null
                 val enginesToTry = if (engine == "dynamic") {
                     val firstEngine = getDynamicEngine(url)
-                    val allEngines = listOf("cobalt", "yt-dlp", "gallery-dl")
+                    val allEngines = listOf("cobalt", "yt-dlp", "gallery-dl", "newpipe")
                     listOf(firstEngine) + allEngines.filter { it != firstEngine }
                 } else {
                     listOf(engine)
@@ -245,12 +291,12 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
             logToConsole("Starting download process for $url (Engine: $engine)")
             
             try {
-                var result = _previewMetadata.value
-                if (result == null) {
-                    logToConsole("No cached preview. Performing extraction first...")
+                logToConsole("Performing extraction for download...")
+                var result: com.material.downloader.api.ExtractionResult? = _previewMetadata.value
+                if (result?.status != "success" || result.url.isNullOrBlank()) {
                     val enginesToTry = if (engine == "dynamic") {
                         val firstEngine = getDynamicEngine(url)
-                        val allEngines = listOf("cobalt", "yt-dlp", "gallery-dl")
+                        val allEngines = listOf("cobalt", "yt-dlp", "gallery-dl", "newpipe")
                         listOf(firstEngine) + allEngines.filter { it != firstEngine }
                     } else {
                         listOf(engine)
@@ -268,6 +314,10 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                         }
                     }
                 }
+
+                if (result == null || result.status != "success") {
+                    throw Exception(result?.message ?: "All extraction engines failed.")
+                }
                 
                 if (result?.status == "success") {
                     val isGallery = result.is_gallery == true
@@ -283,8 +333,12 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                             val sanitizedTitle = title.replace(Regex("[^a-zA-Z0-9]"), "_")
                             val fileName = "${sanitizedTitle}_${index + 1}_${System.currentTimeMillis()}.$extension"
                             
-                            // Automatically save galleries to Pictures/Gabi instead of Movies/Gabi
-                            val targetPath = if (downloadPath.value == "Movies/Gabi") "Pictures/Gabi" else downloadPath.value
+                            // Automatically save galleries to Pictures/Gabi and audio to Music/Gabi
+                            val targetPath = when {
+                                isGallery && downloadPath.value == "Downloads/Gabi" -> "Pictures/Gabi"
+                                mode == "audio" && downloadPath.value == "Downloads/Gabi" -> "Music/Gabi"
+                                else -> downloadPath.value
+                            }
                             logToConsole("Downloading file [${index + 1}/$totalFiles]: $fileName")
                             
                             downloader.downloadFile(
@@ -327,7 +381,11 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                         val sanitizedTitle = title.replace(Regex("[^a-zA-Z0-9]"), "_")
                         val fileName = "${sanitizedTitle}_${System.currentTimeMillis()}.$extension"
                         
-                        val targetPath = if (isGallery && downloadPath.value == "Movies/Gabi") "Pictures/Gabi" else downloadPath.value
+                        val targetPath = when {
+                            isGallery && downloadPath.value == "Download/Gabi" -> "Pictures/Gabi"
+                            mode == "audio" && downloadPath.value == "Download/Gabi" -> "Music/Gabi"
+                            else -> downloadPath.value
+                        }
                         logToConsole("Downloading file: $fileName")
                         
                         downloader.downloadFile(
@@ -349,10 +407,11 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                                 val folderUri = if (selectedFolderUri.value != null) {
                                     Uri.parse(selectedFolderUri.value)
                                 } else {
-                                    val mediaDir = if (targetPath.startsWith("Pictures")) {
-                                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-                                    } else {
-                                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
+                                    val mediaDir = when {
+                                        targetPath.startsWith("Pictures") -> Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                                        targetPath.startsWith("Music") -> Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)
+                                        targetPath.startsWith("Downloads") -> Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                                        else -> Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
                                     }
                                     Uri.parse("content://media/external/file/").buildUpon()
                                         .appendQueryParameter("path", mediaDir.absolutePath + "/" + targetPath)
