@@ -34,6 +34,8 @@ class MainActivity : ComponentActivity() {
         if (!Python.isStarted()) {
             Python.start(AndroidPlatform(this))
         }
+        
+        org.schabi.newpipe.extractor.NewPipe.init(com.material.downloader.api.OkHttpDownloader())
 
         // Request notification permission for Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

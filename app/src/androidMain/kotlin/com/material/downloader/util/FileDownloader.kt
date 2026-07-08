@@ -99,6 +99,7 @@ class FileDownloader(private val context: Context, private val client: HttpClien
         val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val volume = MediaStore.VOLUME_EXTERNAL_PRIMARY
             when {
+                relativePath.startsWith("Download") -> MediaStore.Downloads.getContentUri(volume)
                 mimeType.startsWith("image/") -> MediaStore.Images.Media.getContentUri(volume)
                 mimeType.startsWith("audio/") -> MediaStore.Audio.Media.getContentUri(volume)
                 else -> MediaStore.Video.Media.getContentUri(volume)
