@@ -28,40 +28,39 @@ class FileDownloader(private val context: Context, private val client: HttpClien
         emit(DownloadState.Downloading(0f))
         
         try {
-            val response = client.get(url)
-            
-            if (response.status.value !in 200..299) {
-                throw Exception("Server returned status ${response.status.value}: ${response.status.description}")
-            }
+            client.prepareGet(url).execute { response ->
+                if (response.status.value !in 200..299) {
+                    throw Exception("Server returned status ${response.status.value}: ${response.status.description}")
+                }
 
-            val contentLength = response.headers[io.ktor.http.HttpHeaders.ContentLength]?.toLong() ?: -1L
-            val channel: ByteReadChannel = response.bodyAsChannel()
-            
-            val uri = if (customFolderUri != null) {
-                createSafUri(Uri.parse(customFolderUri), fileName)
-            } else {
-                createMediaStoreUri(fileName, relativePath)
-            } ?: throw Exception("Could not create destination file")
-            
-            context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                var bytesRead = 0L
-                val buffer = ByteArray(8192)
-                while (!channel.isClosedForRead) {
-                    val packet = channel.readRemaining(buffer.size.toLong())
-                    while (!packet.isEmpty) {
-                        val length = packet.remaining.toInt()
-                        packet.readAvailable(buffer, 0, length)
-                        outputStream.write(buffer, 0, length)
-                        bytesRead += length
-                        
-                        if (contentLength > 0) {
-                            emit(DownloadState.Downloading(bytesRead.toFloat() / contentLength))
+                val contentLength = response.headers[io.ktor.http.HttpHeaders.ContentLength]?.toLong() ?: -1L
+                val channel: ByteReadChannel = response.bodyAsChannel()
+                
+                val uri = if (customFolderUri != null) {
+                    createSafUri(Uri.parse(customFolderUri), fileName)
+                } else {
+                    createMediaStoreUri(fileName, relativePath)
+                } ?: throw Exception("Could not create destination file")
+                
+                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    var bytesRead = 0L
+                    val buffer = ByteArray(8192)
+                    while (!channel.isClosedForRead) {
+                        val packet = channel.readRemaining(buffer.size.toLong())
+                        while (!packet.isEmpty) {
+                            val length = packet.remaining.toInt()
+                            packet.readAvailable(buffer, 0, length)
+                            outputStream.write(buffer, 0, length)
+                            bytesRead += length
+                            
+                            if (contentLength > 0) {
+                                emit(DownloadState.Downloading(bytesRead.toFloat() / contentLength))
+                            }
                         }
                     }
                 }
+                emit(DownloadState.Success(uri.toString()))
             }
-            
-            emit(DownloadState.Success(uri.toString()))
         } catch (e: Exception) {
             emit(DownloadState.Error(e.message ?: "Unknown error"))
         }
