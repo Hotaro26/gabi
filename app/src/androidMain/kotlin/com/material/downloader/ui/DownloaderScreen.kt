@@ -48,6 +48,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -79,6 +83,8 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
     val isExpanded = windowSize.widthSizeClass != WindowWidthSizeClass.Compact
     
     var selectedTab by remember { mutableIntStateOf(0) }
+
+    
     var url by remember { mutableStateOf("") }
     var quality by remember { mutableStateOf("720") }
     var downloadMode by remember { mutableStateOf("auto") }
@@ -124,17 +130,18 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
     LaunchedEffect(externalUrl) {
         externalUrl?.let { 
             url = it
-            viewModel.fetchPreview(it, quality, downloadMode, engine)
             viewModel.consumeSharedUrl()
         }
     }
 
-    LaunchedEffect(url, engine, quality, downloadMode) {
+    LaunchedEffect(url, engine) {
         if (url.isNotBlank() && url.startsWith("http")) {
             delay(1000) // Debounce for 1 second
             viewModel.fetchPreview(url, quality, downloadMode, engine)
         }
     }
+
+
 
     if (showClearLogsDialog) {
         AlertDialog(
@@ -613,6 +620,11 @@ fun MainDownloaderTab(
     var modeExpanded by remember { mutableStateOf(false) }
     var engineExpanded by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
+    var showFullscreenLogs by remember { mutableStateOf(false) }
+    
+    BackHandler(enabled = showFullscreenLogs) {
+        showFullscreenLogs = false
+    }
     
     val clipboardManager = LocalClipboardManager.current
     val consoleLogs by viewModel.consoleLogs.collectAsState()
@@ -913,8 +925,19 @@ fun MainDownloaderTab(
                         }
                     }
                     DropdownMenu(expanded = qualityExpanded, onDismissRequest = { qualityExpanded = false }) {
-                        val options = if (downloadMode == "audio") listOf("480" to "Low", "720" to "Medium", "1080" to "High", "max" to "Best")
-                                     else listOf("480" to "480p", "720" to "720p", "1080" to "1080p", "max" to "Max Quality")
+                        val options = if (downloadMode == "audio") {
+                            listOf("480" to "Low", "720" to "Medium", "1080" to "High", "max" to "Best")
+                        } else {
+                            val avQuals = preview?.available_qualities
+                            if (!avQuals.isNullOrEmpty()) {
+                                avQuals.map { 
+                                    val clean = it.replace("p", "")
+                                    clean to it
+                                } + listOf("max" to "Max Quality")
+                            } else {
+                                listOf("480" to "480p", "720" to "720p", "1080" to "1080p", "max" to "Max Quality")
+                            }
+                        }
                         options.forEach { (valStr, label) ->
                             DropdownMenuItem(
                                 text = { Text(label) },
@@ -970,7 +993,12 @@ fun MainDownloaderTab(
         // Terminal CLI Component
         val currentTerminalTheme = viewModel.terminalTheme.value
         Card(
-            modifier = Modifier.fillMaxWidth().height(180.dp),
+            modifier = Modifier.fillMaxWidth().height(180.dp)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onDoubleTap = { showFullscreenLogs = true }
+                    )
+                },
             colors = CardDefaults.cardColors(containerColor = Color(currentTerminalTheme.background)),
             border = BorderStroke(1.dp, Color(currentTerminalTheme.header)),
             shape = RoundedCornerShape(16.dp)
@@ -1034,6 +1062,69 @@ fun MainDownloaderTab(
                             fontSize = 11.sp,
                             lineHeight = 14.sp
                         )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showFullscreenLogs) {
+        Dialog(
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+            onDismissRequest = { showFullscreenLogs = false }
+        ) {
+            val currentTerminalTheme = viewModel.terminalTheme.value
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = Color(currentTerminalTheme.background)
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(currentTerminalTheme.header))
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { showFullscreenLogs = false }) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color(currentTerminalTheme.text)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            text = "Terminal Logs",
+                            color = Color(currentTerminalTheme.text),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+                    
+                    val lazyListState = rememberLazyListState()
+                    LaunchedEffect(consoleLogs.size) {
+                        if (consoleLogs.isNotEmpty()) {
+                            lazyListState.animateScrollToItem(consoleLogs.size - 1)
+                        }
+                    }
+                    
+                    LazyColumn(
+                        state = lazyListState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        items(consoleLogs) { log ->
+                            Text(
+                                text = log,
+                                color = Color(currentTerminalTheme.text),
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp
+                            )
+                        }
                     }
                 }
             }
@@ -1172,7 +1263,23 @@ fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = 
         currentScreen = "Main"
     }
     
-    Crossfade(targetState = currentScreen, animationSpec = spring(stiffness = Spring.StiffnessLow), label = "settings_nav") { screen ->
+    AnimatedContent(
+        targetState = currentScreen,
+        transitionSpec = {
+            if (targetState != "Main") {
+                // Slide in from right, exit to left
+                (slideInHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { it } + fadeIn()).togetherWith(
+                    slideOutHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { -it } + fadeOut()
+                )
+            } else {
+                // Slide in from left, exit to right
+                (slideInHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { -it } + fadeIn()).togetherWith(
+                    slideOutHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { it } + fadeOut()
+                )
+            }.using(SizeTransform(clip = false))
+        },
+        label = "settings_nav"
+    ) { screen ->
         when (screen) {
             "Main" -> SettingsMainList(onNavigate = { currentScreen = it }, contentPadding = contentPadding)
             "Customisation" -> CustomisationScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
@@ -1416,7 +1523,7 @@ fun DeveloperScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
             shape = RoundedCornerShape(20.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Gabi v3.3", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                Text("Gabi v3.7", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                 Text("Powered by yt-dlp, gallery-dl & Chaquopy", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }

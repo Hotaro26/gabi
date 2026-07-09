@@ -22,6 +22,8 @@ import coil.compose.AsyncImage
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,7 +120,7 @@ fun NewPipeTab(
                                 AsyncImage(
                                     model = item.thumbnails?.firstOrNull()?.url ?: "",
                                     contentDescription = null,
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
                                     contentScale = androidx.compose.ui.layout.ContentScale.Crop
                                 )
                             }

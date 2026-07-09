@@ -32,17 +32,6 @@ def extract_video(url, quality='720', mode='auto'):
             'extract_flat': False, # Resolve direct URLs
         }
         
-        # Configure format to prefer single-file formats (merged) since we use Ktor for downloading
-        if mode == 'audio':
-            ydl_opts['format'] = 'bestaudio/best'
-        else:
-            # Prefer merged mp4 or the best single file that contains both video and audio
-            # DASH streams (bestvideo+bestaudio) require ffmpeg to merge, which isn't available
-            if quality == 'max':
-                ydl_opts['format'] = 'best[ext=mp4]/best'
-            else:
-                ydl_opts['format'] = f'best[height<={quality}][ext=mp4]/best[height<={quality}]/best'
-
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             try:
                 info = ydl.extract_info(url.strip(), download=False)
@@ -50,25 +39,86 @@ def extract_video(url, quality='720', mode='auto'):
                 # Handle playlists or multi-video entries
                 video = info['entries'][0] if 'entries' in info and len(info['entries']) > 0 else info
                 
-                # Find the best direct URL
-                download_url = video.get('url')
-                if not download_url and 'formats' in video:
-                    # Fallback to the best resolved format URL
-                    formats = [f for f in video['formats'] if f.get('url')]
-                    if formats:
-                        download_url = formats[-1].get('url') # 'best' is usually at the end
+                formats = video.get('formats', [])
+                
+                # 1. Determine all available video qualities and max_resolution
+                available_qualities = []
+                max_res = 0
+                for fmt in formats:
+                    h = fmt.get('height')
+                    if h and isinstance(h, int):
+                        if h > max_res:
+                            max_res = h
+                        res_str = f"{h}p"
+                        if res_str not in available_qualities:
+                            available_qualities.append(res_str)
+                
+                # Sort descending
+                available_qualities.sort(key=lambda x: int(x.replace('p', '')), reverse=True)
+                max_res_str = f"{max_res}p" if max_res > 0 else None
 
-                if not download_url:
+                video_url = None
+                audio_url = None
+                
+                # 2. Select formats based on mode & requested quality
+                if mode == 'audio':
+                    audio_fmts = [f for f in formats if f.get('acodec') != 'none' and f.get('vcodec') == 'none' and f.get('url')]
+                    if audio_fmts:
+                        # Prefer m4a for compatibility
+                        m4a_audio = [f for f in audio_fmts if f.get('ext') == 'm4a']
+                        if m4a_audio:
+                            audio_fmts = m4a_audio
+                        audio_fmts.sort(key=lambda x: x.get('abr') or x.get('bitrate') or 0)
+                        video_url = audio_fmts[-1].get('url')
+                    else:
+                        video_url = video.get('url')
+                else:
+                    video_fmts = [f for f in formats if f.get('vcodec') != 'none' and f.get('url')]
+                    if video_fmts:
+                        if quality == 'max':
+                            video_fmts.sort(key=lambda x: (x.get('height') or 0, x.get('tbr') or x.get('bitrate') or 0))
+                            selected_video = video_fmts[-1]
+                        else:
+                            try:
+                                target_h = int(quality.replace('p', ''))
+                            except ValueError:
+                                target_h = 720
+                            
+                            matching_fmts = [f for f in video_fmts if f.get('height') and f.get('height') <= target_h]
+                            if matching_fmts:
+                                matching_fmts.sort(key=lambda x: (x.get('height') or 0, x.get('tbr') or x.get('bitrate') or 0))
+                                selected_video = matching_fmts[-1]
+                            else:
+                                video_fmts.sort(key=lambda x: (x.get('height') or 0, x.get('tbr') or x.get('bitrate') or 0))
+                                selected_video = video_fmts[-1]
+                        
+                        video_url = selected_video.get('url')
+                        
+                        if selected_video.get('acodec') == 'none':
+                            audio_fmts = [f for f in formats if f.get('acodec') != 'none' and f.get('vcodec') == 'none' and f.get('url')]
+                            if audio_fmts:
+                                m4a_audio = [f for f in audio_fmts if f.get('ext') == 'm4a']
+                                if m4a_audio:
+                                    audio_fmts = m4a_audio
+                                audio_fmts.sort(key=lambda x: x.get('abr') or x.get('bitrate') or 0)
+                                audio_url = audio_fmts[-1].get('url')
+                    else:
+                        video_url = video.get('url')
+
+                if not video_url:
                     return json.dumps({'status': 'error', 'message': 'Could not resolve a direct download URL.'})
 
                 return json.dumps({
                     'status': 'success',
-                    'url': download_url,
+                    'url': video_url,
+                    'audio_url': audio_url,
                     'title': video.get('title', 'video'),
                     'author': video.get('uploader') or video.get('channel') or 'Unknown',
                     'thumbnail': video.get('thumbnail'),
                     'size': video.get('filesize_approx') or video.get('filesize') or 0,
-                    'ext': 'mp3' if mode == 'audio' else video.get('ext', 'mp4')
+                    'ext': 'mp3' if mode == 'audio' else video.get('ext', 'mp4'),
+                    'max_resolution': max_res_str,
+                    'available_qualities': available_qualities
                 })
             except Exception as e:
                 return json.dumps({'status': 'error', 'message': f"yt-dlp error: {str(e)}"})

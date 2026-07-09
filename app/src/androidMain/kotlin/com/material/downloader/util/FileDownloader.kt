@@ -66,7 +66,45 @@ class FileDownloader(private val context: Context, private val client: HttpClien
         }
     }
 
-    private fun getMimeTypeFromExtension(fileName: String): String {
+    suspend fun downloadFileToPath(
+        url: String, 
+        destFile: java.io.File
+    ): Flow<DownloadState> = flow {
+        emit(DownloadState.Downloading(0f))
+        try {
+            client.prepareGet(url).execute { response ->
+                if (response.status.value !in 200..299) {
+                    throw Exception("Server returned status ${response.status.value}: ${response.status.description}")
+                }
+
+                val contentLength = response.headers[io.ktor.http.HttpHeaders.ContentLength]?.toLong() ?: -1L
+                val channel: ByteReadChannel = response.bodyAsChannel()
+                
+                destFile.outputStream().use { outputStream ->
+                    var bytesRead = 0L
+                    val buffer = ByteArray(8192)
+                    while (!channel.isClosedForRead) {
+                        val packet = channel.readRemaining(buffer.size.toLong())
+                        while (!packet.isEmpty) {
+                            val length = packet.remaining.toInt()
+                            packet.readAvailable(buffer, 0, length)
+                            outputStream.write(buffer, 0, length)
+                            bytesRead += length
+                            
+                            if (contentLength > 0) {
+                                emit(DownloadState.Downloading(bytesRead.toFloat() / contentLength))
+                            }
+                        }
+                    }
+                }
+                emit(DownloadState.Success(destFile.absolutePath))
+            }
+        } catch (e: Exception) {
+            emit(DownloadState.Error(e.message ?: "Unknown error"))
+        }
+    }
+
+    fun getMimeTypeFromExtension(fileName: String): String {
         val ext = fileName.substringAfterLast('.', "").lowercase()
         return when (ext) {
             "jpg", "jpeg" -> "image/jpeg"
@@ -84,7 +122,7 @@ class FileDownloader(private val context: Context, private val client: HttpClien
         }
     }
 
-    private fun createMediaStoreUri(fileName: String, relativePath: String): Uri? {
+    fun createMediaStoreUri(fileName: String, relativePath: String): Uri? {
         val mimeType = getMimeTypeFromExtension(fileName)
         val contentValues = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
@@ -114,7 +152,7 @@ class FileDownloader(private val context: Context, private val client: HttpClien
         return context.contentResolver.insert(collection, contentValues)
     }
 
-    private fun createSafUri(folderUri: Uri, fileName: String): Uri? {
+    fun createSafUri(folderUri: Uri, fileName: String): Uri? {
         val mimeType = getMimeTypeFromExtension(fileName)
         val directory = DocumentFile.fromTreeUri(context, folderUri)
         val file = directory?.createFile(mimeType, fileName)

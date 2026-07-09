@@ -94,6 +94,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     fun logToConsole(message: String) {
         val timestamp = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
         _consoleLogs.value = _consoleLogs.value + "[$timestamp] $message"
+        android.util.Log.d("GabiApp", message)
     }
 
     fun clearConsole() {
@@ -190,33 +191,72 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                     val urlObj = service.getStreamExtractor(url)
                     urlObj.fetchPage()
                     
-                    val allVideos = urlObj.videoStreams
-                    val bestVideo = if (quality == "best" || quality.isBlank()) {
-                        allVideos.maxByOrNull { it.resolution.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0 }
+                    val videoOnlyStreams = urlObj.videoOnlyStreams
+                    val progressiveStreams = urlObj.videoStreams
+                    val qualityClean = quality.replace("p", "")
+
+                    val selectedVideo = if (mode == "audio") {
+                        null
                     } else {
-                        // Attempt to match the exact quality string (e.g. "1080", "720")
-                        allVideos.filter { it.resolution.contains(quality.replace("p", "")) }
-                            .maxByOrNull { it.resolution.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0 } 
-                            ?: allVideos.maxByOrNull { it.resolution.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0 }
+                        val matchedVideoOnly = if (quality == "best" || quality.isBlank()) {
+                            videoOnlyStreams.maxByOrNull { it.resolution.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0 }
+                        } else {
+                            videoOnlyStreams.find { it.resolution.contains(qualityClean) }
+                        }
+                        
+                        val matchedProgressive = if (quality == "best" || quality.isBlank()) {
+                            progressiveStreams.maxByOrNull { it.resolution.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0 }
+                        } else {
+                            progressiveStreams.find { it.resolution.contains(qualityClean) }
+                        }
+                        
+                        val videoOnlyRes = matchedVideoOnly?.resolution?.replace(Regex("[^0-9]"), "")?.toIntOrNull() ?: 0
+                        val progressiveRes = matchedProgressive?.resolution?.replace(Regex("[^0-9]"), "")?.toIntOrNull() ?: 0
+                        
+                        if (videoOnlyRes > progressiveRes) {
+                            matchedVideoOnly
+                        } else {
+                            matchedProgressive ?: matchedVideoOnly ?: progressiveStreams.maxByOrNull { it.resolution.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0 }
+                        }
                     }
-                    val englishAudio = urlObj.audioStreams.filter { it.audioLocale?.language == "en" }
-                    val defaultAudio = urlObj.audioStreams.filter { it.audioLocale == null }
+
+                    val m4aAudioStreams = urlObj.audioStreams.filter { it.getFormat()?.suffix == "m4a" }
+                    val englishAudio = m4aAudioStreams.filter { it.audioLocale?.language == "en" }
+                    val defaultAudio = m4aAudioStreams.filter { it.audioLocale == null }
                     
                     val bestAudio = englishAudio.maxByOrNull { it.averageBitrate }
                         ?: defaultAudio.maxByOrNull { it.averageBitrate }
+                        ?: m4aAudioStreams.maxByOrNull { it.averageBitrate }
                         ?: urlObj.audioStreams.maxByOrNull { it.averageBitrate }
+
+                    val isMuxingRequired = selectedVideo != null && videoOnlyStreams.contains(selectedVideo)
                     
-                    val streamUrl = if (mode == "audio") bestAudio?.content else bestVideo?.content ?: bestAudio?.content
-                    val ext = if (mode == "audio") "m4a" else bestVideo?.getFormat()?.suffix ?: "mp4"
+                    val streamUrl = if (mode == "audio") bestAudio?.content else selectedVideo?.content ?: bestAudio?.content
+                    val audioUrl = if (isMuxingRequired) bestAudio?.content else null
+                    val ext = if (mode == "audio") "m4a" else selectedVideo?.getFormat()?.suffix ?: "mp4"
                     
+                    val availableQuals = (videoOnlyStreams + progressiveStreams)
+                        .mapNotNull { it.resolution?.replace(Regex("[^0-9]"), "")?.toIntOrNull() }
+                        .distinct()
+                        .sortedDescending()
+                        .map { "${it}p" }
+                    
+                    val maxResInt = (videoOnlyStreams + progressiveStreams)
+                        .mapNotNull { it.resolution?.replace(Regex("[^0-9]"), "")?.toIntOrNull() }
+                        .maxOrNull()
+                    val maxResStr = if (maxResInt != null) "${maxResInt}p" else null
+
                     if (streamUrl != null) {
                         com.material.downloader.api.ExtractionResult(
                             status = "success",
                             url = streamUrl,
+                            audio_url = audioUrl,
                             title = urlObj.name,
                             author = urlObj.uploaderName,
                             thumbnail = urlObj.thumbnails?.firstOrNull()?.url ?: "",
-                            ext = ext
+                            ext = ext,
+                            max_resolution = maxResStr,
+                            available_qualities = availableQuals
                         )
                     } else {
                         com.material.downloader.api.ExtractionResult(status = "error", message = "No streams found")
@@ -243,7 +283,12 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
 
     fun fetchPreview(url: String, quality: String, mode: String = "auto", engine: String = "dynamic") {
         viewModelScope.launch {
-            logToConsole("Fetching preview: $url (Engine: $engine, Mode: $mode)")
+            clearConsole()
+            logToConsole("----------------------------------------")
+            logToConsole("[SYSTEM] Fetching video metadata...")
+            logToConsole("[INFO] URL: $url")
+            logToConsole("[INFO] Preferred Quality: ${quality}p | Engine: $engine")
+            logToConsole("----------------------------------------")
             try {
                 var result: com.material.downloader.api.ExtractionResult? = null
                 val enginesToTry = if (engine == "dynamic") {
@@ -255,19 +300,24 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                 }
 
                 for (currentEngine in enginesToTry) {
-                    logToConsole("Trying engine: $currentEngine")
+                    logToConsole("[SYSTEM] Querying extractor: $currentEngine...")
                     val currentResult = performExtraction(url, quality, mode, currentEngine)
                     if (currentResult.status == "success") {
                         result = currentResult
                         break
                     } else {
-                        logToConsole("Engine $currentEngine failed. ${if (enginesToTry.last() != currentEngine) "Trying next..." else "No more engines to try."}")
+                        logToConsole("[WARNING] Extractor $currentEngine failed. ${if (enginesToTry.last() != currentEngine) "Trying next candidate..." else "All candidates exhausted."}")
                         result = currentResult
                     }
                 }
 
                 if (result?.status == "success") {
-                    logToConsole("Preview loaded: '${result?.title}' by ${result?.author}")
+                    logToConsole("[SUCCESS] Metadata resolved successfully!")
+                    logToConsole("[INFO] Title: '${result?.title}'")
+                    logToConsole("[INFO] Author: ${result?.author}")
+                    result?.max_resolution?.let { maxRes ->
+                        logToConsole("Highest available resolution: $maxRes")
+                    }
                 }
                 _previewMetadata.value = result
             } catch (e: Exception) {
@@ -282,6 +332,84 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
         logToConsole("Cleared preview metadata")
     }
 
+    private fun muxVideoAudio(videoFile: java.io.File, audioFile: java.io.File, outputFile: java.io.File) {
+        val videoExtractor = android.media.MediaExtractor()
+        videoExtractor.setDataSource(videoFile.absolutePath)
+        
+        val audioExtractor = android.media.MediaExtractor()
+        audioExtractor.setDataSource(audioFile.absolutePath)
+        
+        val muxer = android.media.MediaMuxer(outputFile.absolutePath, android.media.MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+        
+        var videoTrackIndex = -1
+        for (i in 0 until videoExtractor.trackCount) {
+            val format = videoExtractor.getTrackFormat(i)
+            val mime = format.getString(android.media.MediaFormat.KEY_MIME) ?: ""
+            if (mime.startsWith("video/")) {
+                videoExtractor.selectTrack(i)
+                videoTrackIndex = muxer.addTrack(format)
+                break
+            }
+        }
+        
+        var audioTrackIndex = -1
+        for (i in 0 until audioExtractor.trackCount) {
+            val format = audioExtractor.getTrackFormat(i)
+            val mime = format.getString(android.media.MediaFormat.KEY_MIME) ?: ""
+            if (mime.startsWith("audio/")) {
+                audioExtractor.selectTrack(i)
+                audioTrackIndex = muxer.addTrack(format)
+                break
+            }
+        }
+        
+        if (videoTrackIndex == -1) {
+            videoExtractor.release()
+            audioExtractor.release()
+            throw java.io.IOException("Video track not found in source video stream")
+        }
+        if (audioTrackIndex == -1) {
+            videoExtractor.release()
+            audioExtractor.release()
+            throw java.io.IOException("Audio track not found in source audio stream")
+        }
+
+        muxer.start()
+        
+        val videoBuffer = java.nio.ByteBuffer.allocate(1024 * 1024)
+        val videoBufferInfo = android.media.MediaCodec.BufferInfo()
+        while (true) {
+            videoBufferInfo.offset = 0
+            videoBufferInfo.size = videoExtractor.readSampleData(videoBuffer, 0)
+            if (videoBufferInfo.size < 0) {
+                break
+            }
+            videoBufferInfo.presentationTimeUs = videoExtractor.sampleTime
+            videoBufferInfo.flags = videoExtractor.sampleFlags
+            muxer.writeSampleData(videoTrackIndex, videoBuffer, videoBufferInfo)
+            videoExtractor.advance()
+        }
+        
+        val audioBuffer = java.nio.ByteBuffer.allocate(1024 * 1024)
+        val audioBufferInfo = android.media.MediaCodec.BufferInfo()
+        while (true) {
+            audioBufferInfo.offset = 0
+            audioBufferInfo.size = audioExtractor.readSampleData(audioBuffer, 0)
+            if (audioBufferInfo.size < 0) {
+                break
+            }
+            audioBufferInfo.presentationTimeUs = audioExtractor.sampleTime
+            audioBufferInfo.flags = audioExtractor.sampleFlags
+            muxer.writeSampleData(audioTrackIndex, audioBuffer, audioBufferInfo)
+            audioExtractor.advance()
+        }
+        
+        muxer.stop()
+        muxer.release()
+        videoExtractor.release()
+        audioExtractor.release()
+    }
+
     fun downloadMedia(url: String, quality: String, mode: String = "auto", engine: String = "dynamic") {
         currentDownloadJob?.cancel()
         currentDownloadJob = viewModelScope.launch {
@@ -292,8 +420,8 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
             
             try {
                 logToConsole("Performing extraction for download...")
-                var result: com.material.downloader.api.ExtractionResult? = _previewMetadata.value
-                if (result?.status != "success" || result.url.isNullOrBlank()) {
+                var result: com.material.downloader.api.ExtractionResult? = null
+                if (result == null) {
                     val enginesToTry = if (engine == "dynamic") {
                         val firstEngine = getDynamicEngine(url)
                         val allEngines = listOf("cobalt", "yt-dlp", "gallery-dl", "newpipe")
@@ -386,24 +514,81 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                             mode == "audio" && downloadPath.value == "Download/Gabi" -> "Music/Gabi"
                             else -> downloadPath.value
                         }
-                        logToConsole("Downloading file: $fileName")
-                        
-                        downloader.downloadFile(
-                            url = downloadUrl, 
-                            fileName = fileName, 
-                            relativePath = targetPath,
-                            customFolderUri = selectedFolderUri.value
-                        ).collect { state ->
-                            _uiState.value = state
-                            if (state is DownloadState.Downloading) {
-                                notificationHelper.showProgressNotification(notificationId, title, (state.progress * 100).toInt())
-                            }
-                            if (state is DownloadState.Success) {
-                                val savedUri = Uri.parse(state.path)
-                                downloader.finalizeFile(savedUri, fileName)
-                                logDao.insertLog(DownloadLog(title = title, url = url, status = "Success", path = state.path))
+
+                        val audioUrl = result.audio_url
+                        if (audioUrl != null) {
+                            logToConsole("DASH stream detected. Starting split video and audio downloads...")
+                            val cacheDir = getApplication<Application>().cacheDir
+                            val tempVideoFile = java.io.File(cacheDir, "temp_video_${System.currentTimeMillis()}.mp4")
+                            val tempAudioFile = java.io.File(cacheDir, "temp_audio_${System.currentTimeMillis()}.m4a")
+                            val tempMuxedFile = java.io.File(cacheDir, "temp_muxed_${System.currentTimeMillis()}.mp4")
+
+                            try {
+                                logToConsole("Downloading video track: $downloadUrl")
+                                var videoSuccess = false
+                                downloader.downloadFileToPath(downloadUrl, tempVideoFile).collect { state ->
+                                    if (state is DownloadState.Downloading) {
+                                        val progress = state.progress / 2f
+                                        _uiState.value = DownloadState.Downloading(progress)
+                                        notificationHelper.showProgressNotification(notificationId, "$title (Video)", (progress * 100).toInt())
+                                    }
+                                    if (state is DownloadState.Success) {
+                                        videoSuccess = true
+                                    }
+                                    if (state is DownloadState.Error) {
+                                        logToConsole("Video download failed: ${state.message}")
+                                    }
+                                }
+
+                                if (!videoSuccess) {
+                                    throw Exception("Failed to download video track")
+                                }
+
+                                logToConsole("Downloading audio track: $audioUrl")
+                                var audioSuccess = false
+                                downloader.downloadFileToPath(audioUrl, tempAudioFile).collect { state ->
+                                    if (state is DownloadState.Downloading) {
+                                        val progress = 0.5f + (state.progress / 2f)
+                                        _uiState.value = DownloadState.Downloading(progress)
+                                        notificationHelper.showProgressNotification(notificationId, "$title (Audio)", (progress * 100).toInt())
+                                    }
+                                    if (state is DownloadState.Success) {
+                                        audioSuccess = true
+                                    }
+                                    if (state is DownloadState.Error) {
+                                        logToConsole("Audio download failed: ${state.message}")
+                                    }
+                                }
+
+                                if (!audioSuccess) {
+                                    throw Exception("Failed to download audio track")
+                                }
+
+                                logToConsole("Muxing video and audio tracks...")
+                                _uiState.value = DownloadState.Downloading(0.99f)
+                                notificationHelper.showProgressNotification(notificationId, "$title (Muxing...)", 99)
+                                
+                                muxVideoAudio(tempVideoFile, tempAudioFile, tempMuxedFile)
+                                logToConsole("Muxing completed successfully!")
+
+                                val targetUri = if (selectedFolderUri.value != null) {
+                                    downloader.createSafUri(Uri.parse(selectedFolderUri.value), fileName)
+                                } else {
+                                    downloader.createMediaStoreUri(fileName, targetPath)
+                                } ?: throw Exception("Could not create destination file")
+
+                                getApplication<Application>().contentResolver.openOutputStream(targetUri)?.use { outStream ->
+                                    tempMuxedFile.inputStream().use { inStream ->
+                                        inStream.copyTo(outStream)
+                                    }
+                                }
+
+                                downloader.finalizeFile(targetUri, fileName)
+                                logDao.insertLog(DownloadLog(title = title, url = url, status = "Success", path = targetUri.toString()))
                                 logToConsole("File saved successfully to $targetPath/$fileName")
                                 
+                                _uiState.value = DownloadState.Success(targetUri.toString())
+
                                 val folderUri = if (selectedFolderUri.value != null) {
                                     Uri.parse(selectedFolderUri.value)
                                 } else {
@@ -418,9 +603,47 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                                         .build()
                                 }
                                 notificationHelper.showProgressNotification(notificationId, title, 100, folderUri)
+                            } finally {
+                                if (tempVideoFile.exists()) tempVideoFile.delete()
+                                if (tempAudioFile.exists()) tempAudioFile.delete()
+                                if (tempMuxedFile.exists()) tempMuxedFile.delete()
                             }
-                            if (state is DownloadState.Error) {
-                                logToConsole("File download failed: ${state.message}")
+                        } else {
+                            logToConsole("Downloading file: $fileName")
+                            downloader.downloadFile(
+                                url = downloadUrl, 
+                                fileName = fileName, 
+                                relativePath = targetPath,
+                                customFolderUri = selectedFolderUri.value
+                            ).collect { state ->
+                                _uiState.value = state
+                                if (state is DownloadState.Downloading) {
+                                    notificationHelper.showProgressNotification(notificationId, title, (state.progress * 100).toInt())
+                                }
+                                if (state is DownloadState.Success) {
+                                    val savedUri = Uri.parse(state.path)
+                                    downloader.finalizeFile(savedUri, fileName)
+                                    logDao.insertLog(DownloadLog(title = title, url = url, status = "Success", path = state.path))
+                                    logToConsole("File saved successfully to $targetPath/$fileName")
+                                    
+                                    val folderUri = if (selectedFolderUri.value != null) {
+                                        Uri.parse(selectedFolderUri.value)
+                                    } else {
+                                        val mediaDir = when {
+                                            targetPath.startsWith("Pictures") -> Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                                            targetPath.startsWith("Music") -> Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)
+                                            targetPath.startsWith("Downloads") -> Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                                            else -> Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
+                                        }
+                                        Uri.parse("content://media/external/file/").buildUpon()
+                                            .appendQueryParameter("path", mediaDir.absolutePath + "/" + targetPath)
+                                            .build()
+                                    }
+                                    notificationHelper.showProgressNotification(notificationId, title, 100, folderUri)
+                                }
+                                if (state is DownloadState.Error) {
+                                    logToConsole("File download failed: ${state.message}")
+                                }
                             }
                         }
                     }
@@ -431,6 +654,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                     logToConsole("Download failed: $errorMsg")
                 }
             } catch (e: Exception) {
+                e.printStackTrace()
                 if (e is kotlinx.coroutines.CancellationException) {
                     _uiState.value = DownloadState.Idle
                     lastNotificationId?.let { notificationHelper.cancelNotification(it) }

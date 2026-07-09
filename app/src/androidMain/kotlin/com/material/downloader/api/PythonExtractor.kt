@@ -30,5 +30,8 @@ data class ExtractionResult(
     val size: Long? = null,
     val ext: String? = null,
     val is_gallery: Boolean? = null,
-    val message: String? = null
+    val message: String? = null,
+    val audio_url: String? = null,
+    val max_resolution: String? = null,
+    val available_qualities: List<String>? = null
 )
