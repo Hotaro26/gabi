@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.multiplatform")
@@ -103,10 +106,16 @@ android {
 
     signingConfigs {
         create("release") {
+            val keystorePropertiesFile = rootProject.file("local.properties")
+            val keystoreProperties = Properties()
+            if (keystorePropertiesFile.exists()) {
+                keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+            }
+
             storeFile = file("gabi-release.jks")
-            storePassword = "gabi123"
-            keyAlias = "gabi"
-            keyPassword = "gabi123"
+            storePassword = keystoreProperties.getProperty("KEYSTORE_PASSWORD") ?: ""
+            keyAlias = keystoreProperties.getProperty("KEY_ALIAS") ?: ""
+            keyPassword = keystoreProperties.getProperty("KEY_PASSWORD") ?: ""
         }
     }
 
