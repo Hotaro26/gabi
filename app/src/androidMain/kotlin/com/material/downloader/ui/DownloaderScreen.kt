@@ -6,6 +6,7 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -39,6 +40,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -241,11 +243,11 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                     label = { Text("Logs") }
                 )
                 NavigationRailItem(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
+                    selected = selectedTab == 3,
+                    onClick = { selectedTab = 3 },
                     icon = { 
                         val rotation by animateFloatAsState(
-                            targetValue = if (selectedTab == 2) 360f else 0f,
+                            targetValue = if (selectedTab == 3) 360f else 0f,
                             animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
                             label = "rotation"
                         )
@@ -425,35 +427,38 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                 }
             }
         ) { padding ->
-            Crossfade(
-                targetState = selectedTab,
-                animationSpec = spring(stiffness = Spring.StiffnessLow),
-                label = "tab_switch"
-            ) { tab ->
-                when (tab) {
-                    0 -> MainDownloaderTab(
-                        viewModel = viewModel,
-                        uiState = uiState,
-                        preview = preview,
-                        url = url,
-                        onUrlChange = { url = it },
-                        quality = quality,
-                        onQualityChange = { quality = it },
-                        downloadMode = downloadMode,
-                        onModeChange = { downloadMode = it },
-                        engine = engine,
-                        onEngineChange = { engine = it },
-                        contentPadding = padding
-                    )
-                    1 -> NewPipeTab(
-                        viewModel = viewModel,
-                        contentPadding = padding,
-                        onUrlSelected = { selectedUrl ->
-                            playingUrl = selectedUrl
-                        }
-                    )
-                    2 -> LogsTab(history, viewModel::deleteLog, contentPadding = padding)
-                    3 -> SettingsTab(viewModel, contentPadding = padding)
+            val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+            val screenMargin = if (isExpanded) (configuration.screenWidthDp * 0.20f).dp else 0.dp
+            Box(modifier = Modifier.fillMaxSize().padding(horizontal = screenMargin)) {
+                AnimatedContent(
+                    targetState = selectedTab,
+                    label = "tab_transition"
+                ) { tab ->
+                    when (tab) {
+                        0 -> MainDownloaderTab(
+                            viewModel = viewModel,
+                            uiState = uiState,
+                            preview = preview,
+                            url = url,
+                            onUrlChange = { url = it },
+                            quality = quality,
+                            onQualityChange = { quality = it },
+                            downloadMode = downloadMode,
+                            onModeChange = { downloadMode = it },
+                            engine = engine,
+                            onEngineChange = { engine = it },
+                            contentPadding = padding
+                        )
+                        1 -> NewPipeTab(
+                            viewModel = viewModel,
+                            contentPadding = padding,
+                            onUrlSelected = { selectedUrl ->
+                                playingUrl = selectedUrl
+                            }
+                        )
+                        2 -> LogsTab(history, viewModel::deleteLog, contentPadding = padding)
+                        3 -> SettingsTab(viewModel, contentPadding = padding)
+                    }
                 }
             }
         }
@@ -1121,16 +1126,197 @@ fun DownloadProgressBox(progress: Float, onCancel: () -> Unit) {
     }
 }
 
+@Composable
+fun SettingsListItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconColor: androidx.compose.ui.graphics.Color,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .background(iconColor, shape = CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = Color.White)
+        }
+        Spacer(Modifier.width(20.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = PaddingValues(0.dp)) {
-    var showPlatforms by remember { mutableStateOf(false) }
-    var showLicenses by remember { mutableStateOf(false) }
-    var showSupportDialog by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-    val scrollState = rememberScrollState()
-    val myUpiId = "9693703723@fam"
+    var currentScreen by remember { mutableStateOf("Main") }
+
+    BackHandler(enabled = currentScreen != "Main") {
+        currentScreen = "Main"
+    }
     
+    Crossfade(targetState = currentScreen, animationSpec = spring(stiffness = Spring.StiffnessLow), label = "settings_nav") { screen ->
+        when (screen) {
+            "Main" -> SettingsMainList(onNavigate = { currentScreen = it }, contentPadding = contentPadding)
+            "Customisation" -> CustomisationScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
+            "Downloads" -> DownloadsSettingsScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
+            "Developer" -> DeveloperScreen(onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
+            "Support" -> SupportScreen(onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
+        }
+    }
+}
+
+@Composable
+fun SettingsMainList(onNavigate: (String) -> Unit, contentPadding: PaddingValues) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(contentPadding)
+            .padding(horizontal = 16.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "Settings",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(vertical = 16.dp)
+        )
+        
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        ) {
+            Column {
+                SettingsListItem(
+                    icon = Icons.Default.Palette,
+                    iconColor = Color(0xFF88637B), // Mauve
+                    title = "Customisation",
+                    subtitle = "Themes, App Appearance, Terminal",
+                    onClick = { onNavigate("Customisation") }
+                )
+                HorizontalDivider(modifier = Modifier.alpha(0.1f))
+                SettingsListItem(
+                    icon = Icons.Default.FolderOpen,
+                    iconColor = Color(0xFF00758F), // Teal
+                    title = "Downloads",
+                    subtitle = "Storage location, rules",
+                    onClick = { onNavigate("Downloads") }
+                )
+                HorizontalDivider(modifier = Modifier.alpha(0.1f))
+                SettingsListItem(
+                    icon = Icons.Default.Code,
+                    iconColor = Color(0xFF4C6B8B), // Slate blue
+                    title = "Developer",
+                    subtitle = "App Info, Platforms, Licenses",
+                    onClick = { onNavigate("Developer") }
+                )
+                HorizontalDivider(modifier = Modifier.alpha(0.1f))
+                SettingsListItem(
+                    icon = Icons.Default.Favorite,
+                    iconColor = Color(0xFF7A4F5C), // Burgundy
+                    title = "Support",
+                    subtitle = "Help keep Gabi alive",
+                    onClick = { onNavigate("Support") }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentPadding: PaddingValues) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(contentPadding)
+            .padding(horizontal = 24.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 16.dp)) {
+            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
+            Spacer(Modifier.width(8.dp))
+            Text("Customisation", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        }
+        
+        Text("Appearance", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("System", "Light", "Dark").forEachIndexed { index, label ->
+                FilterChip(
+                    selected = viewModel.themeMode.intValue == index,
+                    onClick = { viewModel.themeMode.intValue = index },
+                    label = { Text(label) },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+        Text("Color Scheme", style = MaterialTheme.typography.titleMedium)
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            AppTheme.values().forEach { theme ->
+                FilterChip(
+                    selected = viewModel.selectedTheme.value == theme,
+                    onClick = { viewModel.selectedTheme.value = theme },
+                    label = { Text(theme.label) },
+                    leadingIcon = if (viewModel.selectedTheme.value == theme) {
+                        { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
+                    } else null,
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+        Text("Terminal Theme", style = MaterialTheme.typography.titleMedium)
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            TerminalTheme.values().forEach { theme ->
+                FilterChip(
+                    selected = viewModel.terminalTheme.value == theme,
+                    onClick = { viewModel.updateTerminalTheme(theme) },
+                    label = { Text(theme.displayName) },
+                    leadingIcon = if (viewModel.terminalTheme.value == theme) {
+                        { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
+                    } else null,
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentPadding: PaddingValues) {
+    val context = LocalContext.current
     val folderPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
@@ -1142,28 +1328,122 @@ fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = 
             viewModel.selectedFolderName.value = DocumentFile.fromTreeUri(context, it)?.name ?: "Selected Folder"
         }
     }
-
-    if (showSupportDialog) {
-        // ... (rest of the code remains the same)
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(contentPadding)
+            .padding(horizontal = 24.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 16.dp)) {
+            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
+            Spacer(Modifier.width(8.dp))
+            Text("Downloads", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        }
+        
+        Text("Download Repository", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("Files will be saved in your selected folder", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        
+        OutlinedCard(
+            onClick = { folderPickerLauncher.launch(null) },
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(Icons.Default.FolderOpen, null, tint = MaterialTheme.colorScheme.primary)
+                Column {
+                    Text(
+                        viewModel.selectedFolderName.value ?: "Select Folder",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    if (viewModel.selectedFolderUri.value == null) {
+                        Text("Default: Movies/Gabi", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        }
     }
+}
 
-    // ... (rest of the dialogs)
+@Composable
+fun DeveloperScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
+    val context = LocalContext.current
+    var showPlatforms by remember { mutableStateOf(false) }
+    var showLicenses by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding)
             .padding(horizontal = 24.dp)
-            .verticalScroll(scrollState)
-            .padding(top = 24.dp, bottom = 24.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Settings", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.height(24.dp))
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 16.dp)) {
+            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
+            Spacer(Modifier.width(8.dp))
+            Text("Developer", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        }
         
-        // Support Section
-        Text("Support Developer", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 4.dp))
+        Text("hotaro", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text("Building crisp, fast, and secure software.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AssistChip(
+                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Hotaro26"))) },
+                label = { Text("GitHub") },
+                shape = RoundedCornerShape(12.dp)
+            )
+            AssistChip(
+                onClick = { Toast.makeText(context, "Discord: oi.hotaro", Toast.LENGTH_LONG).show() },
+                label = { Text("Discord") },
+                shape = RoundedCornerShape(12.dp)
+            )
+        }
+        
+        Spacer(Modifier.height(16.dp))
+        Text("App Info", style = MaterialTheme.typography.titleMedium)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Gabi v3.3", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                Text("Powered by yt-dlp, gallery-dl & Chaquopy", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
+    val context = LocalContext.current
+    val myUpiId = "9693703723@fam"
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(contentPadding)
+            .padding(horizontal = 24.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 16.dp)) {
+            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
+            Spacer(Modifier.width(8.dp))
+            Text("Support", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        }
+        
         Surface(
-            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(28.dp),
             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
         ) {
@@ -1192,7 +1472,7 @@ fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = 
                             .appendQueryParameter("cu", "INR")
                             .build()
                         val upiIntent = Intent(Intent.ACTION_VIEW, uri)
-                        try { context.startActivity(upiIntent) } catch (e: Exception) { showSupportDialog = true }
+                        try { context.startActivity(upiIntent) } catch (e: Exception) { Toast.makeText(context, "No UPI app found", Toast.LENGTH_SHORT).show() }
                     },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -1204,171 +1484,6 @@ fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = 
                 }
             }
         }
-
-        Spacer(Modifier.height(24.dp))
-
-        // Customise Section
-        Text("Customise", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 4.dp))
-        Surface(
-            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-        ) {
-            Column(Modifier.padding(20.dp)) {
-                Text("Appearance", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(12.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("System", "Light", "Dark").forEachIndexed { index, label ->
-                        FilterChip(
-                            selected = viewModel.themeMode.intValue == index,
-                            onClick = { viewModel.themeMode.intValue = index },
-                            label = { Text(label) },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(24.dp))
-                Text("Color Scheme", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(12.dp))
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    AppTheme.values().forEach { theme ->
-                        FilterChip(
-                            selected = viewModel.selectedTheme.value == theme,
-                            onClick = { viewModel.selectedTheme.value = theme },
-                            label = { Text(theme.label) },
-                            leadingIcon = if (viewModel.selectedTheme.value == theme) {
-                                { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
-                            } else null,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(24.dp))
-                Text("Terminal Theme", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(12.dp))
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    TerminalTheme.values().forEach { theme ->
-                        FilterChip(
-                            selected = viewModel.terminalTheme.value == theme,
-                            onClick = { viewModel.updateTerminalTheme(theme) },
-                            label = { Text(theme.displayName) },
-                            leadingIcon = if (viewModel.terminalTheme.value == theme) {
-                                { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
-                            } else null,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                    }
-                }
-            }
-        }
-
-        Spacer(Modifier.height(24.dp))
-
-
-
-        // Repository Section
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-            shape = RoundedCornerShape(28.dp)
-        ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Text("Download Repository", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text("Files will be saved in your selected folder", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(16.dp))
-                
-                OutlinedCard(
-                    onClick = { folderPickerLauncher.launch(null) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Icon(Icons.Default.FolderOpen, null, tint = MaterialTheme.colorScheme.primary)
-                        Column {
-                            Text(
-                                viewModel.selectedFolderName.value ?: "Select Folder",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            if (viewModel.selectedFolderUri.value == null) {
-                                Text("Default: Movies/Gabi", style = MaterialTheme.typography.bodySmall)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        Spacer(Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            AssistChip(
-                onClick = { showPlatforms = true },
-                label = { Text("Platforms") },
-                leadingIcon = { Icon(Icons.Default.Info, null, modifier = Modifier.size(18.dp)) }
-            )
-            AssistChip(
-                onClick = { showLicenses = true },
-                label = { Text("Licenses") },
-                leadingIcon = { Icon(Icons.Default.Description, null, modifier = Modifier.size(18.dp)) }
-            )
-        }
-
-        Spacer(Modifier.height(32.dp))
-
-        // Developer Section
-        Text("Developer", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 4.dp))
-        Surface(
-            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-        ) {
-            Column(Modifier.padding(20.dp)) {
-                Text("hotaro", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text("Building crisp, fast, and secure software.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(16.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AssistChip(
-                        onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Hotaro26"))) },
-                        label = { Text("GitHub") },
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    AssistChip(
-                        onClick = { Toast.makeText(context, "Discord: oi.hotaro", Toast.LENGTH_LONG).show() },
-                        label = { Text("Discord") },
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                }
-            }
-        }
-
-        Spacer(Modifier.height(32.dp))
-        Text("App Info", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 4.dp))
-        Card(
-            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-            shape = RoundedCornerShape(20.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Gabi v3.3", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                Text("Powered by yt-dlp, gallery-dl & Chaquopy", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        Spacer(Modifier.height(32.dp))
     }
 }
 
