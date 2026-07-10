@@ -1,0 +1,8 @@
+Built with a modern Material 3 interface, Gabi allows you to download videos, audio, and image galleries from over 1000+ supported sites with ease. Right now, it has 4 engines: yt-dlp, gallery-dl, newpipe extractor, and cobalt api!
+
+Features:
+- Wide Support: Powered by yt-dlp, gallery-dl, and cobalt.
+- Media Flexibility: Download video up to 1080p/Max, audio MP3s, and full image galleries.
+- Smart Preview: See metadata like title, author, thumbnail before downloading.
+- Instant Action: One-Tap Download or Share to Gabi for immediate processing.
+- Customization: Beautiful Material You dynamic theming and custom color palettes.
