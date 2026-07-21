@@ -114,3 +114,62 @@ def extract_gallery(url, cookies_path=None):
                 return json.dumps({'status': 'error', 'message': 'No images found in gallery'})
         except Exception as e:
             return json.dumps({'status': 'error', 'message': str(e)})
+
+def get_versions():
+    try:
+        import yt_dlp.version
+        import gallery_dl
+        return json.dumps({
+            'status': 'success',
+            'yt_dlp': yt_dlp.version.__version__,
+            'gallery_dl': gallery_dl.__version__
+        })
+    except Exception as e:
+        return json.dumps({'status': 'error', 'message': str(e)})
+
+def update_extractors(target_path):
+    import io
+    import sys
+    try:
+        # Check if Chaquopy pip internal is available
+        try:
+            from pip._internal.cli.main import main as pip_main
+        except ImportError:
+            try:
+                from pip._internal import main as pip_main
+            except ImportError:
+                import pip
+                pip_main = getattr(pip, "main", None)
+
+        if not pip_main:
+            return json.dumps({'status': 'error', 'message': 'Pip is not available in this environment'})
+
+        # Monkey patch pip user_agent to prevent AssetPath crash in Chaquopy
+        try:
+            import pip._internal.network.session
+            pip._internal.network.session.user_agent = lambda *args, **kwargs: "pip/chaquopy"
+        except Exception:
+            pass
+
+        # Capture output
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        new_out = io.StringIO()
+        sys.stdout = new_out
+        sys.stderr = new_out
+
+        try:
+            exit_code = pip_main(["install", "--upgrade", "--target", target_path, "yt-dlp", "gallery-dl"])
+        except SystemExit as e:
+            exit_code = e.code
+        finally:
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+        
+        output = new_out.getvalue()
+        if exit_code == 0 or exit_code is None:
+            return json.dumps({'status': 'success', 'message': output})
+        else:
+            return json.dumps({'status': 'error', 'message': f'Pip failed with code {exit_code}. Output: {output}'})
+    except Exception as e:
+        return json.dumps({'status': 'error', 'message': str(e)})

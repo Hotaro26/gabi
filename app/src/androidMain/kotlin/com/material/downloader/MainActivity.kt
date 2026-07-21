@@ -25,14 +25,22 @@ import com.material.downloader.ui.DownloaderViewModel
 import com.material.downloader.ui.theme.ExpressiveTheme
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         
-        if (!Python.isStarted()) {
-            Python.start(AndroidPlatform(this))
+        CoroutineScope(Dispatchers.IO).launch {
+            if (!Python.isStarted()) {
+                Python.start(AndroidPlatform(this@MainActivity))
+                val py = Python.getInstance()
+                val customPath = java.io.File(filesDir, "python_packages").absolutePath
+                py.getModule("sys").get("path")?.callAttr("insert", 0, customPath)
+            }
         }
         
         org.schabi.newpipe.extractor.NewPipe.init(com.material.downloader.api.OkHttpDownloader())

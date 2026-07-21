@@ -17,6 +17,25 @@ class PythonExtractor {
             ExtractionResult(status = "error", message = e.message ?: "Python execution failed")
         }
     }
+
+    fun getVersions(): Map<String, String> {
+        return try {
+            val resultJson = module.callAttr("get_versions").toString()
+            val map = json.decodeFromString<Map<String, String>>(resultJson)
+            map
+        } catch (e: Exception) {
+            mapOf("status" to "error", "message" to (e.message ?: "Unknown error"))
+        }
+    }
+
+    fun updateExtractors(targetPath: String): Map<String, String> {
+        return try {
+            val resultJson = module.callAttr("update_extractors", targetPath).toString()
+            json.decodeFromString<Map<String, String>>(resultJson)
+        } catch (e: Exception) {
+            mapOf("status" to "error", "message" to (e.message ?: "Unknown error"))
+        }
+    }
 }
 
 @Serializable

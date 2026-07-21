@@ -12,6 +12,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.viewinterop.AndroidView
+import android.webkit.CookieManager
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -627,6 +632,7 @@ fun MainDownloaderTab(
     var engineExpanded by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
     var showFullscreenLogs by remember { mutableStateOf(false) }
+    var showPreviewSheet by remember { mutableStateOf(false) }
     var duplicateWarningUrl by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -750,6 +756,7 @@ fun MainDownloaderTab(
                                        engine == "gallery-dl"
                 
                 Card(
+                    onClick = { showPreviewSheet = true },
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                     shape = RoundedCornerShape(24.dp)
@@ -852,6 +859,119 @@ fun MainDownloaderTab(
                             }
                         }
                     }
+                }
+            }
+        }
+
+        if (showPreviewSheet && preview != null) {
+            val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            val meta = preview
+            val isImageOrGallery = meta.is_gallery == true || meta.ext in listOf("jpg", "jpeg", "png", "webp", "gif") || engine == "gallery-dl"
+
+            ModalBottomSheet(
+                onDismissRequest = { showPreviewSheet = false },
+                sheetState = sheetState,
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    if (isImageOrGallery) {
+                        val imageUrls = meta.urls ?: listOf(meta.thumbnail ?: meta.url ?: "")
+                        val validImageUrls = imageUrls.filter { !it.isNullOrBlank() }
+                        
+                        if (validImageUrls.isNotEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(300.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                            ) {
+                                val pagerState = rememberPagerState(pageCount = { validImageUrls.size })
+                                HorizontalPager(
+                                    state = pagerState,
+                                    modifier = Modifier.fillMaxSize()
+                                ) { page ->
+                                    AsyncImage(
+                                        model = validImageUrls[page],
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                }
+                                
+                                if (validImageUrls.size > 1) {
+                                    Surface(
+                                        color = Color.Black.copy(alpha = 0.6f),
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier
+                                            .padding(12.dp)
+                                            .align(Alignment.TopEnd)
+                                    ) {
+                                        Text(
+                                            text = "${pagerState.currentPage + 1} / ${validImageUrls.size}",
+                                            color = Color.White,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        val streamUrlToPlay = meta.url ?: ""
+                        if (streamUrlToPlay.isNotBlank()) {
+                            val exoPlayer = remember { androidx.media3.exoplayer.ExoPlayer.Builder(context).build() }
+                            DisposableEffect(streamUrlToPlay) {
+                                exoPlayer.setMediaItem(androidx.media3.common.MediaItem.fromUri(android.net.Uri.parse(streamUrlToPlay)))
+                                exoPlayer.prepare()
+                                exoPlayer.playWhenReady = true
+                                onDispose { exoPlayer.release() }
+                            }
+                            
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(250.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(Color.Black)
+                            ) {
+                                androidx.compose.ui.viewinterop.AndroidView(
+                                    factory = { ctx ->
+                                        androidx.media3.ui.PlayerView(ctx).apply {
+                                            player = exoPlayer
+                                            useController = true
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
+                    }
+                    
+                    Text(meta.title ?: "Unknown Title", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Text(meta.author ?: "Unknown Author", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        val isAudio = downloadMode == "audio" || meta.ext == "mp3" || meta.ext == "m4a"
+                        Card(modifier = Modifier.weight(1f), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+                            Column(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(if (isAudio) Icons.Default.MusicNote else Icons.Default.PlayArrow, null)
+                                Spacer(Modifier.height(4.dp))
+                                Text(if (isAudio) "Audio" else "Video", style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                        Card(modifier = Modifier.weight(1f), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+                            Column(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.Settings, null)
+                                Spacer(Modifier.height(4.dp))
+                                Text(if (quality == "best") "Best Quality" else "${quality}p", style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
                 }
             }
         }
@@ -1528,26 +1648,94 @@ fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, 
         }
     }
 
-    var hasCookies by remember { mutableStateOf(viewModel.getSetting("cookies_path", "").isNotEmpty()) }
+    var ytCookies by remember { mutableStateOf(viewModel.getSetting("yt_dlp_cookies_path", "").isNotEmpty()) }
+    var galleryCookies by remember { mutableStateOf(viewModel.getSetting("gallery_dl_cookies_path", "").isNotEmpty()) }
+    var targetEngineForCookies by remember { mutableStateOf<String?>(null) }
+    
+    var ytDlpVersion by remember { mutableStateOf("Fetching...") }
+    var galleryDlVersion by remember { mutableStateOf("Fetching...") }
+    var isUpdatingExtractors by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val versions = com.material.downloader.api.PythonExtractor().getVersions()
+                if (versions["status"] == "success") {
+                    ytDlpVersion = versions["yt_dlp"] ?: "Unknown"
+                    galleryDlVersion = versions["gallery_dl"] ?: "Unknown"
+                } else {
+                    ytDlpVersion = "Failed"
+                    galleryDlVersion = "Failed"
+                }
+            } catch(e: Exception) {
+                ytDlpVersion = "Error"
+                galleryDlVersion = "Error"
+            }
+        }
+    }
+    
     val cookiesPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let {
+            val engine = targetEngineForCookies ?: return@let
             try {
                 val inputStream = context.contentResolver.openInputStream(it)
-                val cookiesFile = java.io.File(context.filesDir, "cookies.txt")
+                val cookiesFile = java.io.File(context.filesDir, "${engine}_cookies.txt")
                 inputStream?.use { input ->
                     cookiesFile.outputStream().use { output ->
                         input.copyTo(output)
                     }
                 }
-                viewModel.saveSetting("cookies_path", cookiesFile.absolutePath)
-                hasCookies = true
-                android.widget.Toast.makeText(context, "Cookies imported successfully", android.widget.Toast.LENGTH_SHORT).show()
+                viewModel.saveSetting("${engine}_cookies_path", cookiesFile.absolutePath)
+                if (engine == "yt_dlp") ytCookies = true else galleryCookies = true
+                android.widget.Toast.makeText(context, "Cookies imported for $engine", android.widget.Toast.LENGTH_SHORT).show()
             } catch(e: Exception) {
                 android.widget.Toast.makeText(context, "Failed to import cookies", android.widget.Toast.LENGTH_SHORT).show()
             }
         }
+    }
+    
+    var showCookieExtractor by remember { mutableStateOf(false) }
+
+    if (showCookieExtractor && targetEngineForCookies != null) {
+        CookieExtractorDialog(
+            fileName = "${targetEngineForCookies}_cookies.txt",
+            onDismiss = { showCookieExtractor = false },
+            onCookiesExtracted = { path ->
+                val engine = targetEngineForCookies!!
+                viewModel.saveSetting("${engine}_cookies_path", path)
+                if (engine == "yt_dlp") ytCookies = true else galleryCookies = true
+                android.widget.Toast.makeText(context, "Cookies extracted for $engine", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+    
+    var showEngineChooser by remember { mutableStateOf(false) }
+    var chooserAction by remember { mutableStateOf("") }
+    
+    if (showEngineChooser) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showEngineChooser = false },
+            title = { Text("Select Target Extractor") },
+            text = { Text("Which extractor do you want to set cookies for?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showEngineChooser = false
+                    targetEngineForCookies = "yt_dlp"
+                    if (chooserAction == "import") cookiesPickerLauncher.launch(arrayOf("text/plain"))
+                    else showCookieExtractor = true
+                }) { Text("yt-dlp") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showEngineChooser = false
+                    targetEngineForCookies = "gallery_dl"
+                    if (chooserAction == "import") cookiesPickerLauncher.launch(arrayOf("text/plain"))
+                    else showCookieExtractor = true
+                }) { Text("gallery-dl") }
+            }
+        )
     }
     
     Column(
@@ -1595,11 +1783,40 @@ fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, 
         }
 
         Spacer(Modifier.height(16.dp))
-        Text("Extraction Credentials", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text("Import cookies.txt for private/age-restricted content", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Extractors", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("Update internal components", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         
         OutlinedCard(
-            onClick = { cookiesPickerLauncher.launch(arrayOf("text/plain")) },
+            onClick = {
+                if (isUpdatingExtractors) return@OutlinedCard
+                isUpdatingExtractors = true
+                android.widget.Toast.makeText(context, "Updating extractors... Please wait", android.widget.Toast.LENGTH_LONG).show()
+                val targetPath = java.io.File(context.filesDir, "python_packages").absolutePath
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    try {
+                        val result = com.material.downloader.api.PythonExtractor().updateExtractors(targetPath)
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            android.util.Log.e("ExtractorUpdate", "Result: $result")
+                            if (result["status"] == "success") {
+                                android.widget.Toast.makeText(context, "Extractors updated successfully! Please restart the app.", android.widget.Toast.LENGTH_LONG).show()
+                                val versions = com.material.downloader.api.PythonExtractor().getVersions()
+                                if (versions["status"] == "success") {
+                                    ytDlpVersion = versions["yt_dlp"] ?: ytDlpVersion
+                                    galleryDlVersion = versions["gallery_dl"] ?: galleryDlVersion
+                                }
+                            } else {
+                                android.widget.Toast.makeText(context, "Update failed: ${result["message"]}", android.widget.Toast.LENGTH_LONG).show()
+                            }
+                            isUpdatingExtractors = false
+                        }
+                    } catch(e: Exception) {
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            android.widget.Toast.makeText(context, "Error updating: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                            isUpdatingExtractors = false
+                        }
+                    }
+                }
+            },
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             shape = RoundedCornerShape(16.dp)
         ) {
@@ -1608,26 +1825,174 @@ fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, 
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(if (hasCookies) Icons.Default.CheckCircle else Icons.Default.VpnKey, null, tint = if (hasCookies) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary)
+                if (isUpdatingExtractors) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(Icons.Default.SystemUpdate, null, tint = MaterialTheme.colorScheme.primary)
+                }
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        if (hasCookies) "Cookies imported" else "Import cookies.txt",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
-                    )
-                    if (hasCookies) {
-                        Text("Active for yt-dlp & gallery-dl", style = MaterialTheme.typography.bodySmall, color = Color(0xFF4CAF50))
+                    Text("Update yt-dlp & gallery-dl", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Text("yt-dlp: $ytDlpVersion • gallery-dl: $galleryDlVersion", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+        Text("Extraction Credentials", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("Import cookies.txt for private/age-restricted content", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        
+        OutlinedCard(
+            onClick = {
+                chooserAction = "import"
+                showEngineChooser = true
+            },
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(Icons.Default.VpnKey, null, tint = MaterialTheme.colorScheme.primary)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Import cookies.txt", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (ytCookies) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(modifier = Modifier.size(8.dp).background(Color.Green, CircleShape))
+                                Spacer(Modifier.width(4.dp))
+                                Text("yt-dlp", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                        if (galleryCookies) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(modifier = Modifier.size(8.dp).background(Color.Green, CircleShape))
+                                Spacer(Modifier.width(4.dp))
+                                Text("gallery-dl", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
                     }
                 }
-                if (hasCookies) {
+                if (ytCookies || galleryCookies) {
                     IconButton(onClick = {
-                        val cookiesFile = java.io.File(context.filesDir, "cookies.txt")
-                        if (cookiesFile.exists()) cookiesFile.delete()
-                        viewModel.saveSetting("cookies_path", "")
-                        hasCookies = false
+                        val ytFile = java.io.File(context.filesDir, "yt_dlp_cookies.txt")
+                        val galFile = java.io.File(context.filesDir, "gallery_dl_cookies.txt")
+                        if (ytFile.exists()) ytFile.delete()
+                        if (galFile.exists()) galFile.delete()
+                        viewModel.saveSetting("yt_dlp_cookies_path", "")
+                        viewModel.saveSetting("gallery_dl_cookies_path", "")
+                        ytCookies = false
+                        galleryCookies = false
                     }) {
                         Icon(Icons.Default.Delete, contentDescription = "Remove cookies", tint = MaterialTheme.colorScheme.error)
                     }
+                }
+            }
+        }
+        
+        OutlinedCard(
+            onClick = {
+                chooserAction = "extract"
+                showEngineChooser = true
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(Icons.Default.Web, null, tint = MaterialTheme.colorScheme.primary)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Extract from Web Login", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Text("Login to sites to get cookies automatically", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
+
+fun saveCookiesToNetscapeFormat(context: android.content.Context, url: String, cookieString: String?, fileName: String): String {
+    if (cookieString.isNullOrEmpty()) return ""
+    val uri = android.net.Uri.parse(url)
+    val domain = uri.host ?: return ""
+    val cookiesFile = java.io.File(context.filesDir, fileName)
+    val out = StringBuilder()
+    if (!cookiesFile.exists()) {
+        out.append("# Netscape HTTP Cookie File\n\n")
+    } else {
+        out.append(cookiesFile.readText())
+    }
+    
+    val cookies = cookieString.split(";")
+    for (cookie in cookies) {
+        val parts = cookie.trim().split("=", limit = 2)
+        if (parts.size == 2) {
+            val name = parts[0]
+            val value = parts[1]
+            out.append("$domain\tTRUE\t/\tFALSE\t2147483647\t$name\t$value\n")
+        }
+    }
+    cookiesFile.writeText(out.toString())
+    return cookiesFile.absolutePath
+}
+
+@Composable
+fun CookieExtractorDialog(fileName: String, onDismiss: () -> Unit, onCookiesExtracted: (String) -> Unit) {
+    var url by remember { mutableStateOf("https://youtube.com") }
+    var currentUrl by remember { mutableStateOf("https://youtube.com") }
+    val context = LocalContext.current
+    
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(8.dp)) {
+                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Close") }
+                    OutlinedTextField(
+                        value = url,
+                        onValueChange = { url = it },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Go),
+                        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = { currentUrl = url })
+                    )
+                    IconButton(onClick = { currentUrl = url }) { Icon(Icons.Default.Search, "Go") }
+                }
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    AndroidView(
+                        factory = { ctx ->
+                            WebView(ctx).apply {
+                                settings.javaScriptEnabled = true
+                                settings.domStorageEnabled = true
+                                webViewClient = object : WebViewClient() {
+                                    override fun onPageFinished(view: WebView?, loadedUrl: String?) {
+                                        super.onPageFinished(view, loadedUrl)
+                                        loadedUrl?.let { url = it }
+                                    }
+                                }
+                                loadUrl(currentUrl)
+                            }
+                        },
+                        update = { it.loadUrl(currentUrl) }
+                    )
+                }
+                Button(
+                    onClick = {
+                        val cookieManager = CookieManager.getInstance()
+                        val cookies = cookieManager.getCookie(currentUrl)
+                        if (!cookies.isNullOrEmpty()) {
+                            val path = saveCookiesToNetscapeFormat(context, currentUrl, cookies, fileName)
+                            onCookiesExtracted(path)
+                            onDismiss()
+                        } else {
+                            android.widget.Toast.makeText(context, "No cookies found", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(16.dp)
+                ) {
+                    Text("Extract & Save Cookies")
                 }
             }
         }
@@ -1670,7 +2035,12 @@ fun DeveloperScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
                             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Person, null, modifier = Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary)
+                        AsyncImage(
+                            model = "https://github.com/Hotaro26.png",
+                            contentDescription = "Profile Picture",
+                            modifier = Modifier.fillMaxSize().clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
                     }
                     Column {
                         Text("Hotaro", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
@@ -1684,7 +2054,7 @@ fun DeveloperScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Icon(Icons.Default.Code, null, modifier = Modifier.size(18.dp))
+                        Icon(androidx.compose.ui.res.painterResource(id = com.material.downloader.R.drawable.ic_github), null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         Text("GitHub")
                     }
@@ -1693,7 +2063,7 @@ fun DeveloperScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Icon(Icons.Default.ChatBubbleOutline, null, modifier = Modifier.size(18.dp))
+                        Icon(androidx.compose.ui.res.painterResource(id = com.material.downloader.R.drawable.ic_discord), null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         Text("Discord")
                     }
@@ -1801,7 +2171,7 @@ fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFD700), modifier = Modifier.size(28.dp))
+                Icon(Icons.Default.Star, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
                 Column {
                     Text("Star the Project", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text("Support on GitHub", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

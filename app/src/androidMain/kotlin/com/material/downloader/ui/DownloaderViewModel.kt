@@ -313,7 +313,8 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                 }
             } else {
                 logToConsole("Executing $engine extractor in Python...")
-                val cookiesPath = prefs.getString("cookies_path", null)
+                val engineKey = if (engine == "gallery-dl") "gallery_dl" else "yt_dlp"
+                val cookiesPath = prefs.getString("${engineKey}_cookies_path", null)
                 val res = extractor.extract(url, quality, mode, engine, cookiesPath)
                 if (res.status == "success") {
                     if (res.is_gallery == true) {

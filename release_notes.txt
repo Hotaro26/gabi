@@ -1,0 +1,18 @@
+Gabi v3.9 Release
+
+Changelog:
+- Added interactive ExoPlayer and Image Carousel media preview bottom sheet for downloaded media.
+- Added smooth dynamic search bar pinning at the top when searching in the NewPipe screen.
+- Added a back arrow in the NewPipe search screen when the search bar is pinned.
+- Replaced the downloads icon in the NewPipe screen with a watch/download action card that highlights the selected video.
+- Implemented custom cookies.txt import functionality for yt-dlp and gallery-dl, including automatic web log extraction.
+- Added one-click extractor updates (yt-dlp and gallery-dl) with version indicators.
+- Added a secondary background behind back arrows in the settings screen.
+- Replaced the star character with a proper star icon in the support section.
+- Added a light background in the customization section to match the appearance section.
+- Improved the developer section UI, utilizing proper GitHub and Discord icons.
+- Integrated dynamic GitHub profile avatar loading for the developer section.
+- Added native themed monochrome icon support for the app launcher.
+- Fixed pip module errors during extractor updates (Chaquopy AssetFinder monkeypatched).
+- Verified in-app updater implementation.
+- Ascended version code to 5 and version name to 3.9.

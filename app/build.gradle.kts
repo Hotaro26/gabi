@@ -94,8 +94,8 @@ android {
         applicationId = "com.material.downloader"
         minSdk = 24
         targetSdk = 34
-        versionCode = 4
-        versionName = "3.8"
+        versionCode = 5
+        versionName = "3.9"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
 
@@ -160,6 +160,7 @@ chaquopy {
     defaultConfig {
         version = "3.11"
         pip {
+            install("pip")
             install("yt-dlp")
             install("gallery-dl")
         }
