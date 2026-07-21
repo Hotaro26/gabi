@@ -9,9 +9,9 @@ class PythonExtractor {
     private val module = py.getModule("downloader")
     private val json = Json { ignoreUnknownKeys = true }
 
-    fun extract(url: String, quality: String, mode: String, engine: String): ExtractionResult {
+    fun extract(url: String, quality: String, mode: String, engine: String, cookiesPath: String? = null): ExtractionResult {
         return try {
-            val resultJson = module.callAttr("extract_info", url, quality, mode, engine).toString()
+            val resultJson = module.callAttr("extract_info", url, quality, mode, engine, cookiesPath).toString()
             json.decodeFromString<ExtractionResult>(resultJson)
         } catch (e: Exception) {
             ExtractionResult(status = "error", message = e.message ?: "Python execution failed")

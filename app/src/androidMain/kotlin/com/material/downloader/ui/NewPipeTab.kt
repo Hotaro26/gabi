@@ -1,11 +1,15 @@
 package com.material.downloader.ui
 
+import androidx.compose.animation.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,12 +34,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 fun NewPipeTab(
     viewModel: DownloaderViewModel,
     contentPadding: PaddingValues,
-    onUrlSelected: (String) -> Unit
+    onUrlSelected: (String) -> Unit,
+    onWatchSelected: (String) -> Unit
 ) {
     var query by viewModel.newPipeQuery
     var results by viewModel.newPipeResults
     var isLoading by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    var selectedItem by remember { mutableStateOf<StreamInfoItem?>(null) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     LaunchedEffect(query) {
         if (query.isBlank()) {
@@ -70,38 +77,58 @@ fun NewPipeTab(
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (results.isEmpty() && !isLoading) {
-            Spacer(modifier = Modifier.fillMaxHeight(0.3f))
-            Icon(
-                painter = androidx.compose.ui.res.painterResource(android.R.drawable.ic_media_play),
-                contentDescription = "YouTube",
-                modifier = Modifier.size(72.dp).padding(bottom = 16.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Text("YouTube Search", style = MaterialTheme.typography.headlineMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-            Spacer(modifier = Modifier.height(24.dp))
+        AnimatedVisibility(
+            visible = results.isEmpty() && !isLoading,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Spacer(modifier = Modifier.fillMaxHeight(0.3f))
+                Icon(
+                    painter = androidx.compose.ui.res.painterResource(android.R.drawable.ic_media_play),
+                    contentDescription = "YouTube",
+                    modifier = Modifier.size(72.dp).padding(bottom = 16.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text("YouTube Search", style = MaterialTheme.typography.headlineMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                Spacer(modifier = Modifier.height(24.dp))
+            }
         }
 
-        OutlinedTextField(
-            value = query,
-            onValueChange = { query = it },
+        Row(
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp),
-            placeholder = { Text("Search YouTube...") },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { performSearch() }),
-            trailingIcon = {
-                if (query.isNotEmpty()) {
-                    IconButton(onClick = { query = ""; results = emptyList() }) {
-                        Icon(androidx.compose.material.icons.Icons.Default.Close, contentDescription = "Clear")
-                    }
-                } else {
-                    IconButton(onClick = performSearch) {
-                        Icon(Icons.Default.Search, contentDescription = "Search")
-                    }
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AnimatedVisibility(visible = results.isNotEmpty() || isLoading) {
+                IconButton(
+                    onClick = { query = ""; results = emptyList() },
+                    modifier = Modifier.padding(end = 8.dp).background(MaterialTheme.colorScheme.surfaceVariant, androidx.compose.foundation.shape.CircleShape)
+                ) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                 }
-            },
-            shape = MaterialTheme.shapes.large
-        )
+            }
+
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Search YouTube...") },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { performSearch() }),
+                trailingIcon = {
+                    if (query.isNotEmpty()) {
+                        IconButton(onClick = { query = ""; results = emptyList() }) {
+                            Icon(Icons.Default.Close, contentDescription = "Clear")
+                        }
+                    } else {
+                        IconButton(onClick = performSearch) {
+                            Icon(Icons.Default.Search, contentDescription = "Search")
+                        }
+                    }
+                },
+                shape = MaterialTheme.shapes.large
+            )
+        }
         
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -110,10 +137,14 @@ fun NewPipeTab(
         } else if (results.isNotEmpty()) {
             LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(results) { item ->
+                    val isSelected = selectedItem == item
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        onClick = { onUrlSelected(item.url) },
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        onClick = { selectedItem = item },
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        ),
+                        border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null
                     ) {
                         Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                             Box(modifier = Modifier.size(100.dp, 60.dp)) {
@@ -126,17 +157,67 @@ fun NewPipeTab(
                             }
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(item.name, style = MaterialTheme.typography.titleSmall, maxLines = 2, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                Text(item.name, style = MaterialTheme.typography.titleSmall, maxLines = 2, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else androidx.compose.ui.graphics.Color.Unspecified)
                                 Spacer(Modifier.height(4.dp))
-                                Text(item.uploaderName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            IconButton(onClick = { onUrlSelected(item.url) }) {
-                                Icon(Icons.Default.Download, "Download", tint = MaterialTheme.colorScheme.primary)
+                                Text(item.uploaderName, style = MaterialTheme.typography.bodySmall, color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
                 }
                 item { Spacer(Modifier.height(16.dp)) }
+            }
+        }
+    }
+
+    if (selectedItem != null) {
+        val item = selectedItem!!
+        ModalBottomSheet(
+            onDismissRequest = { selectedItem = null },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                AsyncImage(
+                    model = item.thumbnails?.firstOrNull()?.url ?: "",
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(16.dp)),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                )
+                Text(item.name, style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Text(item.uploaderName, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Button(
+                        onClick = { 
+                            selectedItem = null
+                            onWatchSelected(item.url)
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Watch")
+                    }
+                    Button(
+                        onClick = { 
+                            selectedItem = null
+                            onUrlSelected(item.url)
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Download, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Download")
+                    }
+                }
+                Spacer(Modifier.height(32.dp))
             }
         }
     }

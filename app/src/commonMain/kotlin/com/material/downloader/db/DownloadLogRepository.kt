@@ -8,4 +8,5 @@ interface DownloadLogRepository {
     suspend fun insertLog(log: DownloadLog)
     suspend fun deleteLog(log: DownloadLog)
     suspend fun deleteAllLogs()
+    suspend fun hasUrl(url: String): Boolean
 }

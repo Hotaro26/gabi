@@ -20,4 +20,7 @@ class DesktopDownloadLogRepository : DownloadLogRepository {
     override suspend fun deleteAllLogs() {
         logs.value = emptyList()
     }
+    override suspend fun hasUrl(url: String): Boolean {
+        return logs.value.any { it.url == url }
+    }
 }

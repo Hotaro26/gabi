@@ -17,6 +17,9 @@ interface DownloadLogDao {
 
     @Delete
     suspend fun deleteLog(log: DownloadLog)
+
+    @Query("SELECT COUNT(*) FROM download_logs WHERE url = :url")
+    suspend fun hasUrl(url: String): Int
 }
 
 @Database(entities = [DownloadLog::class], version = 1)

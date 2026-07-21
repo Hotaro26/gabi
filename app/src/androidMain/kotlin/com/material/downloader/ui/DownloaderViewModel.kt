@@ -22,6 +22,7 @@ import kotlinx.coroutines.withContext
 
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 
 import androidx.room.Room
 import com.material.downloader.db.AppDatabase
@@ -99,6 +100,52 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
 
     fun clearConsole() {
         _consoleLogs.value = listOf("gabi@terminal:~ $ console cleared")
+    }
+
+    fun saveSetting(key: String, value: String) {
+        prefs.edit().putString(key, value).apply()
+    }
+
+    fun getSetting(key: String, defaultValue: String): String {
+        return prefs.getString(key, defaultValue) ?: defaultValue
+    }
+
+    suspend fun hasDownloadedUrl(url: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            logDao.hasUrl(url) > 0
+        }
+    }
+
+    var updateAvailable = mutableStateOf<Pair<String, String>?>(null)
+
+    init {
+        checkForUpdates()
+    }
+
+    private fun checkForUpdates() {
+        viewModelScope.launch {
+            try {
+                val response: HttpResponse = client.get("https://api.github.com/repos/Hotaro26/gabi/releases/latest")
+                if (response.status.value in 200..299) {
+                    val responseBody = response.bodyAsText()
+                    val tagRegex = "\"tag_name\"\\s*:\\s*\"([^\"]+)\"".toRegex()
+                    val urlRegex = "\"browser_download_url\"\\s*:\\s*\"([^\"]+\\.apk)\"".toRegex()
+                    val match = tagRegex.find(responseBody)
+                    val urlMatch = urlRegex.find(responseBody)
+                    if (match != null && urlMatch != null) {
+                        val latestVersion = match.groupValues[1]
+                        val apkUrl = urlMatch.groupValues[1]
+                        val currentVersion = "v" + com.material.downloader.BuildConfig.VERSION_NAME
+                        // Assuming semantic versioning or simple string comparison
+                        if (latestVersion != currentVersion && !latestVersion.contains("beta")) {
+                            updateAvailable.value = Pair(latestVersion, apkUrl)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                logToConsole("Update check failed: ${e.message}")
+            }
+        }
     }
 
     private var currentDownloadJob: Job? = null
@@ -266,7 +313,8 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                 }
             } else {
                 logToConsole("Executing $engine extractor in Python...")
-                val res = extractor.extract(url, quality, mode, engine)
+                val cookiesPath = prefs.getString("cookies_path", null)
+                val res = extractor.extract(url, quality, mode, engine, cookiesPath)
                 if (res.status == "success") {
                     if (res.is_gallery == true) {
                         logToConsole("Python extractor found gallery with ${res.urls?.size ?: 0} items")

@@ -23,6 +23,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.sp
@@ -88,7 +89,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
     var url by remember { mutableStateOf("") }
     var quality by remember { mutableStateOf("720") }
     var downloadMode by remember { mutableStateOf("auto") }
-    var engine by remember { mutableStateOf("newpipe") }
+    var engine by remember { mutableStateOf(viewModel.getSetting("selected_engine", "newpipe")) }
     var showClearLogsDialog by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
     val preview by viewModel.previewMetadata.collectAsState()
@@ -460,6 +461,11 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             viewModel = viewModel,
                             contentPadding = padding,
                             onUrlSelected = { selectedUrl ->
+                                url = selectedUrl
+                                engine = "newpipe"
+                                selectedTab = 0
+                            },
+                            onWatchSelected = { selectedUrl ->
                                 playingUrl = selectedUrl
                             }
                         )
@@ -621,6 +627,9 @@ fun MainDownloaderTab(
     var engineExpanded by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
     var showFullscreenLogs by remember { mutableStateOf(false) }
+    var duplicateWarningUrl by remember { mutableStateOf<String?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
     
     BackHandler(enabled = showFullscreenLogs) {
         showFullscreenLogs = false
@@ -633,6 +642,53 @@ fun MainDownloaderTab(
         if (uiState is DownloadState.Success) {
             showSuccessDialog = true
         }
+    }
+
+    LaunchedEffect(engine) {
+        viewModel.saveSetting("selected_engine", engine)
+    }
+
+    if (duplicateWarningUrl != null) {
+        AlertDialog(
+            onDismissRequest = { duplicateWarningUrl = null },
+            title = { Text("Duplicate Download") },
+            text = { Text("You have already downloaded this media. Do you want to download it again?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val proceedUrl = duplicateWarningUrl!!
+                    duplicateWarningUrl = null
+                    viewModel.downloadMedia(proceedUrl, quality, downloadMode, engine)
+                }) {
+                    Text("Download Anyway")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { duplicateWarningUrl = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    viewModel.updateAvailable.value?.let { updateInfo ->
+        AlertDialog(
+            onDismissRequest = { viewModel.updateAvailable.value = null },
+            title = { Text("Update Available: ${updateInfo.first}") },
+            text = { Text("A new version of Gabi is available on GitHub. Would you like to download and install it?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.updateAvailable.value = null
+                    com.material.downloader.util.AppUpdater(context).downloadAndInstallUpdate(updateInfo.second)
+                }) {
+                    Text("Update Now")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.updateAvailable.value = null }) {
+                    Text("Later")
+                }
+            }
+        )
     }
 
     Column(
@@ -967,7 +1023,17 @@ fun MainDownloaderTab(
             )
 
             Button(
-                onClick = { if (url.isNotBlank()) viewModel.downloadMedia(url, quality, downloadMode, engine) },
+                onClick = { 
+                    if (url.isNotBlank()) {
+                        coroutineScope.launch {
+                            if (viewModel.hasDownloadedUrl(url)) {
+                                duplicateWarningUrl = url
+                            } else {
+                                viewModel.downloadMedia(url, quality, downloadMode, engine)
+                            }
+                        }
+                    } 
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .graphicsLayer {
@@ -1361,61 +1427,87 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 16.dp)) {
-            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
-            Spacer(Modifier.width(8.dp))
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+            ) { Icon(Icons.Default.ArrowBack, "Back") }
+            Spacer(Modifier.width(16.dp))
             Text("Customisation", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         }
         
-        Text("Appearance", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("System", "Light", "Dark").forEachIndexed { index, label ->
-                FilterChip(
-                    selected = viewModel.themeMode.intValue == index,
-                    onClick = { viewModel.themeMode.intValue = index },
-                    label = { Text(label) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
-                )
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Appearance", style = MaterialTheme.typography.titleMedium)
+                Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("System", "Light", "Dark").forEachIndexed { index, label ->
+                        FilterChip(
+                            selected = viewModel.themeMode.intValue == index,
+                            onClick = { viewModel.themeMode.intValue = index },
+                            label = { Text(label) },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Color Scheme", style = MaterialTheme.typography.titleMedium)
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    AppTheme.values().forEach { theme ->
+                        FilterChip(
+                            selected = viewModel.selectedTheme.value == theme,
+                            onClick = { viewModel.selectedTheme.value = theme },
+                            label = { Text(theme.label) },
+                            leadingIcon = if (viewModel.selectedTheme.value == theme) {
+                                { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
+                            } else null,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    }
+                }
             }
         }
 
         Spacer(Modifier.height(16.dp))
-        Text("Color Scheme", style = MaterialTheme.typography.titleMedium)
-        FlowRow(
+        Card(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+            shape = RoundedCornerShape(20.dp)
         ) {
-            AppTheme.values().forEach { theme ->
-                FilterChip(
-                    selected = viewModel.selectedTheme.value == theme,
-                    onClick = { viewModel.selectedTheme.value = theme },
-                    label = { Text(theme.label) },
-                    leadingIcon = if (viewModel.selectedTheme.value == theme) {
-                        { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
-                    } else null,
-                    shape = RoundedCornerShape(12.dp)
-                )
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-        Text("Terminal Theme", style = MaterialTheme.typography.titleMedium)
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            TerminalTheme.values().forEach { theme ->
-                FilterChip(
-                    selected = viewModel.terminalTheme.value == theme,
-                    onClick = { viewModel.updateTerminalTheme(theme) },
-                    label = { Text(theme.displayName) },
-                    leadingIcon = if (viewModel.terminalTheme.value == theme) {
-                        { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
-                    } else null,
-                    shape = RoundedCornerShape(12.dp)
-                )
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Terminal Theme", style = MaterialTheme.typography.titleMedium)
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TerminalTheme.values().forEach { theme ->
+                        FilterChip(
+                            selected = viewModel.terminalTheme.value == theme,
+                            onClick = { viewModel.updateTerminalTheme(theme) },
+                            label = { Text(theme.displayName) },
+                            leadingIcon = if (viewModel.terminalTheme.value == theme) {
+                                { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
+                            } else null,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    }
+                }
             }
         }
     }
@@ -1435,6 +1527,28 @@ fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, 
             viewModel.selectedFolderName.value = DocumentFile.fromTreeUri(context, it)?.name ?: "Selected Folder"
         }
     }
+
+    var hasCookies by remember { mutableStateOf(viewModel.getSetting("cookies_path", "").isNotEmpty()) }
+    val cookiesPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            try {
+                val inputStream = context.contentResolver.openInputStream(it)
+                val cookiesFile = java.io.File(context.filesDir, "cookies.txt")
+                inputStream?.use { input ->
+                    cookiesFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                viewModel.saveSetting("cookies_path", cookiesFile.absolutePath)
+                hasCookies = true
+                android.widget.Toast.makeText(context, "Cookies imported successfully", android.widget.Toast.LENGTH_SHORT).show()
+            } catch(e: Exception) {
+                android.widget.Toast.makeText(context, "Failed to import cookies", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
     
     Column(
         modifier = Modifier
@@ -1445,8 +1559,11 @@ fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, 
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 16.dp)) {
-            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
-            Spacer(Modifier.width(8.dp))
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+            ) { Icon(Icons.Default.ArrowBack, "Back") }
+            Spacer(Modifier.width(16.dp))
             Text("Downloads", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         }
         
@@ -1476,6 +1593,44 @@ fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, 
                 }
             }
         }
+
+        Spacer(Modifier.height(16.dp))
+        Text("Extraction Credentials", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("Import cookies.txt for private/age-restricted content", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        
+        OutlinedCard(
+            onClick = { cookiesPickerLauncher.launch(arrayOf("text/plain")) },
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(if (hasCookies) Icons.Default.CheckCircle else Icons.Default.VpnKey, null, tint = if (hasCookies) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        if (hasCookies) "Cookies imported" else "Import cookies.txt",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    if (hasCookies) {
+                        Text("Active for yt-dlp & gallery-dl", style = MaterialTheme.typography.bodySmall, color = Color(0xFF4CAF50))
+                    }
+                }
+                if (hasCookies) {
+                    IconButton(onClick = {
+                        val cookiesFile = java.io.File(context.filesDir, "cookies.txt")
+                        if (cookiesFile.exists()) cookiesFile.delete()
+                        viewModel.saveSetting("cookies_path", "")
+                        hasCookies = false
+                    }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Remove cookies", tint = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1494,37 +1649,73 @@ fun DeveloperScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 16.dp)) {
-            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
-            Spacer(Modifier.width(8.dp))
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+            ) { Icon(Icons.Default.ArrowBack, "Back") }
+            Spacer(Modifier.width(16.dp))
             Text("Developer", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         }
         
-        Text("hotaro", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Text("Building crisp, fast, and secure software.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            AssistChip(
-                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Hotaro26"))) },
-                label = { Text("GitHub") },
-                shape = RoundedCornerShape(12.dp)
-            )
-            AssistChip(
-                onClick = { Toast.makeText(context, "Discord: oi.hotaro", Toast.LENGTH_LONG).show() },
-                label = { Text("Discord") },
-                shape = RoundedCornerShape(12.dp)
-            )
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+            shape = RoundedCornerShape(24.dp)
+        ) {
+            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Person, null, modifier = Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary)
+                    }
+                    Column {
+                        Text("Hotaro", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Text("Building crisp, fast, and secure software.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    Button(
+                        onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Hotaro26"))) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Code, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("GitHub")
+                    }
+                    OutlinedButton(
+                        onClick = { Toast.makeText(context, "Discord: oi.hotaro", Toast.LENGTH_LONG).show() },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.ChatBubbleOutline, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Discord")
+                    }
+                }
+            }
         }
         
-        Spacer(Modifier.height(16.dp))
-        Text("App Info", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(8.dp))
+        Text("App Info", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp))
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
             shape = RoundedCornerShape(20.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Gabi v3.7", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                Text("Powered by yt-dlp, gallery-dl & Chaquopy", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary)
+                    Column {
+                        Text("Gabi v${com.material.downloader.BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                        Text("Powered by yt-dlp, gallery-dl & Chaquopy", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
             }
         }
     }
@@ -1544,8 +1735,11 @@ fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 16.dp)) {
-            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
-            Spacer(Modifier.width(8.dp))
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+            ) { Icon(Icons.Default.ArrowBack, "Back") }
+            Spacer(Modifier.width(16.dp))
             Text("Support", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         }
         
@@ -1578,16 +1772,39 @@ fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
                             .appendQueryParameter("am", "0")
                             .appendQueryParameter("cu", "INR")
                             .build()
-                        val upiIntent = Intent(Intent.ACTION_VIEW, uri)
-                        try { context.startActivity(upiIntent) } catch (e: Exception) { Toast.makeText(context, "No UPI app found", Toast.LENGTH_SHORT).show() }
+                        val intent = Intent(Intent.ACTION_VIEW).apply { data = uri }
+                        val chooser = Intent.createChooser(intent, "Pay with...")
+                        try {
+                            context.startActivity(chooser)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "No UPI app found", Toast.LENGTH_SHORT).show()
+                        }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    shape = RoundedCornerShape(16.dp)
                 ) {
-                    Icon(Icons.Default.Payments, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Support via UPI")
+                    Text("Donate via UPI")
+                }
+            }
+        }
+        
+        Spacer(Modifier.height(8.dp))
+        
+        OutlinedCard(
+            onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Hotaro26/gabi"))) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFD700), modifier = Modifier.size(28.dp))
+                Column {
+                    Text("Star the Project", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Support on GitHub", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

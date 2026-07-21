@@ -8,4 +8,5 @@ class AndroidDownloadLogRepository(private val dao: DownloadLogDao) : DownloadLo
     override suspend fun insertLog(log: DownloadLog) = dao.insertLog(log)
     override suspend fun deleteLog(log: DownloadLog) = dao.deleteLog(log)
     override suspend fun deleteAllLogs() = dao.deleteAllLogs()
+    override suspend fun hasUrl(url: String): Boolean = dao.hasUrl(url) > 0
 }

@@ -8,13 +8,13 @@ import threading
 # Thread lock to prevent concurrent extraction crashes (generator already executing)
 extraction_lock = threading.Lock()
 
-def extract_info(url, quality='720', mode='auto', engine='yt-dlp'):
+def extract_info(url, quality='720', mode='auto', engine='yt-dlp', cookies_path=None):
     if engine == 'gallery-dl':
-        return extract_gallery(url)
+        return extract_gallery(url, cookies_path)
     else:
-        return extract_video(url, quality, mode)
+        return extract_video(url, quality, mode, cookies_path)
 
-def extract_video(url, quality='720', mode='auto'):
+def extract_video(url, quality='720', mode='auto', cookies_path=None):
     with extraction_lock:
         # Robust configuration for direct stream extraction
         ydl_opts = {
@@ -42,6 +42,9 @@ def extract_video(url, quality='720', mode='auto'):
                 ydl_opts['format'] = 'best[ext=mp4]/best'
             else:
                 ydl_opts['format'] = f'best[height<={quality}][ext=mp4]/best[height<={quality}]/best'
+
+        if cookies_path and os.path.exists(cookies_path):
+            ydl_opts['cookiefile'] = cookies_path
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             try:
@@ -73,13 +76,15 @@ def extract_video(url, quality='720', mode='auto'):
             except Exception as e:
                 return json.dumps({'status': 'error', 'message': f"yt-dlp error: {str(e)}"})
 
-def extract_gallery(url):
+def extract_gallery(url, cookies_path=None):
     with extraction_lock:
         try:
             from gallery_dl import job
             import gallery_dl
             gallery_dl.config.load()
             gallery_dl.config.set(("extractor",), "base-directory", ".")
+            if cookies_path and os.path.exists(cookies_path):
+                gallery_dl.config.set(("extractor",), "cookies", cookies_path)
             
             # Enable URL resolution (resolve=True) to follow redirects/short URLs
             j = job.DataJob(url, resolve=True)
