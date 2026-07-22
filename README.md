@@ -13,7 +13,7 @@
 [Gabi](https://hotaro26.github.io/gabi/) is a minimal, fast, and secure media downloader for Android. Built with a modern Material 3 interface, it allows you to download videos, audio, and image galleries from over 1000+ supported sites with ease. Right now, it has 3 engines, **yt-dlp**, **gallery-dl** **newpipe extractor** and **cobalt api**!!
 
 ---
-> PLEASE CONSIDER GIVING A ⭐STAR TO THIS PROJECT! (to support a teenage dev)
+> PLEASE CONSIDER GIVING A ⭐STAR TO THIS PROJECT IF THIS APP HAS BEEN USEFUL TO YOU! (also to support a teenage dev, stars motivates me to keep going for new future updates and features)
  
 > [!TIP]
 > Refer to [pre-release](https://github.com/Hotaro26/gabi/releases/tag/v3.4) section for experimental feature.
