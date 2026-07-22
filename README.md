@@ -1,10 +1,12 @@
-<p align="center">
+<div align="center">
 <img width="300" height="300" alt="gabi11" src="https://github.com/user-attachments/assets/c1435762-4f08-431b-b485-202ffae1800a" />
 
+ ## Gabi
 
-</p>
-
-## Gabi
+  <img alt="Kotlin" src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Kotlin/kotlin1.svg" />
+  
+  <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Android/android1.svg" />
+</div>
 
 [Gabi](https://hotaro26.github.io/gabi/) is a minimal, fast, and secure media downloader for Android. Built with a modern Material 3 interface, it allows you to download videos, audio, and image galleries from over 1000+ supported sites with ease. Right now, it has 3 engines, **yt-dlp**, **gallery-dl** **newpipe extractor** and **cobalt api**!!
 
@@ -112,7 +114,8 @@ To build Gabi yourself:
 
 ## 🤝 Support
 
-Gabi is built with ❤️ by **hotaro**. If you find the app useful, consider supporting the development via UPI (found in the app's settings).
+Gabi is built with ❤️ by **hotaro**. If you find the app useful, consider supporting the development via UPI (Totally Optional).
+or Just ⭐ star the project!
 
 -   **GitHub**: [Hotaro26](https://github.com/Hotaro26)
 -   **Discord**: `oi.hotaro`
