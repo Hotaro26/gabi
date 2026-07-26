@@ -407,7 +407,7 @@ body {
   transition: opacity 0.3s;
 }
 .dynamic-island.expanded {
-  width: 125px;
+  width: 140px;
   height: 28px;
   border-radius: 20px;
 }
@@ -1527,11 +1527,19 @@ footer {
         if (island) {
             island.addEventListener('click', () => {
                 island.classList.add('expanded');
-                islandText.textContent = 'Gabi Downloader';
+                islandText.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: #4ade80; display: inline-block; vertical-align: middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> <span style="vertical-align: middle;">Gabi Downloader</span>`;
                 setTimeout(() => {
                     island.classList.remove('expanded');
-                }, 2000);
+                }, 2500);
             });
+
+            setTimeout(() => {
+                island.classList.add('expanded');
+                islandText.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: #4ade80; display: inline-block; vertical-align: middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> <span style="vertical-align: middle;">Downloading 74%</span>`;
+                setTimeout(() => {
+                    island.classList.remove('expanded');
+                }, 3000);
+            }, 3000);
         }
 
         // Carousel logic
@@ -1560,10 +1568,14 @@ footer {
             
             if (island) {
                 island.classList.add('expanded');
-                islandText.textContent = `Screenshot ${currentSlide + 1} / ${slides.length}`;
+                const statuses = [
+                    `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: #4ade80; display: inline-block; vertical-align: middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> <span style="vertical-align: middle;">Downloading 74%</span>`,
+                    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: #facc15; display: inline-block; vertical-align: middle;"><path d="M5 18H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3.19M15 6h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-3.19"></path><line x1="23" y1="13" x2="23" y2="11"></line><polyline points="11 6 7 12 13 12 9 18"></polyline></svg> <span style="vertical-align: middle;">Charging 92%</span>`
+                ];
+                islandText.innerHTML = statuses[Math.floor(Math.random() * statuses.length)];
                 setTimeout(() => {
                     island.classList.remove('expanded');
-                }, 2000);
+                }, 2500);
             }
 
         }
