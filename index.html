@@ -1341,245 +1341,7 @@ footer {
         </div>
     </div>
 
-    <script>
-        // Tab switching logic
-        const tabBtns = document.querySelectorAll('.tab-btn');
-        const tabPanes = document.querySelectorAll('.tab-pane');
-
-        tabBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                // Remove active class from all buttons and hide all panes
-                tabBtns.forEach(b => b.classList.remove('active'));
-                tabPanes.forEach(p => p.style.display = 'none');
-
-                // Add active class to clicked button and show corresponding pane
-                btn.classList.add('active');
-                const targetId = btn.getAttribute('data-target');
-                document.getElementById(targetId).style.display = 'block';
-            });
-        });
-
-        // Smooth scroll for TOC
-        document.querySelectorAll('.toc-list a').forEach(anchor => {
-            anchor.addEventListener('click', function(e) {
-                e.preventDefault();
-                const targetId = this.getAttribute('href').substring(1);
-                const targetElement = document.getElementById(targetId);
-                if (targetElement) {
-                    window.scrollTo({
-                        top: targetElement.offsetTop - 80, // Offset for navbar
-                        behavior: 'smooth'
-                    });
-                }
-            });
-        });
-
-        // Theme toggle logic
-        const themeToggle = document.querySelector('.theme-toggle');
-        const sunIcon = document.querySelector('.sun-icon');
-        const moonIcon = document.querySelector('.moon-icon');
-
-        // Check local storage for theme
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'light') {
-            document.body.setAttribute('data-theme', 'light');
-            sunIcon.style.display = 'block';
-            moonIcon.style.display = 'none';
-        }
-
-        themeToggle.addEventListener('click', () => {
-            if (document.body.getAttribute('data-theme') === 'dark') {
-                document.body.setAttribute('data-theme', 'light');
-                localStorage.setItem('theme', 'light');
-                sunIcon.style.display = 'block';
-                moonIcon.style.display = 'none';
-            } else {
-                document.body.setAttribute('data-theme', 'dark');
-                localStorage.setItem('theme', 'dark');
-                sunIcon.style.display = 'none';
-                moonIcon.style.display = 'block';
-            }
-        });
-
-        // Fetch all release versions from GitHub
-        fetch('https://api.github.com/repos/Hotaro26/gabi/releases')
-            .then(response => response.json())
-            .then(data => {
-                if (data && data.length > 0) {
-                    const latest = data[0];
-                    const versionLink = document.getElementById('versionLink');
-                    versionLink.href = latest.html_url;
-                    versionLink.innerHTML = `Get ${latest.tag_name} <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
-                    
-                    const versionMenu = document.getElementById('versionMenu');
-                    if (versionMenu) {
-                        data.forEach(release => {
-                            const a = document.createElement('a');
-                            a.href = release.html_url;
-                            a.textContent = release.tag_name;
-                            versionMenu.appendChild(a);
-                        });
-                    }
-                }
-            })
-            .catch(error => console.error('Error fetching releases:', error));
-
-        // Search functionality
-        const searchData = [
-            { id: 'installation-guide', title: 'Installation guide', desc: 'Step by step guide to install Gabi.' },
-            { id: 'downloading-gabi', title: 'Downloading Gabi', desc: 'You can download the latest version from our GitHub Releases page.' },
-            { id: 'how-to-use', title: 'How to Use', desc: 'Basic Usage, Instant Actions, Customization, Paste & Fetch, Configure, Download.' },
-            { id: 'features', title: 'Key Features', desc: 'Wide Support, Smart Preview, Share to Gabi, Themes.' },
-            { id: 'supported-sites', title: 'Supported Sites', desc: 'YouTube, TikTok, Instagram, Twitter, Reddit, Twitch, Facebook, SoundCloud, Pixiv, Pinterest, yt-dlp, gallery-dl, cobalt.' },
-            { id: 'customization', title: 'Customization', desc: 'Themes, Lavender, Forest, Midnight, Rose, Monochrome, Material You, Dynamic Theme, Dark mode, Light mode, Storage Access Framework.' },
-            { id: 'instant-action', title: 'Instant Action', desc: 'One-Tap Download, fetch links from clipboard, Share to Gabi, background processing.' },
-            { id: 'building-from-source', title: 'Building from Source', desc: 'To build Gabi yourself: Clone the repository, Open in Android Studio, Build the project.' }
-        ];
-
-        const searchBtn = document.getElementById('searchBtn');
-        const searchModal = document.getElementById('searchModal');
-        const closeSearch = document.getElementById('closeSearch');
-        const searchInput = document.getElementById('searchInput');
-        const searchResults = document.getElementById('searchResults');
-
-        function openSearch() {
-            searchModal.classList.add('active');
-            searchInput.value = '';
-            renderResults(searchData);
-            setTimeout(() => searchInput.focus(), 100);
-        }
-
-        function closeSearchModal() {
-            searchModal.classList.remove('active');
-        }
-
-        searchBtn.addEventListener('click', openSearch);
-        closeSearch.addEventListener('click', closeSearchModal);
-        searchModal.addEventListener('click', (e) => {
-            if (e.target === searchModal) closeSearchModal();
-        });
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'b' && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault();
-                openSearch();
-            }
-            if (e.key === 'Escape') closeSearchModal();
-        });
-
-        searchInput.addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase();
-            const filtered = searchData.filter(item => 
-                item.title.toLowerCase().includes(query) || 
-                item.desc.toLowerCase().includes(query)
-            );
-            renderResults(filtered);
-        });
-
-        function renderResults(results) {
-            searchResults.innerHTML = '';
-            if (results.length === 0) {
-                searchResults.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--vp-c-text-2);">No results found</div>';
-                return;
-            }
-            results.forEach(item => {
-                const a = document.createElement('a');
-                const isDocs = window.location.pathname.endsWith('docs.html');
-                a.href = (isDocs ? '' : 'docs.html') + '#' + item.id;
-                a.className = 'search-result-item';
-                a.innerHTML = `<div class="search-result-title">${item.title}</div><div class="search-result-desc">${item.desc}</div>`;
-                a.addEventListener('click', () => {
-                    closeSearchModal();
-                });
-                searchResults.appendChild(a);
-            });
-        }
-
-        // Accent Color Picker Logic
-        const colorBtns = document.querySelectorAll('.color-btn');
-        const customColorPicker = document.getElementById('customColorPicker');
-        const root = document.documentElement;
-
-        const savedColor = localStorage.getItem('accent-color');
-        if (savedColor) {
-            root.style.setProperty('--vp-c-brand', savedColor);
-            let matched = false;
-            colorBtns.forEach(btn => {
-                if (btn.getAttribute('data-color') === savedColor) {
-                    btn.classList.add('active');
-                    matched = true;
-                }
-            });
-            if (!matched && customColorPicker) {
-                customColorPicker.value = savedColor;
-                document.querySelectorAll('.custom-color-btn').forEach(b => b.classList.add('active'));
-            }
-        }
-
-        colorBtns.forEach(btn => {
-            if (!btn.hasAttribute('data-color')) return;
-            btn.addEventListener('click', () => {
-                const color = btn.getAttribute('data-color');
-                root.style.setProperty('--vp-c-brand', color);
-                localStorage.setItem('accent-color', color);
-                
-                colorBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-            });
-        });
-
-        if (customColorPicker) {
-            customColorPicker.addEventListener('input', (e) => {
-                const color = e.target.value;
-                root.style.setProperty('--vp-c-brand', color);
-                localStorage.setItem('accent-color', color);
-                
-                colorBtns.forEach(b => b.classList.remove('active'));
-                document.querySelectorAll('.custom-color-btn').forEach(b => b.classList.add('active'));
-            });
-        }
-    </script>
-
-<script>
-function showView(viewId) {
-    document.querySelectorAll('.view-section').forEach(el => el.style.display = 'none');
-    document.getElementById(viewId).style.display = 'block';
-    
-    // Scroll to top or anchor
-    window.scrollTo(0, 0);
-    
-    // Update active nav links
-    document.querySelectorAll('.nav-link').forEach(link => {
-        link.style.color = '';
-    });
-}
-
-function handleHash() {
-    let hash = window.location.hash.substring(1);
-    if (!hash) hash = 'home';
-    
-    const parts = hash.split('?')[0].split('#'); // handle nested hashes if any
-    const view = parts[0];
-    
-    if (view === 'docs') showView('docs-view');
-    else if (view === 'news') showView('news-view');
-    else showView('home-view');
-    
-    if (parts.length > 1) {
-        setTimeout(() => {
-            const el = document.getElementById(parts[1]);
-            if(el) el.scrollIntoView();
-        }, 100);
-    }
-}
-
-window.addEventListener('load', handleHash);
-window.addEventListener('hashchange', handleHash);
-</script>
-
-</body>
-</html>
-</div>
+    </div>
 <div id="news-view" class="view-section" style="display:none;">
 <main class="news-container">
         <h1 class="news-page-title" style="font-size: 2.5rem; font-weight: 800; margin-bottom: 32px; text-align: center;">Gabi Releases & News</h1>
@@ -1600,7 +1362,43 @@ window.addEventListener('hashchange', handleHash);
         </div>
     </div>
 
-    <script>
+    </div>
+<footer>
+        <p>Copyright © 2026 Gabi App</p>
+        <div class="footer-links">
+            <a href="https://github.com/Hotaro26/gabi">Open-source MIT Licensed</a>
+            <span>|</span>
+            <a href="#">Privacy policy</a>
+        </div>
+    </footer>
+<div class="search-modal" id="searchModal">
+        <div class="search-modal-content">
+            <div class="search-header">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="searchInput" placeholder="Search documentation...">
+                <button class="close-search" id="closeSearch">ESC</button>
+            </div>
+            <div class="search-results" id="searchResults"></div>
+        </div>
+<script>
+
+        // Tab switching logic
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabPanes = document.querySelectorAll('.tab-pane');
+
+        if (tabBtns.length > 0) {
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    tabPanes.forEach(p => p.classList.remove('active'));
+                    
+                    btn.classList.add('active');
+                    const targetId = btn.getAttribute('data-target');
+                    document.getElementById(targetId).classList.add('active');
+                });
+            });
+        }
+
         const themeToggle = document.getElementById('themeToggle');
         const sunIcon = document.getElementById('sunIcon');
         const moonIcon = document.getElementById('moonIcon');
@@ -1608,30 +1406,36 @@ window.addEventListener('hashchange', handleHash);
         // Setup Initial Theme
         if (localStorage.getItem('theme') === 'light' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: light)').matches)) {
             document.body.setAttribute('data-theme', 'light');
-            sunIcon.style.display = 'block';
-            moonIcon.style.display = 'none';
+            if (sunIcon) sunIcon.style.display = 'block';
+            if (moonIcon) moonIcon.style.display = 'none';
         }
 
-        themeToggle.addEventListener('click', () => {
-            if (document.body.getAttribute('data-theme') === 'dark') {
-                document.body.setAttribute('data-theme', 'light');
-                localStorage.setItem('theme', 'light');
-                sunIcon.style.display = 'block';
-                moonIcon.style.display = 'none';
-            } else {
-                document.body.setAttribute('data-theme', 'dark');
-                localStorage.setItem('theme', 'dark');
-                sunIcon.style.display = 'none';
-                moonIcon.style.display = 'block';
-            }
-        });
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+                if (document.body.getAttribute('data-theme') === 'dark') {
+                    document.body.setAttribute('data-theme', 'light');
+                    localStorage.setItem('theme', 'light');
+                    if (sunIcon) sunIcon.style.display = 'block';
+                    if (moonIcon) moonIcon.style.display = 'none';
+                } else {
+                    document.body.setAttribute('data-theme', 'dark');
+                    localStorage.setItem('theme', 'dark');
+                    if (sunIcon) sunIcon.style.display = 'none';
+                    if (moonIcon) moonIcon.style.display = 'block';
+                }
+            });
+        }
 
         // Search functionality
         const searchData = [
-            { title: 'Installation guide', desc: 'Downloading and installing Gabi via APK.', id: 'installation-guide' },
-            { title: 'How to Use', desc: 'Basic usage, Instant actions, and Customization.', id: 'how-to-use' },
-            { title: 'Key Features', desc: 'Wide Support, Smart Preview, Themes, etc.', id: 'features' },
-            { title: 'Building from Source', desc: 'Compile Gabi from source using Android Studio.', id: 'building-from-source' }
+            { id: 'installation-guide', title: 'Installation guide', desc: 'Step by step guide to install Gabi.' },
+            { id: 'downloading-gabi', title: 'Downloading Gabi', desc: 'You can download the latest version from our GitHub Releases page.' },
+            { id: 'how-to-use', title: 'How to Use', desc: 'Basic Usage, Instant Actions, Customization, Paste & Fetch, Configure, Download.' },
+            { id: 'features', title: 'Key Features', desc: 'Wide Support, Smart Preview, Share to Gabi, Themes.' },
+            { id: 'supported-sites', title: 'Supported Sites', desc: 'YouTube, TikTok, Instagram, Twitter, Reddit, Twitch, Facebook, SoundCloud, Pixiv, Pinterest, yt-dlp, gallery-dl, cobalt.' },
+            { id: 'customization', title: 'Customization', desc: 'Themes, Lavender, Forest, Midnight, Rose, Monochrome, Material You, Dynamic Theme, Dark mode, Light mode, Storage Access Framework.' },
+            { id: 'instant-action', title: 'Instant Action', desc: 'One-Tap Download, fetch links from clipboard, Share to Gabi, background processing.' },
+            { id: 'building-from-source', title: 'Building from Source', desc: 'To build Gabi yourself: Clone the repository, Open in Android Studio, Build the project.' }
         ];
 
         const searchBtn = document.getElementById('searchBtn');
@@ -1641,19 +1445,21 @@ window.addEventListener('hashchange', handleHash);
         const searchResults = document.getElementById('searchResults');
 
         function openSearch() {
-            searchModal.classList.add('active');
-            searchInput.value = '';
+            if (searchModal) searchModal.classList.add('active');
+            if (searchInput) {
+                searchInput.value = '';
+                setTimeout(() => searchInput.focus(), 100);
+            }
             renderResults(searchData);
-            setTimeout(() => searchInput.focus(), 100);
         }
 
         function closeSearchModal() {
-            searchModal.classList.remove('active');
+            if (searchModal) searchModal.classList.remove('active');
         }
 
-        searchBtn.addEventListener('click', openSearch);
-        closeSearch.addEventListener('click', closeSearchModal);
-        searchModal.addEventListener('click', (e) => {
+        if (searchBtn) searchBtn.addEventListener('click', openSearch);
+        if (closeSearch) closeSearch.addEventListener('click', closeSearchModal);
+        if (searchModal) searchModal.addEventListener('click', (e) => {
             if (e.target === searchModal) closeSearchModal();
         });
 
@@ -1665,16 +1471,19 @@ window.addEventListener('hashchange', handleHash);
             if (e.key === 'Escape') closeSearchModal();
         });
 
-        searchInput.addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase();
-            const filtered = searchData.filter(item => 
-                item.title.toLowerCase().includes(query) || 
-                item.desc.toLowerCase().includes(query)
-            );
-            renderResults(filtered);
-        });
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                const filtered = searchData.filter(item => 
+                    item.title.toLowerCase().includes(query) || 
+                    item.desc.toLowerCase().includes(query)
+                );
+                renderResults(filtered);
+            });
+        }
 
         function renderResults(results) {
+            if (!searchResults) return;
             searchResults.innerHTML = '';
             if (results.length === 0) {
                 searchResults.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--vp-c-text-2);">No results found</div>';
@@ -1682,7 +1491,7 @@ window.addEventListener('hashchange', handleHash);
             }
             results.forEach(item => {
                 const a = document.createElement('a');
-                a.href = 'docs.html#' + item.id;
+                a.href = '#' + item.id;
                 a.className = 'search-result-item';
                 a.innerHTML = `<div class="search-result-title">${item.title}</div><div class="search-result-desc">${item.desc}</div>`;
                 a.addEventListener('click', () => {
@@ -1692,7 +1501,61 @@ window.addEventListener('hashchange', handleHash);
             });
         }
 
-        // Fetch all release versions from GitHub for the navbar
+        // Carousel logic
+        const slides = document.querySelectorAll('.carousel-slide');
+        const prevBtn = document.querySelector('.carousel-arrow.left');
+        const nextBtn = document.querySelector('.carousel-arrow.right');
+        const mockupContainer = document.querySelector('.phone-mockup');
+        let currentSlide = 0;
+        let slideInterval;
+        
+        function showSlide(index) {
+            if (!slides || slides.length === 0) return;
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (index + slides.length) % slides.length;
+            slides[currentSlide].classList.add('active');
+            
+            const pill = document.getElementById('devicePill');
+            
+            if (slides[currentSlide].getAttribute('data-type') === 'tablet') {
+                if (mockupContainer) mockupContainer.classList.add('tablet-mode');
+                if (pill) pill.textContent = 'Tablet';
+            } else {
+                if (mockupContainer) mockupContainer.classList.remove('tablet-mode');
+                if (pill) pill.textContent = 'Phone';
+            }
+        }
+        
+        function nextSlide() {
+            showSlide(currentSlide + 1);
+        }
+        
+        function startCarousel() {
+            slideInterval = setInterval(nextSlide, 3000);
+        }
+        
+        function resetCarousel() {
+            clearInterval(slideInterval);
+            startCarousel();
+        }
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => {
+                showSlide(currentSlide - 1);
+                resetCarousel();
+            });
+        }
+        
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                nextSlide();
+                resetCarousel();
+            });
+        }
+        
+        if (slides.length > 0) startCarousel();
+
+        // Fetch all release versions from GitHub
         fetch('https://api.github.com/repos/Hotaro26/gabi/releases')
             .then(response => response.json())
             .then(data => {
@@ -1715,324 +1578,56 @@ window.addEventListener('hashchange', handleHash);
                     }
                 }
             })
-            .catch(error => console.error('Error fetching releases for navbar:', error));
-
-        // Fetch ALL releases for the news feed
-        const newsFeed = document.getElementById('newsFeed');
-        fetch('https://api.github.com/repos/Hotaro26/gabi/releases')
-            .then(res => res.json())
-            .then(releases => {
-                newsFeed.innerHTML = '';
-                if (!releases || releases.length === 0) {
-                    newsFeed.innerHTML = '<p style="text-align:center;">No news or releases found.</p>';
-                    return;
-                }
-                
-                releases.forEach(release => {
-                    const article = document.createElement('article');
-                    article.className = 'release-card';
-                    
-                    const dateObj = new Date(release.published_at);
-                    const date = dateObj.toLocaleDateString(undefined, {
-                        year: 'numeric', month: 'long', day: 'numeric'
-                    });
-                    
-                    let bodyHtml = '';
-                    if (release.body) {
-                        bodyHtml = marked.parse(release.body);
-                    }
-                    
-                    article.innerHTML = `
-                        <div class="release-header">
-                            <h2 class="release-title"><a href="${release.html_url}" target="_blank">${release.name || release.tag_name}</a></h2>
-                            <div class="release-meta" style="display: flex; align-items: center; gap: 12px; margin-top: 12px;">
-                                <span class="release-tag">${release.tag_name}</span>
-                                <span class="release-date">${date}</span>
-                            </div>
-                        </div>
-                        <div class="release-body markdown-body">
-                            ${bodyHtml}
-                        </div>
-                    `;
-                    newsFeed.appendChild(article);
-                });
-            })
-            .catch(err => {
-                newsFeed.innerHTML = '<p style="text-align:center; color:#ef4444;">Error loading news. Please try again later.</p>';
-                console.error(err);
-            });
-
-        // Accent Color Picker Logic
-        const colorBtns = document.querySelectorAll('.color-btn');
-        const customColorPicker = document.getElementById('customColorPicker');
-        const root = document.documentElement;
-
-        const savedColor = localStorage.getItem('accent-color');
-        if (savedColor) {
-            root.style.setProperty('--vp-c-brand', savedColor);
-            let matched = false;
-            colorBtns.forEach(btn => {
-                if (btn.getAttribute('data-color') === savedColor) {
-                    btn.classList.add('active');
-                    matched = true;
-                }
-            });
-            if (!matched && customColorPicker) {
-                customColorPicker.value = savedColor;
-                document.querySelectorAll('.custom-color-btn').forEach(b => b.classList.add('active'));
-            }
-        }
-
-        colorBtns.forEach(btn => {
-            if (!btn.hasAttribute('data-color')) return;
-            btn.addEventListener('click', () => {
-                const color = btn.getAttribute('data-color');
-                root.style.setProperty('--vp-c-brand', color);
-                localStorage.setItem('accent-color', color);
-                
-                colorBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-            });
-        });
-
-        if (customColorPicker) {
-            customColorPicker.addEventListener('input', (e) => {
-                const color = e.target.value;
-                root.style.setProperty('--vp-c-brand', color);
-                localStorage.setItem('accent-color', color);
-                
-                colorBtns.forEach(b => b.classList.remove('active'));
-                document.querySelectorAll('.custom-color-btn').forEach(b => b.classList.add('active'));
-            });
-        }
-    </script>
-
-<script>
-function showView(viewId) {
-    document.querySelectorAll('.view-section').forEach(el => el.style.display = 'none');
-    document.getElementById(viewId).style.display = 'block';
-    
-    // Scroll to top or anchor
-    window.scrollTo(0, 0);
-    
-    // Update active nav links
-    document.querySelectorAll('.nav-link').forEach(link => {
-        link.style.color = '';
-    });
-}
-
-function handleHash() {
-    let hash = window.location.hash.substring(1);
-    if (!hash) hash = 'home';
-    
-    const parts = hash.split('?')[0].split('#'); // handle nested hashes if any
-    const view = parts[0];
-    
-    if (view === 'docs') showView('docs-view');
-    else if (view === 'news') showView('news-view');
-    else showView('home-view');
-    
-    if (parts.length > 1) {
-        setTimeout(() => {
-            const el = document.getElementById(parts[1]);
-            if(el) el.scrollIntoView();
-        }, 100);
-    }
-}
-
-window.addEventListener('load', handleHash);
-window.addEventListener('hashchange', handleHash);
-</script>
-
-</body>
-</html>
-</div>
-<footer>
-        <p>Copyright © 2026 Gabi App</p>
-        <div class="footer-links">
-            <a href="https://github.com/Hotaro26/gabi">Open-source MIT Licensed</a>
-            <span>|</span>
-            <a href="#">Privacy policy</a>
-        </div>
-    </footer>
-
-    <!-- Search Modal -->
-    <div class="search-modal" id="searchModal">
-        <div class="search-modal-content">
-            <div class="search-header">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <input type="text" id="searchInput" placeholder="Search documentation...">
-                <button class="close-search" id="closeSearch">ESC</button>
-            </div>
-            <div class="search-results" id="searchResults"></div>
-        </div>
-    </div>
-
-    <script>
-        const themeToggle = document.getElementById('themeToggle');
-        const sunIcon = document.getElementById('sunIcon');
-        const moonIcon = document.getElementById('moonIcon');
-        
-        // Setup Initial Theme
-        if (localStorage.getItem('theme') === 'light' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: light)').matches)) {
-            document.body.setAttribute('data-theme', 'light');
-            sunIcon.style.display = 'block';
-            moonIcon.style.display = 'none';
-        }
-
-        themeToggle.addEventListener('click', () => {
-            if (document.body.getAttribute('data-theme') === 'dark') {
-                document.body.setAttribute('data-theme', 'light');
-                localStorage.setItem('theme', 'light');
-                sunIcon.style.display = 'block';
-                moonIcon.style.display = 'none';
-            } else {
-                document.body.setAttribute('data-theme', 'dark');
-                localStorage.setItem('theme', 'dark');
-                sunIcon.style.display = 'none';
-                moonIcon.style.display = 'block';
-            }
-        });
-
-        // Search functionality
-        const searchData = [
-            { title: 'Installation guide', desc: 'Downloading and installing Gabi via APK.', id: 'installation-guide' },
-            { title: 'How to Use', desc: 'Basic usage, Instant actions, and Customization.', id: 'how-to-use' },
-            { title: 'Key Features', desc: 'Wide Support, Smart Preview, Themes, etc.', id: 'features' },
-            { title: 'Building from Source', desc: 'Compile Gabi from source using Android Studio.', id: 'building-from-source' }
-        ];
-
-        const searchBtn = document.getElementById('searchBtn');
-        const searchModal = document.getElementById('searchModal');
-        const closeSearch = document.getElementById('closeSearch');
-        const searchInput = document.getElementById('searchInput');
-        const searchResults = document.getElementById('searchResults');
-
-        function openSearch() {
-            searchModal.classList.add('active');
-            searchInput.value = '';
-            renderResults(searchData);
-            setTimeout(() => searchInput.focus(), 100);
-        }
-
-        function closeSearchModal() {
-            searchModal.classList.remove('active');
-        }
-
-        searchBtn.addEventListener('click', openSearch);
-        closeSearch.addEventListener('click', closeSearchModal);
-        searchModal.addEventListener('click', (e) => {
-            if (e.target === searchModal) closeSearchModal();
-        });
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'b' && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault();
-                openSearch();
-            }
-            if (e.key === 'Escape') closeSearchModal();
-        });
-
-        searchInput.addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase();
-            const filtered = searchData.filter(item => 
-                item.title.toLowerCase().includes(query) || 
-                item.desc.toLowerCase().includes(query)
-            );
-            renderResults(filtered);
-        });
-
-        function renderResults(results) {
-            searchResults.innerHTML = '';
-            if (results.length === 0) {
-                searchResults.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--vp-c-text-2);">No results found</div>';
-                return;
-            }
-            results.forEach(item => {
-                const a = document.createElement('a');
-                const isDocs = window.location.pathname.endsWith('docs.html');
-                a.href = (isDocs ? '' : 'docs.html') + '#' + item.id;
-                a.className = 'search-result-item';
-                a.innerHTML = `<div class="search-result-title">${item.title}</div><div class="search-result-desc">${item.desc}</div>`;
-                a.addEventListener('click', () => {
-                    closeSearchModal();
-                });
-                searchResults.appendChild(a);
-            });
-        }
-
-        // Carousel logic
-        const slides = document.querySelectorAll('.carousel-slide');
-        const prevBtn = document.querySelector('.carousel-arrow.left');
-        const nextBtn = document.querySelector('.carousel-arrow.right');
-        const mockupContainer = document.querySelector('.phone-mockup');
-        let currentSlide = 0;
-        let slideInterval;
-        
-        function showSlide(index) {
-            slides[currentSlide].classList.remove('active');
-            currentSlide = (index + slides.length) % slides.length;
-            slides[currentSlide].classList.add('active');
-            
-            const pill = document.getElementById('devicePill');
-            
-            if (slides[currentSlide].getAttribute('data-type') === 'tablet') {
-                mockupContainer.classList.add('tablet-mode');
-                pill.textContent = 'Tablet';
-            } else {
-                mockupContainer.classList.remove('tablet-mode');
-                pill.textContent = 'Phone';
-            }
-        }
-        
-        function nextSlide() {
-            showSlide(currentSlide + 1);
-        }
-        
-        function startCarousel() {
-            slideInterval = setInterval(nextSlide, 3000);
-        }
-        
-        function resetCarousel() {
-            clearInterval(slideInterval);
-            startCarousel();
-        }
-
-        prevBtn.addEventListener('click', () => {
-            showSlide(currentSlide - 1);
-            resetCarousel();
-        });
-        
-        nextBtn.addEventListener('click', () => {
-            nextSlide();
-            resetCarousel();
-        });
-        
-        startCarousel();
-
-        // Fetch all release versions from GitHub
-        fetch('https://api.github.com/repos/Hotaro26/gabi/releases')
-            .then(response => response.json())
-            .then(data => {
-                if (data && data.length > 0) {
-                    const latest = data[0];
-                    const versionLink = document.getElementById('versionLink');
-                    versionLink.href = latest.html_url;
-                    versionLink.innerHTML = `Get ${latest.tag_name} <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
-                    
-                    const versionMenu = document.getElementById('versionMenu');
-                    if (versionMenu) {
-                        data.forEach(release => {
-                            const a = document.createElement('a');
-                            a.href = release.html_url;
-                            a.textContent = release.tag_name;
-                            versionMenu.appendChild(a);
-                        });
-                    }
-                }
-            })
             .catch(error => console.error('Error fetching releases:', error));
 
+        // Fetch news feed
+        const newsFeed = document.getElementById('newsFeed');
+        if (newsFeed) {
+            fetch('https://api.github.com/repos/Hotaro26/gabi/releases')
+                .then(response => response.json())
+                .then(data => {
+                    newsFeed.innerHTML = '';
+                    if (data && data.length > 0) {
+                        data.forEach(release => {
+                            const date = new Date(release.published_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                            
+                            // Convert markdown to simple HTML (basic implementation)
+                            let bodyHtml = release.body
+                                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                                .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+                                .replace(/\*(.*)\*/gim, '<em>$1</em>')
+                                .replace(/\[(.*?)\]\((.*?)\)/gim, "<a href='$2'>$1</a>")
+                                .replace(/
+/gim, '<br>');
+                                
+                            const card = document.createElement('div');
+                            card.className = 'release-card';
+                            card.innerHTML = `
+                                <div class="release-header">
+                                    <h2 class="release-title"><a href="${release.html_url}" target="_blank">${release.name || release.tag_name}</a></h2>
+                                    <div style="display: flex; gap: 12px; align-items: center;">
+                                        <span class="release-tag">${release.tag_name}</span>
+                                        <span class="release-date">${date}</span>
+                                    </div>
+                                </div>
+                                <div class="markdown-body">
+                                    ${bodyHtml}
+                                </div>
+                            `;
+                            newsFeed.appendChild(card);
+                        });
+                    } else {
+                        newsFeed.innerHTML = '<div style="text-align:center; padding: 40px; color: var(--vp-c-text-2);">No releases found.</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching releases for news:', error);
+                    newsFeed.innerHTML = '<div style="text-align:center; padding: 40px; color: #ff5555;">Failed to load news. Check console.</div>';
+                });
+        }
+
         // Accent Color Picker Logic
         const colorBtns = document.querySelectorAll('.color-btn');
         const customColorPicker = document.getElementById('customColorPicker');
@@ -2076,29 +1671,19 @@ window.addEventListener('hashchange', handleHash);
                 document.querySelectorAll('.custom-color-btn').forEach(b => b.classList.add('active'));
             });
         }
-    </script>
 
-<script>
+
 function showView(viewId) {
     document.querySelectorAll('.view-section').forEach(el => el.style.display = 'none');
     document.getElementById(viewId).style.display = 'block';
-    
-    // Scroll to top or anchor
     window.scrollTo(0, 0);
-    
-    // Update active nav links
-    document.querySelectorAll('.nav-link').forEach(link => {
-        link.style.color = '';
-    });
+    document.querySelectorAll('.nav-link').forEach(link => { link.style.color = ''; });
 }
-
 function handleHash() {
     let hash = window.location.hash.substring(1);
     if (!hash) hash = 'home';
-    
-    const parts = hash.split('?')[0].split('#'); // handle nested hashes if any
+    const parts = hash.split('?')[0].split('#');
     const view = parts[0];
-    
     if (view === 'docs') showView('docs-view');
     else if (view === 'news') showView('news-view');
     else showView('home-view');
@@ -2110,10 +1695,9 @@ function handleHash() {
         }, 100);
     }
 }
-
 window.addEventListener('load', handleHash);
 window.addEventListener('hashchange', handleHash);
-</script>
 
+</script>
 </body>
 </html>
