@@ -1364,20 +1364,20 @@ footer {
             <div class="toc">
                 <h4 class="toc-title">On this page</h4>
                 <ul class="toc-list">
-                    <li><a href="#installation-guide">Installation guide</a>
+                    <li><a href="#docs#installation-guide">Installation guide</a>
                         <ul>
-                            <li><a href="#downloading-gabi">Downloading Gabi</a></li>
-                            <li><a href="#how-to-use">How to Use</a></li>
+                            <li><a href="#docs#downloading-gabi">Downloading Gabi</a></li>
+                            <li><a href="#docs#how-to-use">How to Use</a></li>
                         </ul>
                     </li>
-                    <li><a href="#features">Key Features</a>
+                    <li><a href="#docs#features">Key Features</a>
                         <ul>
-                            <li><a href="#supported-sites">Supported Sites</a></li>
-                            <li><a href="#customization">Customization</a></li>
-                            <li><a href="#instant-action">Instant Action</a></li>
+                            <li><a href="#docs#supported-sites">Supported Sites</a></li>
+                            <li><a href="#docs#customization">Customization</a></li>
+                            <li><a href="#docs#instant-action">Instant Action</a></li>
                         </ul>
                     </li>
-                    <li><a href="#building-from-source">Building from Source</a></li>
+                    <li><a href="#docs#building-from-source">Building from Source</a></li>
                 </ul>
             </div>
         </aside>
@@ -1407,15 +1407,7 @@ footer {
             <a href="#">Privacy policy</a>
         </div>
     </footer>
-<div class="search-modal" id="searchModal">
-        <div class="search-modal-content">
-            <div class="search-header">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <input type="text" id="searchInput" placeholder="Search documentation...">
-                <button class="close-search" id="closeSearch">ESC</button>
-            </div>
-            <div class="search-results" id="searchResults"></div>
-        </div>
+
 <!-- Search Modal -->
     <div class="search-modal" id="searchModal">
         <div class="search-modal-content">
@@ -1437,11 +1429,18 @@ footer {
             tabBtns.forEach(btn => {
                 btn.addEventListener('click', () => {
                     tabBtns.forEach(b => b.classList.remove('active'));
-                    tabPanes.forEach(p => p.classList.remove('active'));
+                    tabPanes.forEach(p => {
+                        p.classList.remove('active');
+                        p.style.display = 'none';
+                    });
                     
                     btn.classList.add('active');
                     const targetId = btn.getAttribute('data-target');
-                    document.getElementById(targetId).classList.add('active');
+                    const targetPane = document.getElementById(targetId);
+                    if(targetPane) {
+                        targetPane.classList.add('active');
+                        targetPane.style.display = 'block';
+                    }
                 });
             });
         }
@@ -1538,10 +1537,12 @@ footer {
             }
             results.forEach(item => {
                 const a = document.createElement('a');
-                a.href = '#' + item.id;
+                a.href = '#docs#' + item.id;
                 a.className = 'search-result-item';
                 a.innerHTML = `<div class="search-result-title">${item.title}</div><div class="search-result-desc">${item.desc}</div>`;
-                a.addEventListener('click', () => {
+                a.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    window.location.hash = '#docs#' + item.id;
                     closeSearchModal();
                 });
                 searchResults.appendChild(a);
