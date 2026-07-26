@@ -422,10 +422,6 @@ body {
   border-radius: 24px;
 }
 
-.phone-mockup.tablet-mode .dynamic-island {
-  opacity: 0;
-}
-
 .device-pill {
   background: var(--vp-c-bg-soft);
   color: var(--vp-c-text-2);
@@ -1562,7 +1558,7 @@ footer {
                 if (pill) pill.textContent = 'Phone';
             }
             
-            if (island && slides[currentSlide].getAttribute('data-type') !== 'tablet') {
+            if (island) {
                 island.classList.add('expanded');
                 islandText.textContent = `Screenshot ${currentSlide + 1} / ${slides.length}`;
                 setTimeout(() => {
