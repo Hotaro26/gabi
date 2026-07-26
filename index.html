@@ -1562,12 +1562,32 @@ footer {
                     
                     const versionMenu = document.getElementById('versionMenu');
                     if (versionMenu) {
-                        data.forEach(release => {
+                        data.forEach((release, index) => {
                             const a = document.createElement('a');
                             a.href = release.html_url;
                             a.textContent = release.tag_name;
+                            if (index >= 5) {
+                                a.style.display = 'none';
+                                a.classList.add('hidden-version');
+                            }
                             versionMenu.appendChild(a);
                         });
+                        if (data.length > 5) {
+                            const showMoreBtn = document.createElement('div');
+                            showMoreBtn.textContent = 'Show more...';
+                            showMoreBtn.style.cursor = 'pointer';
+                            showMoreBtn.style.padding = '8px 16px';
+                            showMoreBtn.style.color = 'var(--vp-c-brand)';
+                            showMoreBtn.style.fontWeight = '500';
+                            showMoreBtn.style.textAlign = 'center';
+                            showMoreBtn.addEventListener('click', (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                versionMenu.querySelectorAll('.hidden-version').forEach(el => el.style.display = 'block');
+                                showMoreBtn.style.display = 'none';
+                            });
+                            versionMenu.appendChild(showMoreBtn);
+                        }
                     }
                 }
             })
