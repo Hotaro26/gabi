@@ -7,9 +7,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  --vp-c-brand: #818cf8;
-  --vp-c-brand-light: #a5b4fc;
-  --vp-c-brand-dark: #6366f1;
+  --vp-c-brand: #64748b;
+  --vp-c-brand-light: #94a3b8;
+  --vp-c-brand-dark: #475569;
   
   --vp-c-bg: #1b1b1f;
   --vp-c-bg-soft: #202127;
@@ -1083,6 +1083,34 @@ footer {
 
 
 
+@media (max-width: 600px) {
+  .hero {
+    padding: 80px 20px 30px;
+    gap: 32px;
+  }
+  .hero-title, .hero-subtitle {
+    font-size: 2.2rem;
+  }
+  .hero-desc {
+    font-size: 1.05rem;
+  }
+  .hero-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .btn {
+    width: 100%;
+  }
+  .phone-mockup {
+    height: 400px;
+    border-width: 6px;
+    border-radius: 28px;
+  }
+  .features {
+    padding: 0 20px 40px;
+  }
+}
+
 </style>
     <link rel="icon" type="image/png" href="phone screenhots/gabi_icon.png">
     <meta name="description" content="Gabi is a minimal, fast, and secure media downloader for Android.">
@@ -1682,13 +1710,16 @@ footer {
                             
                             // Convert markdown to simple HTML (basic implementation)
                             let bodyHtml = release.body
+                                .replace(/\r\n/g, '\n')
                                 .replace(/^### (.*$)/gim, '<h3>$1</h3>')
                                 .replace(/^## (.*$)/gim, '<h2>$1</h2>')
                                 .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-                                .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
-                                .replace(/\*(.*)\*/gim, '<em>$1</em>')
+                                .replace(/^\s*[-*]\s+(.*$)/gim, '<li>$1</li>')
+                                .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+                                .replace(/\*(.*?)\*/gim, '<em>$1</em>')
                                 .replace(/\[(.*?)\]\((.*?)\)/gim, "<a href='$2'>$1</a>")
-                                .replace(/\\n/gim, '<br>');
+                                .replace(/\n/gim, '<br>')
+                                .replace(/(<li>.*?<\/li>(?:<br>)*)+/gim, match => `<ul>${match.replace(/<br>/g, '')}</ul>`);
                                 
                             const card = document.createElement('div');
                             card.className = 'release-card';
