@@ -182,7 +182,8 @@ body {
 
 .version-menu a {
     display: block;
-    padding: 6px 16px;
+    padding: 8px 20px;
+    white-space: nowrap;
     color: var(--vp-c-text-1);
     text-decoration: none;
     font-size: 0.85rem;
@@ -1574,12 +1575,24 @@ footer {
                         });
                         if (data.length > 5) {
                             const showMoreBtn = document.createElement('div');
-                            showMoreBtn.textContent = 'Show more...';
+                            showMoreBtn.textContent = 'Show all versions';
                             showMoreBtn.style.cursor = 'pointer';
-                            showMoreBtn.style.padding = '8px 16px';
+                            showMoreBtn.style.padding = '10px 20px';
                             showMoreBtn.style.color = 'var(--vp-c-brand)';
-                            showMoreBtn.style.fontWeight = '500';
+                            showMoreBtn.style.fontWeight = '600';
+                            showMoreBtn.style.fontSize = '0.85rem';
                             showMoreBtn.style.textAlign = 'center';
+                            showMoreBtn.style.borderTop = '1px solid var(--vp-c-divider)';
+                            showMoreBtn.style.marginTop = '4px';
+                            showMoreBtn.style.whiteSpace = 'nowrap';
+                            
+                            showMoreBtn.addEventListener('mouseenter', () => {
+                                showMoreBtn.style.backgroundColor = 'var(--vp-c-bg-soft)';
+                            });
+                            showMoreBtn.addEventListener('mouseleave', () => {
+                                showMoreBtn.style.backgroundColor = 'transparent';
+                            });
+                            
                             showMoreBtn.addEventListener('click', (e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
