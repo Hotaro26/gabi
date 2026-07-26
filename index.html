@@ -380,18 +380,39 @@ body {
   transition: aspect-ratio 0.5s ease-in-out, border-radius 0.5s ease-in-out, height 0.5s ease-in-out;
 }
 
-.phone-mockup::after {
-  content: '';
+.dynamic-island {
   position: absolute;
   top: 8px;
   left: 50%;
   transform: translateX(-50%);
-  width: 70px;
-  height: 20px;
-  background-color: #0a0a0a;
-  border-radius: 10px;
+  width: 90px;
+  height: 25px;
+  background-color: #000;
+  border-radius: 20px;
   z-index: 10;
-  transition: opacity 0.3s ease-in-out;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.05);
+}
+.dynamic-island span {
+  opacity: 0;
+  white-space: nowrap;
+  transition: opacity 0.3s;
+}
+.dynamic-island.expanded {
+  width: 160px;
+  height: 35px;
+}
+.dynamic-island.expanded span {
+  opacity: 1;
+  transition-delay: 0.1s;
 }
 
 .phone-mockup.tablet-mode {
@@ -400,7 +421,7 @@ body {
   border-radius: 24px;
 }
 
-.phone-mockup.tablet-mode::after {
+.phone-mockup.tablet-mode .dynamic-island {
   opacity: 0;
 }
 
@@ -1137,6 +1158,7 @@ footer {
                 
                 <div class="mockup-wrapper" style="display: flex; flex-direction: column; align-items: center; gap: 24px;">
                     <div class="phone-mockup">
+                    <div class="dynamic-island" id="dynamicIsland"><span></span></div>
                     <img src="phone screenhots/screenshot1.png" alt="Gabi App Screenshot New 1" data-type="phone" class="carousel-slide active">
                     <img src="phone screenhots/screenshot2.png" alt="Gabi App Screenshot New 2" data-type="phone" class="carousel-slide">
                     <img src="phone screenhots/screenshot3.png" alt="Gabi App Screenshot New 3" data-type="phone" class="carousel-slide">
@@ -1501,6 +1523,20 @@ footer {
             });
         }
 
+        
+        const island = document.getElementById('dynamicIsland');
+        const islandText = island ? island.querySelector('span') : null;
+        
+        if (island) {
+            island.addEventListener('click', () => {
+                island.classList.add('expanded');
+                islandText.textContent = 'Gabi Downloader';
+                setTimeout(() => {
+                    island.classList.remove('expanded');
+                }, 2000);
+            });
+        }
+
         // Carousel logic
         const slides = document.querySelectorAll('.carousel-slide');
         const prevBtn = document.querySelector('.carousel-arrow.left');
@@ -1524,6 +1560,15 @@ footer {
                 if (mockupContainer) mockupContainer.classList.remove('tablet-mode');
                 if (pill) pill.textContent = 'Phone';
             }
+            
+            if (island && slides[currentSlide].getAttribute('data-type') !== 'tablet') {
+                island.classList.add('expanded');
+                islandText.textContent = `Screenshot ${currentSlide + 1} / ${slides.length}`;
+                setTimeout(() => {
+                    island.classList.remove('expanded');
+                }, 2000);
+            }
+
         }
         
         function nextSlide() {
