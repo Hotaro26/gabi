@@ -602,9 +602,7 @@ footer {
     grid-template-columns: 1fr;
   }
   
-  .nav-right {
-    display: none;
-  }
+  
   
   .search-bar {
     display: none;
@@ -1111,6 +1109,46 @@ footer {
   }
 }
 
+
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--vp-c-text-1);
+  cursor: pointer;
+  padding: 8px;
+}
+
+@media (max-width: 900px) {
+  .nav-right {
+    display: none; /* hidden by default on mobile */
+    position: fixed;
+    top: 64px;
+    left: 0;
+    right: 0;
+    background: var(--vp-c-bg);
+    border-bottom: 1px solid var(--vp-c-divider);
+    flex-direction: column;
+    padding: 24px;
+    gap: 24px;
+    align-items: flex-start;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);
+  }
+  
+  .nav-right.mobile-open {
+    display: flex;
+  }
+
+  .mobile-menu-btn {
+    display: block;
+  }
+  
+  .theme-picker {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+}
+
 </style>
     <link rel="icon" type="image/png" href="phone screenhots/gabi_icon.png">
     <meta name="description" content="Gabi is a minimal, fast, and secure media downloader for Android.">
@@ -1118,14 +1156,19 @@ footer {
 <body data-theme="dark">
 
     <nav class="navbar">
-        <div style="display: flex; align-items: center;">
-            <a href="#" class="nav-left">
-                <img src="phone screenhots/gabi_icon.png" alt="Gabi Logo" class="logo-img">
-            </a>
-            <div class="search-bar" id="searchBtn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                Search <kbd>Ctrl B</kbd>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+            <div style="display: flex; align-items: center;">
+                <a href="#" class="nav-left">
+                    <img src="phone screenhots/gabi_icon.png" alt="Gabi Logo" class="logo-img">
+                </a>
+                <div class="search-bar" id="searchBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    Search <kbd>Ctrl B</kbd>
+                </div>
             </div>
+            <button class="mobile-menu-btn" id="mobileMenuBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
         </div>
         
         <div class="nav-right">
@@ -1420,6 +1463,21 @@ footer {
         </div>
 
 <script>
+
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const navRight = document.querySelector('.nav-right');
+        if (mobileMenuBtn && navRight) {
+            mobileMenuBtn.addEventListener('click', () => {
+                navRight.classList.toggle('mobile-open');
+            });
+            // Close menu on link click
+            navRight.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', () => {
+                    navRight.classList.remove('mobile-open');
+                });
+            });
+        }
+
 
         // Tab switching logic
         const tabBtns = document.querySelectorAll('.tab-btn');
