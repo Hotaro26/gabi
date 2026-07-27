@@ -40,14 +40,11 @@
 ---
 ## Screenshots
 
-<table>
-  <tr>
-    <td><img width="430" alt="Screenshot_20260630-102122_Gabi" src="https://github.com/user-attachments/assets/85727742-fc5c-44dc-8f56-6f9056605cb5" /></td>
-    <td><img width="430" alt="Screenshot_20260630-102131_Gabi" src="https://github.com/user-attachments/assets/80a94b9f-a480-4e95-b333-14b5befe287d" /></td>
-    <td><img width="430" alt="Screenshot_20260630-105536_Gabi" src="https://github.com/user-attachments/assets/7cae2796-a4d2-42a0-8b28-ed07d7f5a324" /></td>
-  </tr>
-</table>
 
+| | | |
+|:---:|:---:|:---:|
+| <img width="250" alt="screenshot1" src="https://github.com/user-attachments/assets/dd2b5c92-de47-457f-9def-421329705fea" /> | <img width="250" alt="screenshot2" src="https://github.com/user-attachments/assets/9fc8da79-2ff8-43ac-91ac-5975bc152931" /> | <img width="250" alt="screenshot3" src="https://github.com/user-attachments/assets/152530de-672e-4f14-b387-9dd78c918cb1" /> |
+| <img width="250" alt="screenshot4" src="https://github.com/user-attachments/assets/8a9f5d3a-e273-484a-b7ae-f0b95cef9e51" /> | <img width="250" alt="screenshot5" src="https://github.com/user-attachments/assets/7bc01473-96c8-478c-a1cf-dfd3a9116038" /> | <img width="250" alt="screenshot6" src="https://github.com/user-attachments/assets/59d0fc22-d312-466d-ab36-be67e8264a37" /> |
 
 
 <table>
