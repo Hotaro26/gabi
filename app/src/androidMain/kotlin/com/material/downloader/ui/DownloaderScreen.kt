@@ -131,11 +131,6 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
     // Interaction states for expressive motion
     val instantInteractionSource = remember { MutableInteractionSource() }
     val isInstantPressed by instantInteractionSource.collectIsPressedAsState()
-    val instantCorner by animateDpAsState(
-        targetValue = if (isInstantPressed) 8.dp else 28.dp,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "instant_corner"
-    )
     val instantScale by animateFloatAsState(
         targetValue = if (isInstantPressed) 1.08f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
@@ -311,40 +306,14 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
             containerColor = androidx.compose.ui.graphics.Color.Transparent,
             floatingActionButton = {
                 if (selectedTab == 0 && uiState !is DownloadState.Downloading) {
-                    Column(
-                        horizontalAlignment = Alignment.End,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    FloatingActionButton(
+                        onClick = { showSupportedSitesDialog = true },
+                        shape = CircleShape,
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.size(44.dp)
                     ) {
-                        FloatingActionButton(
-                            onClick = { showSupportedSitesDialog = true },
-                            shape = RoundedCornerShape(50),
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier.size(44.dp)
-                        ) {
-                            Icon(Icons.Default.HelpOutline, contentDescription = "Supported Sites", modifier = Modifier.size(22.dp))
-                        }
-                        
-                        ExtendedFloatingActionButton(
-                            onClick = {
-                                clipboardManager.getText()?.let { 
-                                    val text = it.text
-                                    url = text
-                                    viewModel.fetchPreview(text, quality, downloadMode, engine)
-                                    viewModel.downloadMedia(text, quality, downloadMode, engine)
-                                }
-                            },
-                            modifier = Modifier.graphicsLayer {
-                                scaleX = instantScale
-                                scaleY = instantScale
-                            },
-                            interactionSource = instantInteractionSource,
-                            shape = RoundedCornerShape(instantCorner),
-                            icon = { Icon(Icons.Default.Bolt, null) },
-                            text = { Text("Instant") },
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
+                        Icon(Icons.Default.HelpOutline, contentDescription = "Supported Sites", modifier = Modifier.size(22.dp))
                     }
                 } else if (selectedTab == 2 && history.isNotEmpty()) {
                     FloatingActionButton(
@@ -364,11 +333,12 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
             },
             bottomBar = {
                 if (!isExpanded) {
-                    Box(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 24.dp),
-                        contentAlignment = Alignment.BottomCenter
+                            .padding(bottom = 24.dp, start = 16.dp, end = 16.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(
                             modifier = Modifier
@@ -454,6 +424,38 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                                     val rotation by animateFloatAsState(if (selectedTab == 3) 360f else 0f, tween(800, easing = FastOutSlowInEasing), label = "rotation")
                                     val scale by animateFloatAsState(if (selectedTab == 3) 1.2f else 1.0f, tween(600, easing = FastOutSlowInEasing), label = "scale")
                                     Icon(Icons.Default.Settings, null, modifier = Modifier.graphicsLayer { rotationZ = rotation; scaleX = scale; scaleY = scale }, tint = color3)
+                                }
+                            }
+                        }
+
+                        if (selectedTab == 0 && uiState !is DownloadState.Downloading) {
+                            Spacer(Modifier.width(10.dp))
+                            TooltipBox(
+                                positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                                tooltip = { PlainTooltip { Text("Instant Download") } },
+                                state = rememberTooltipState()
+                            ) {
+                                FloatingActionButton(
+                                    onClick = {
+                                        clipboardManager.getText()?.let { 
+                                            val text = it.text
+                                            url = text
+                                            viewModel.fetchPreview(text, quality, downloadMode, engine)
+                                            viewModel.downloadMedia(text, quality, downloadMode, engine)
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .size(52.dp)
+                                        .graphicsLayer {
+                                            scaleX = instantScale
+                                            scaleY = instantScale
+                                        },
+                                    interactionSource = instantInteractionSource,
+                                    shape = CircleShape,
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                ) {
+                                    Icon(Icons.Default.Bolt, contentDescription = "Instant Download")
                                 }
                             }
                         }
