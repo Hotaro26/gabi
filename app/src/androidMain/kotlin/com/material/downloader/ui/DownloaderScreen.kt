@@ -5,6 +5,16 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.haze
 import dev.chrisbanes.haze.hazeChild
 import dev.chrisbanes.haze.HazeStyle
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+
 
 import android.content.Intent
 import android.net.Uri
@@ -508,7 +518,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                                     selected = selectedHelpTab == id,
                                     onClick = { selectedHelpTab = id },
                                     label = { Text(label) },
-                                    shape = RoundedCornerShape(12.dp)
+                                    shape = RoundedCornerShape(24.dp)
                                 )
                             }
                         }
@@ -567,7 +577,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                         ) {
                             items(sites) { site ->
                                 Surface(
-                                    shape = RoundedCornerShape(12.dp),
+                                    shape = RoundedCornerShape(24.dp),
                                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
@@ -797,7 +807,7 @@ fun MainDownloaderTab(
                                     if (validImageUrls.size > 1) {
                                         Surface(
                                             color = Color.Black.copy(alpha = 0.6f),
-                                            shape = RoundedCornerShape(12.dp),
+                                            shape = RoundedCornerShape(24.dp),
                                             modifier = Modifier
                                                 .padding(12.dp)
                                                 .align(Alignment.TopEnd)
@@ -837,7 +847,7 @@ fun MainDownloaderTab(
                             Box(
                                 modifier = Modifier
                                     .size(110.dp, 70.dp)
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .clip(RoundedCornerShape(24.dp))
                                     .background(MaterialTheme.colorScheme.surfaceVariant)
                             ) {
                                 if (!meta.thumbnail.isNullOrBlank()) {
@@ -913,7 +923,7 @@ fun MainDownloaderTab(
                                 if (validImageUrls.size > 1) {
                                     Surface(
                                         color = Color.Black.copy(alpha = 0.6f),
-                                        shape = RoundedCornerShape(12.dp),
+                                        shape = RoundedCornerShape(24.dp),
                                         modifier = Modifier
                                             .padding(12.dp)
                                             .align(Alignment.TopEnd)
@@ -982,7 +992,7 @@ fun MainDownloaderTab(
                         Button(
                             onClick = { }, // Just informational in this context
                             modifier = Modifier.weight(1f).height(48.dp),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(24.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
@@ -1000,7 +1010,7 @@ fun MainDownloaderTab(
                                 viewModel.downloadMedia(url = url, quality = quality, mode = downloadMode, engine = engine)
                             },
                             modifier = Modifier.weight(1f).height(48.dp),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(24.dp)
                         ) {
                             Icon(Icons.Default.Download, null)
                             Spacer(Modifier.width(8.dp))
@@ -1441,7 +1451,7 @@ fun MainDownloaderTab(
                         viewModel.clearPreview() // Clear preview
                         viewModel.resetDownloadState() // Revert to Idle
                     },
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(24.dp)
                 ) {
                     Text("Download Again")
                 }
@@ -1731,7 +1741,7 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
                             onClick = { viewModel.themeMode.intValue = index },
                             label = { Text(label) },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(24.dp)
                         )
                     }
                 }
@@ -1758,7 +1768,7 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
                             leadingIcon = if (viewModel.selectedTheme.value == theme) {
                                 { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
                             } else null,
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(24.dp)
                         )
                     }
                 }
@@ -1786,7 +1796,7 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
                             leadingIcon = if (viewModel.terminalTheme.value == theme) {
                                 { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
                             } else null,
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(24.dp)
                         )
                     }
                 }
@@ -2214,7 +2224,7 @@ fun DeveloperScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
                     Button(
                         onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Hotaro26"))) },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(24.dp)
                     ) {
                         Icon(androidx.compose.ui.res.painterResource(id = com.material.downloader.R.drawable.ic_github), null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
@@ -2223,7 +2233,7 @@ fun DeveloperScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
                     OutlinedButton(
                         onClick = { Toast.makeText(context, "Discord: oi.hotaro", Toast.LENGTH_LONG).show() },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(24.dp)
                     ) {
                         Icon(androidx.compose.ui.res.painterResource(id = com.material.downloader.R.drawable.ic_discord), null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
@@ -2354,18 +2364,37 @@ fun LicenseItem(name: String, license: String) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LogsTab(
     history: List<com.material.downloader.model.DownloadLog>, 
     onDelete: (com.material.downloader.model.DownloadLog) -> Unit,
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
+    var itemToDelete by remember { mutableStateOf<com.material.downloader.model.DownloadLog?>(null) }
+    
+    if (itemToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { itemToDelete = null },
+            title = { Text("Clear History") },
+            text = { Text("Are you sure you want to remove this item from your history?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    itemToDelete?.let { onDelete(it) }
+                    itemToDelete = null
+                }) { Text("Remove", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { itemToDelete = null }) { Text("Cancel") }
+            }
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            
             .padding(horizontal = 16.dp)
-            .padding(top = 16.dp)
+            .padding(top = 16.dp + contentPadding.calculateTopPadding())
     ) {
         Text("Recent Downloads", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 16.dp))
         if (history.isEmpty()) {
@@ -2375,20 +2404,45 @@ fun LogsTab(
         } else {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding())
+                contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp + contentPadding.calculateBottomPadding())
             ) {
-                items(history) { log ->
-                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(log.title, style = MaterialTheme.typography.labelLarge, maxLines = 1)
-                                Text(log.status, style = MaterialTheme.typography.bodySmall, color = if (log.status == "Success") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                items(history, key = { it.id }) { log ->
+                    val dismissState = rememberSwipeToDismissBoxState(
+                        confirmValueChange = {
+                            if (it == SwipeToDismissBoxValue.EndToStart || it == SwipeToDismissBoxValue.StartToEnd) {
+                                itemToDelete = log
                             }
-                            IconButton(onClick = { onDelete(log) }) {
-                                Icon(Icons.Default.Delete, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.error)
+                            false // always snap back, delete handled by dialog
+                        }
+                    )
+                    
+                    SwipeToDismissBox(
+                        state = dismissState,
+                        modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(24.dp)),
+                        enableDismissFromStartToEnd = true,
+                        enableDismissFromEndToStart = true,
+                        backgroundContent = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.errorContainer, shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp))
+                                    .padding(horizontal = 20.dp),
+                                contentAlignment = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.onErrorContainer)
+                            }
+                        },
+                        content = {
+                            Card(modifier = Modifier.fillMaxWidth(), shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                                Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(log.title, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                                        Text(log.status, style = MaterialTheme.typography.bodySmall, color = if (log.status == "Success") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                                    }
+                                }
                             }
                         }
-                    }
+                    )
                 }
             }
         }
@@ -2404,7 +2458,7 @@ fun StatusInfo(state: DownloadState, onOpenFolder: () -> Unit) {
     }
     Surface(
         color = color.copy(alpha = 0.08f),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(24.dp),
         modifier = Modifier
             .fillMaxWidth()
             .then(if (state is DownloadState.Success) Modifier.clickable { onOpenFolder() } else Modifier)
