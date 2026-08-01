@@ -345,6 +345,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                                         m.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f), CircleShape)
                                     }
                                 }
+                                .animateContentSize(animationSpec = androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy, stiffness = androidx.compose.animation.core.Spring.StiffnessLow))
                                 .padding(horizontal = 12.dp, vertical = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -428,57 +429,71 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             }
                         }
 
-                        if (selectedTab == 0 && uiState !is DownloadState.Downloading) {
-                            Spacer(Modifier.width(10.dp))
-                            TooltipBox(
-                                positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                                tooltip = { PlainTooltip { Text("Instant Download") } },
-                                state = rememberTooltipState()
-                            ) {
-                                FloatingActionButton(
-                                    onClick = {
-                                        clipboardManager.getText()?.let { 
-                                            val text = it.text
-                                            url = text
-                                            viewModel.fetchPreview(text, quality, downloadMode, engine)
-                                            viewModel.downloadMedia(text, quality, downloadMode, engine)
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .size(52.dp)
-                                        .graphicsLayer {
-                                            scaleX = instantScale
-                                            scaleY = instantScale
-                                        },
-                                    interactionSource = instantInteractionSource,
-                                    shape = CircleShape,
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        val isInstantVisible = selectedTab == 0 && uiState !is DownloadState.Downloading
+                        val instantFabSize by animateDpAsState(if (isInstantVisible) 52.dp else 0.dp, androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy, stiffness = androidx.compose.animation.core.Spring.StiffnessLow))
+                        val instantSpacerSize by animateDpAsState(if (isInstantVisible) 10.dp else 0.dp, androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy, stiffness = androidx.compose.animation.core.Spring.StiffnessLow))
+                        
+                        if (instantFabSize > 0.dp) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Spacer(Modifier.width(instantSpacerSize))
+                                TooltipBox(
+                                    positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                                    tooltip = { PlainTooltip { Text("Instant Download") } },
+                                    state = rememberTooltipState()
                                 ) {
-                                    Icon(Icons.Default.Bolt, contentDescription = "Instant Download")
+                                    FloatingActionButton(
+                                        onClick = {
+                                            clipboardManager.getText()?.let { 
+                                                val text = it.text
+                                                url = text
+                                                viewModel.fetchPreview(text, quality, downloadMode, engine)
+                                                viewModel.downloadMedia(text, quality, downloadMode, engine)
+                                            }
+                                        },
+                                        modifier = Modifier
+                                            .size(instantFabSize)
+                                            .graphicsLayer {
+                                                scaleX = instantScale
+                                                scaleY = instantScale
+                                            },
+                                        interactionSource = instantInteractionSource,
+                                        shape = CircleShape,
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                    ) {
+                                        Icon(Icons.Default.Bolt, contentDescription = "Instant Download")
+                                    }
                                 }
                             }
-                        } else if (selectedTab == 2 && history.isNotEmpty()) {
-                            Spacer(Modifier.width(10.dp))
-                            TooltipBox(
-                                positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                                tooltip = { PlainTooltip { Text("Clear History") } },
-                                state = rememberTooltipState()
-                            ) {
-                                FloatingActionButton(
-                                    onClick = { showClearLogsDialog = true },
-                                    modifier = Modifier
-                                        .size(52.dp)
-                                        .graphicsLayer {
-                                            scaleX = clearLogsScale
-                                            scaleY = clearLogsScale
-                                        },
-                                    interactionSource = clearLogsInteractionSource,
-                                    shape = CircleShape,
-                                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        }
+                        
+                        val isBinVisible = selectedTab == 2 && history.isNotEmpty()
+                        val binFabSize by animateDpAsState(if (isBinVisible) 52.dp else 0.dp, androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy, stiffness = androidx.compose.animation.core.Spring.StiffnessLow))
+                        val binSpacerSize by animateDpAsState(if (isBinVisible) 10.dp else 0.dp, androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy, stiffness = androidx.compose.animation.core.Spring.StiffnessLow))
+
+                        if (binFabSize > 0.dp) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Spacer(Modifier.width(binSpacerSize))
+                                TooltipBox(
+                                    positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                                    tooltip = { PlainTooltip { Text("Clear History") } },
+                                    state = rememberTooltipState()
                                 ) {
-                                    Icon(Icons.Default.DeleteSweep, contentDescription = "Clear All Logs")
+                                    FloatingActionButton(
+                                        onClick = { showClearLogsDialog = true },
+                                        modifier = Modifier
+                                            .size(binFabSize)
+                                            .graphicsLayer {
+                                                scaleX = clearLogsScale
+                                                scaleY = clearLogsScale
+                                            },
+                                        interactionSource = clearLogsInteractionSource,
+                                        shape = CircleShape,
+                                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                    ) {
+                                        Icon(Icons.Default.DeleteSweep, contentDescription = "Clear All Logs")
+                                    }
                                 }
                             }
                         }

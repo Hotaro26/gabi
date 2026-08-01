@@ -110,12 +110,18 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     
     var isNavBarBlurEnabled = mutableStateOf(prefs.getBoolean("nav_bar_blur", true))
     var isNavBarOpaque = mutableStateOf(prefs.getBoolean("nav_bar_opaque", false))
+    var isOnboardingCompleted = mutableStateOf(prefs.getBoolean("onboarding_completed", false))
 
     fun toggleNavBarBlur(enabled: Boolean) {
         isNavBarBlurEnabled.value = enabled
         prefs.edit().putBoolean("nav_bar_blur", enabled).apply()
     }
     
+    fun setOnboardingCompleted() {
+        isOnboardingCompleted.value = true
+        prefs.edit().putBoolean("onboarding_completed", true).apply()
+    }
+
     fun toggleNavBarOpaque(enabled: Boolean) {
         isNavBarOpaque.value = enabled
         prefs.edit().putBoolean("nav_bar_opaque", enabled).apply()

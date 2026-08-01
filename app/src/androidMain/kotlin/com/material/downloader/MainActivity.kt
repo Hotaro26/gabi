@@ -45,22 +45,6 @@ class MainActivity : ComponentActivity() {
         
         org.schabi.newpipe.extractor.NewPipe.init(com.material.downloader.api.OkHttpDownloader())
 
-        // Request notification permission for Android 13+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
-            }
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val pm = getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
-            if (!pm.isIgnoringBatteryOptimizations(packageName)) {
-                val intent = android.content.Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-                intent.data = android.net.Uri.parse("package:$packageName")
-                startActivity(intent)
-            }
-        }
-        
         val imageLoader = coil.ImageLoader.Builder(this)
             .components {
                 add(coil.decode.VideoFrameDecoder.Factory())
@@ -91,7 +75,13 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    DownloaderScreen(viewModel)
+                    if (!viewModel.isOnboardingCompleted.value) {
+                        com.material.downloader.ui.OnboardingScreen(
+                            onComplete = { viewModel.setOnboardingCompleted() }
+                        )
+                    } else {
+                        DownloaderScreen(viewModel)
+                    }
                 }
             }
         }
