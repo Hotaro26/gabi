@@ -957,19 +957,33 @@ fun MainDownloaderTab(
                     
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         val isAudio = downloadMode == "audio" || meta.ext == "mp3" || meta.ext == "m4a"
-                        Card(modifier = Modifier.weight(1f), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-                            Column(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(if (isAudio) Icons.Default.MusicNote else Icons.Default.PlayArrow, null)
-                                Spacer(Modifier.height(4.dp))
-                                Text(if (isAudio) "Audio" else "Video", style = MaterialTheme.typography.labelMedium)
-                            }
+                        
+                        Button(
+                            onClick = { }, // Just informational in this context
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        ) {
+                            Icon(if (isAudio) Icons.Default.MusicNote else Icons.Default.PlayArrow, null)
+                            Spacer(Modifier.width(8.dp))
+                            val qual = if (quality == "best") "Best" else "${quality}p"
+                            Text(if (isAudio) "Audio" else "Video ($qual)", maxLines = 1)
                         }
-                        Card(modifier = Modifier.weight(1f), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-                            Column(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(Icons.Default.Settings, null)
-                                Spacer(Modifier.height(4.dp))
-                                Text(if (quality == "best") "Best Quality" else "${quality}p", style = MaterialTheme.typography.labelMedium)
-                            }
+
+                        Button(
+                            onClick = { 
+                                showPreviewSheet = false
+                                viewModel.downloadMedia(url = url, quality = quality, mode = downloadMode, engine = engine)
+                            },
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.Download, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Download")
                         }
                     }
                     Spacer(Modifier.height(16.dp))
