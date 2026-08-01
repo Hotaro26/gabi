@@ -289,6 +289,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
         }
 
         Scaffold(
+            containerColor = androidx.compose.ui.graphics.Color.Transparent,
             floatingActionButton = {
                 if (selectedTab == 0 && uiState !is DownloadState.Downloading) {
                     Column(
@@ -354,7 +355,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             modifier = Modifier
                                 .shadow(8.dp, CircleShape)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f))
                                 .padding(horizontal = 12.dp, vertical = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -443,7 +444,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
         ) { padding ->
             val configuration = androidx.compose.ui.platform.LocalConfiguration.current
             val screenMargin = if (isExpanded) (configuration.screenWidthDp * 0.20f).dp else 0.dp
-            Box(modifier = Modifier.fillMaxSize().padding(horizontal = screenMargin).padding(bottom = padding.calculateBottomPadding())) {
+            Box(modifier = Modifier.fillMaxSize().padding(horizontal = screenMargin)) {
                 AnimatedContent(
                     targetState = selectedTab,
                     label = "tab_transition"
@@ -701,10 +702,10 @@ fun MainDownloaderTab(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(contentPadding)
+            
             .padding(horizontal = 24.dp)
             .verticalScroll(rememberScrollState())
-            .padding(top = 48.dp, bottom = 24.dp),
+            .padding(top = 48.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -1636,9 +1637,9 @@ fun SettingsMainList(onNavigate: (String) -> Unit, contentPadding: PaddingValues
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(contentPadding)
+            
             .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(rememberScrollState()).padding(top = 48.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
@@ -1696,9 +1697,9 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(contentPadding)
+            
             .padding(horizontal = 24.dp)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(rememberScrollState()).padding(top = 48.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 16.dp)) {
@@ -1896,9 +1897,9 @@ fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(contentPadding)
+            
             .padding(horizontal = 24.dp)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(rememberScrollState()).padding(top = 48.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 16.dp)) {
@@ -2163,9 +2164,9 @@ fun DeveloperScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(contentPadding)
+            
             .padding(horizontal = 24.dp)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(rememberScrollState()).padding(top = 48.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 16.dp)) {
@@ -2254,9 +2255,9 @@ fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(contentPadding)
+            
             .padding(horizontal = 24.dp)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(rememberScrollState()).padding(top = 48.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 16.dp)) {
@@ -2356,7 +2357,7 @@ fun LogsTab(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(contentPadding)
+            
             .padding(horizontal = 16.dp)
             .padding(top = 16.dp)
     ) {
@@ -2368,7 +2369,7 @@ fun LogsTab(
         } else {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(bottom = 24.dp)
+                contentPadding = PaddingValues(top = 48.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding())
             ) {
                 items(history) { log ->
                     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {

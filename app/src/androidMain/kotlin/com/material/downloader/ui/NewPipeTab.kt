@@ -73,7 +73,7 @@ fun NewPipeTab(
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(contentPadding).padding(horizontal = 16.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -96,7 +96,7 @@ fun NewPipeTab(
         }
 
         Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             AnimatedVisibility(visible = results.isNotEmpty() || isLoading) {
@@ -135,7 +135,11 @@ fun NewPipeTab(
                 CircularProgressIndicator()
             }
         } else if (results.isNotEmpty()) {
-            LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 16.dp + contentPadding.calculateBottomPadding()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 items(results) { item ->
                     val isSelected = selectedItem == item
                     Card(
