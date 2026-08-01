@@ -1801,7 +1801,7 @@ fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = 
             "Main" -> SettingsMainList(onNavigate = { currentScreen = it }, contentPadding = contentPadding)
             "Customisation" -> CustomisationScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
             "Downloads" -> DownloadsSettingsScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
-            "Developer" -> DeveloperScreen(onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
+            "Developer" -> DeveloperScreen(viewModel = viewModel, onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
             "Support" -> SupportScreen(onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
         }
     }
@@ -2423,15 +2423,20 @@ fun CookieExtractorDialog(fileName: String, onDismiss: () -> Unit, onCookiesExtr
 }
 
 @Composable
-fun DeveloperScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
+fun DeveloperScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentPadding: PaddingValues) {
     val context = LocalContext.current
-    var showPlatforms by remember { mutableStateOf(false) }
-    var showLicenses by remember { mutableStateOf(false) }
+    val profileImageRequest = remember(context) {
+        coil.request.ImageRequest.Builder(context)
+            .data("https://github.com/Hotaro26.png")
+            .diskCachePolicy(coil.request.CachePolicy.ENABLED)
+            .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+            .crossfade(true)
+            .build()
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            
             .padding(horizontal = 24.dp)
             .verticalScroll(rememberScrollState()).padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -2459,7 +2464,7 @@ fun DeveloperScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
                         contentAlignment = Alignment.Center
                     ) {
                         AsyncImage(
-                            model = "https://github.com/Hotaro26.png",
+                            model = profileImageRequest,
                             contentDescription = "Profile Picture",
                             modifier = Modifier.fillMaxSize().clip(CircleShape),
                             contentScale = ContentScale.Crop
@@ -2495,18 +2500,59 @@ fun DeveloperScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
         }
         
         Spacer(Modifier.height(8.dp))
-        Text("App Info", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp))
+        Text("App Info & Updates", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp))
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
             shape = RoundedCornerShape(20.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary)
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text("Gabi v${com.material.downloader.BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                         Text("Powered by yt-dlp, gallery-dl & Chaquopy", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Auto Check Updates", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                        Text("Notify on launch when new release is out", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(
+                        checked = viewModel.autoCheckUpdates.value,
+                        onCheckedChange = { viewModel.toggleAutoCheckUpdates(it) }
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Check for Updates", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                        viewModel.updateCheckMessage.value?.let { msg ->
+                            Text(msg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        } ?: Text("Check latest GitHub release", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Button(
+                        onClick = { viewModel.checkForUpdates(manual = true) },
+                        enabled = !viewModel.isCheckingUpdates.value,
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        if (viewModel.isCheckingUpdates.value) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                        } else {
+                            Text("Check")
+                        }
                     }
                 }
             }

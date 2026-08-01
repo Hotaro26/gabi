@@ -163,14 +163,27 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    var autoCheckUpdates = mutableStateOf(prefs.getBoolean("auto_check_updates", true))
     var updateAvailable = mutableStateOf<Pair<String, String>?>(null)
+    var isCheckingUpdates = mutableStateOf(false)
+    var updateCheckMessage = mutableStateOf<String?>(null)
 
-    init {
-        checkForUpdates()
+    fun toggleAutoCheckUpdates(enabled: Boolean) {
+        autoCheckUpdates.value = enabled
+        prefs.edit().putBoolean("auto_check_updates", enabled).apply()
+        logToConsole("Auto version check ${if (enabled) "enabled" else "disabled"}")
     }
 
-    private fun checkForUpdates() {
+    init {
+        if (autoCheckUpdates.value) {
+            checkForUpdates(manual = false)
+        }
+    }
+
+    fun checkForUpdates(manual: Boolean = false) {
         viewModelScope.launch {
+            isCheckingUpdates.value = true
+            updateCheckMessage.value = if (manual) "Checking for updates..." else null
             try {
                 val response: HttpResponse = client.get("https://api.github.com/repos/Hotaro26/gabi/releases/latest")
                 if (response.status.value in 200..299) {
@@ -179,18 +192,31 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                     val urlRegex = "\"browser_download_url\"\\s*:\\s*\"([^\"]+\\.apk)\"".toRegex()
                     val match = tagRegex.find(responseBody)
                     val urlMatch = urlRegex.find(responseBody)
-                    if (match != null && urlMatch != null) {
+                    if (match != null) {
                         val latestVersion = match.groupValues[1]
-                        val apkUrl = urlMatch.groupValues[1]
+                        val apkUrl = urlMatch?.groupValues?.getOrNull(1) ?: "https://github.com/Hotaro26/gabi/releases/latest"
                         val currentVersion = "v" + com.material.downloader.BuildConfig.VERSION_NAME
-                        // Assuming semantic versioning or simple string comparison
-                        if (latestVersion != currentVersion && !latestVersion.contains("beta")) {
+                        if (latestVersion != currentVersion && !latestVersion.contains("beta", ignoreCase = true)) {
                             updateAvailable.value = Pair(latestVersion, apkUrl)
+                            updateCheckMessage.value = "New version $latestVersion available!"
+                        } else {
+                            if (manual) {
+                                updateCheckMessage.value = "Up to date ($currentVersion)"
+                            }
                         }
+                    } else if (manual) {
+                        updateCheckMessage.value = "No releases found."
                     }
+                } else if (manual) {
+                    updateCheckMessage.value = "Check failed (HTTP ${response.status.value})"
                 }
             } catch (e: Exception) {
                 logToConsole("Update check failed: ${e.message}")
+                if (manual) {
+                    updateCheckMessage.value = "Check failed: ${e.message}"
+                }
+            } finally {
+                isCheckingUpdates.value = false
             }
         }
     }
