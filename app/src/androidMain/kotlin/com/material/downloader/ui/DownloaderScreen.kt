@@ -984,18 +984,10 @@ fun MainDownloaderTab(
         ) {
             // Engine Selector
             Box(modifier = Modifier.weight(1f)) {
-                val isEngineDefault = engine == "newpipe" || engine == viewModel.getSetting("selected_engine", "newpipe")
-                val engineColors = if (isEngineDefault) {
-                    ButtonDefaults.filledTonalButtonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    ButtonDefaults.filledTonalButtonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary,
-                        contentColor = MaterialTheme.colorScheme.onSecondary
-                    )
-                }
+                val engineColors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary
+                )
                 FilledTonalButton(
                     onClick = { engineExpanded = true },
                     shape = RoundedCornerShape(topStart = 100.dp, bottomStart = 100.dp, topEnd = 8.dp, bottomEnd = 8.dp),
