@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.material.downloader.ui
 
 import android.content.Intent
@@ -47,6 +47,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.shadow
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -340,109 +343,106 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
             },
             bottomBar = {
                 if (!isExpanded) {
-                    NavigationBar(
-                        containerColor = Color.Transparent,
-                        tonalElevation = 0.dp
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 24.dp),
+                        contentAlignment = Alignment.BottomCenter
                     ) {
-                        NavigationBarItem(
-                            selected = selectedTab == 0,
-                            onClick = { selectedTab = 0 },
-                            icon = { 
-                                val scale by animateFloatAsState(
-                                    targetValue = if (selectedTab == 0) 1.2f else 1.0f,
-                                    animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
-                                    label = "home_scale"
-                                )
-                                Icon(
-                                    if (selectedTab == 0) Icons.Filled.Home else Icons.Outlined.Home,
-                                    contentDescription = "Home",
-                                    modifier = Modifier.graphicsLayer {
-                                        scaleX = scale
-                                        scaleY = scale
-                                    }
-                                ) 
-                            },
-                            label = { Text("Home") }
-                        )
-                        NavigationBarItem(
-                            selected = selectedTab == 1,
-                            onClick = { selectedTab = 1 },
-                            icon = { 
-                                val scale by animateFloatAsState(
-                                    targetValue = if (selectedTab == 1) 1.2f else 1.0f,
-                                    animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
-                                    label = "newpipe_scale"
-                                )
-                                Icon(
-                                    Icons.Default.PlayArrow, 
-                                    null, 
-                                    modifier = Modifier.graphicsLayer {
-                                        scaleX = scale
-                                        scaleY = scale
-                                    }
-                                ) 
-                            },
-                            label = { Text("NewPipe") }
-                        )
-                        NavigationBarItem(
-                            selected = selectedTab == 2,
-                            onClick = { selectedTab = 2 },
-                            icon = { 
-                                val rotation by animateFloatAsState(
-                                    targetValue = if (selectedTab == 2) 360f else 0f,
-                                    animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
-                                    label = "rotation"
-                                )
-                                val scale by animateFloatAsState(
-                                    targetValue = if (selectedTab == 2) 1.2f else 1.0f,
-                                    animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
-                                    label = "scale"
-                                )
-                                Icon(
-                                    Icons.Default.History, 
-                                    null, 
-                                    modifier = Modifier.graphicsLayer {
-                                        rotationZ = rotation
-                                        scaleX = scale
-                                        scaleY = scale
-                                    }
-                                ) 
-                            },
-                            label = { Text("Logs") }
-                        )
-                        NavigationBarItem(
-                            selected = selectedTab == 3,
-                            onClick = { selectedTab = 3 },
-                            icon = { 
-                                val rotation by animateFloatAsState(
-                                    targetValue = if (selectedTab == 3) 360f else 0f,
-                                    animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
-                                    label = "rotation"
-                                )
-                                val scale by animateFloatAsState(
-                                    targetValue = if (selectedTab == 3) 1.2f else 1.0f,
-                                    animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
-                                    label = "scale"
-                                )
-                                Icon(
-                                    Icons.Default.Settings, 
-                                    null, 
-                                    modifier = Modifier.graphicsLayer {
-                                        rotationZ = rotation
-                                        scaleX = scale
-                                        scaleY = scale
-                                    }
-                                ) 
-                            },
-                            label = { Text("Settings") }
-                        )
+                        Row(
+                            modifier = Modifier
+                                .shadow(8.dp, CircleShape)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val bg0 by animateColorAsState(if (selectedTab == 0) MaterialTheme.colorScheme.primaryContainer else Color.Transparent, label = "")
+                            val color0 by animateColorAsState(if (selectedTab == 0) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant, label = "")
+                            val pad0 by animateDpAsState(if (selectedTab == 0) 24.dp else 10.dp, tween(300, easing = FastOutSlowInEasing), label = "")
+                            TooltipBox(
+                                positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                                tooltip = { PlainTooltip { Text("Homepage") } },
+                                state = rememberTooltipState()
+                            ) {
+                                Box(
+                                    modifier = Modifier.clip(CircleShape).background(bg0).clickable {
+                                        selectedTab = 0
+                                    }.padding(horizontal = pad0, vertical = 10.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val scale by animateFloatAsState(if (selectedTab == 0) 1.2f else 1.0f, tween(600, easing = FastOutSlowInEasing), label = "home_scale")
+                                    Icon(if (selectedTab == 0) Icons.Filled.Home else Icons.Outlined.Home, "Home", modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale }, tint = color0)
+                                }
+                            }
+
+                            val bg1 by animateColorAsState(if (selectedTab == 1) MaterialTheme.colorScheme.primaryContainer else Color.Transparent, label = "")
+                            val color1 by animateColorAsState(if (selectedTab == 1) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant, label = "")
+                            val pad1 by animateDpAsState(if (selectedTab == 1) 24.dp else 10.dp, tween(300, easing = FastOutSlowInEasing), label = "")
+                            TooltipBox(
+                                positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                                tooltip = { PlainTooltip { Text("Media") } },
+                                state = rememberTooltipState()
+                            ) {
+                                Box(
+                                    modifier = Modifier.clip(CircleShape).background(bg1).clickable {
+                                        selectedTab = 1
+                                    }.padding(horizontal = pad1, vertical = 10.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val scale by animateFloatAsState(if (selectedTab == 1) 1.2f else 1.0f, tween(600, easing = FastOutSlowInEasing), label = "newpipe_scale")
+                                    Icon(Icons.Default.PlayArrow, null, modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale }, tint = color1)
+                                }
+                            }
+
+                            val bg2 by animateColorAsState(if (selectedTab == 2) MaterialTheme.colorScheme.primaryContainer else Color.Transparent, label = "")
+                            val color2 by animateColorAsState(if (selectedTab == 2) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant, label = "")
+                            val pad2 by animateDpAsState(if (selectedTab == 2) 24.dp else 10.dp, tween(300, easing = FastOutSlowInEasing), label = "")
+                            TooltipBox(
+                                positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                                tooltip = { PlainTooltip { Text("History") } },
+                                state = rememberTooltipState()
+                            ) {
+                                Box(
+                                    modifier = Modifier.clip(CircleShape).background(bg2).clickable {
+                                        selectedTab = 2
+                                    }.padding(horizontal = pad2, vertical = 10.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val rotation by animateFloatAsState(if (selectedTab == 2) 360f else 0f, tween(800, easing = FastOutSlowInEasing), label = "rotation")
+                                    val scale by animateFloatAsState(if (selectedTab == 2) 1.2f else 1.0f, tween(600, easing = FastOutSlowInEasing), label = "scale")
+                                    Icon(Icons.Default.History, null, modifier = Modifier.graphicsLayer { rotationZ = rotation; scaleX = scale; scaleY = scale }, tint = color2)
+                                }
+                            }
+
+                            val bg3 by animateColorAsState(if (selectedTab == 3) MaterialTheme.colorScheme.primaryContainer else Color.Transparent, label = "")
+                            val color3 by animateColorAsState(if (selectedTab == 3) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant, label = "")
+                            val pad3 by animateDpAsState(if (selectedTab == 3) 24.dp else 10.dp, tween(300, easing = FastOutSlowInEasing), label = "")
+                            TooltipBox(
+                                positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                                tooltip = { PlainTooltip { Text("Settings") } },
+                                state = rememberTooltipState()
+                            ) {
+                                Box(
+                                    modifier = Modifier.clip(CircleShape).background(bg3).clickable {
+                                        selectedTab = 3
+                                    }.padding(horizontal = pad3, vertical = 10.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val rotation by animateFloatAsState(if (selectedTab == 3) 360f else 0f, tween(800, easing = FastOutSlowInEasing), label = "rotation")
+                                    val scale by animateFloatAsState(if (selectedTab == 3) 1.2f else 1.0f, tween(600, easing = FastOutSlowInEasing), label = "scale")
+                                    Icon(Icons.Default.Settings, null, modifier = Modifier.graphicsLayer { rotationZ = rotation; scaleX = scale; scaleY = scale }, tint = color3)
+                                }
+                            }
+                        }
                     }
                 }
             }
         ) { padding ->
             val configuration = androidx.compose.ui.platform.LocalConfiguration.current
             val screenMargin = if (isExpanded) (configuration.screenWidthDp * 0.20f).dp else 0.dp
-            Box(modifier = Modifier.fillMaxSize().padding(horizontal = screenMargin)) {
+            Box(modifier = Modifier.fillMaxSize().padding(horizontal = screenMargin).padding(bottom = padding.calculateBottomPadding())) {
                 AnimatedContent(
                     targetState = selectedTab,
                     label = "tab_transition"
