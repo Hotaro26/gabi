@@ -38,9 +38,15 @@ class NotificationHelper(private val context: Context) {
             PendingIntent.getActivity(context, id, it, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         }
 
+        val iconRes = if (progress < 100) {
+            android.R.drawable.stat_sys_download
+        } else {
+            android.R.drawable.stat_sys_download_done
+        }
+
         val builder = NotificationCompat.Builder(context, channelId)
             .setContentTitle(title)
-            .setSmallIcon(android.R.drawable.stat_sys_download)
+            .setSmallIcon(iconRes)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
 
         if (progress < 100) {
@@ -52,9 +58,9 @@ class NotificationHelper(private val context: Context) {
                 .setOngoing(false)
                 .setProgress(0, 0, false) // Remove progress bar
                 .setAutoCancel(true)
-                if (pendingIntent != null) {
-                    builder.setContentIntent(pendingIntent)
-                }
+            if (pendingIntent != null) {
+                builder.setContentIntent(pendingIntent)
+            }
         }
 
         notificationManager.notify(id, builder.build())

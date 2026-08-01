@@ -1,8 +1,16 @@
 package com.material.downloader.db
 
 import androidx.room.*
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.material.downloader.model.DownloadLog
 import kotlinx.coroutines.flow.Flow
+
+val MIGRATION_1_2 = object : Migration(1, 2) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE download_logs ADD COLUMN thumbnailPath TEXT")
+    }
+}
 
 @Dao
 interface DownloadLogDao {
@@ -22,7 +30,7 @@ interface DownloadLogDao {
     suspend fun hasUrl(url: String): Int
 }
 
-@Database(entities = [DownloadLog::class], version = 1)
+@Database(entities = [DownloadLog::class], version = 2)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun downloadLogDao(): DownloadLogDao
 }

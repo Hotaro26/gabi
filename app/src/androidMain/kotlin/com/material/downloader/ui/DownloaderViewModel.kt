@@ -51,9 +51,56 @@ enum class TerminalTheme(
 class DownloaderViewModel(application: Application) : AndroidViewModel(application) {
     private val extractor = PythonExtractor()
     private val cobaltRepository = CobaltRepository()
-    private val db = Room.databaseBuilder(application, AppDatabase::class.java, "gabi_db").build()
+    private val db = Room.databaseBuilder(application, AppDatabase::class.java, "gabi_db")
+        .addMigrations(com.material.downloader.db.MIGRATION_1_2)
+        .fallbackToDestructiveMigration()
+        .build()
     private val logDao = db.downloadLogDao()
     private val notificationHelper = NotificationHelper(application)
+
+    private suspend fun saveThumbnailToCache(thumbnailUrl: String?, mediaPath: String?): String? = withContext(Dispatchers.IO) {
+        try {
+            val context = getApplication<Application>()
+            val thumbDir = java.io.File(context.cacheDir, "thumbnails").apply { if (!exists()) mkdirs() }
+            val thumbFile = java.io.File(thumbDir, "thumb_${System.currentTimeMillis()}_${(1000..9999).random()}.jpg")
+            
+            // Remote image URL from preview
+            if (!thumbnailUrl.isNullOrEmpty() && (thumbnailUrl.startsWith("http://") || thumbnailUrl.startsWith("https://"))) {
+                java.net.URL(thumbnailUrl).openStream().use { input ->
+                    thumbFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                return@withContext thumbFile.absolutePath
+            }
+
+            // Local video/media file frame extraction
+            if (!mediaPath.isNullOrEmpty()) {
+                val retriever = android.media.MediaMetadataRetriever()
+                try {
+                    if (mediaPath.startsWith("content://") || mediaPath.startsWith("file://")) {
+                        retriever.setDataSource(context, Uri.parse(mediaPath))
+                    } else {
+                        retriever.setDataSource(mediaPath)
+                    }
+                    val bitmap = retriever.frameAtTime
+                    if (bitmap != null) {
+                        thumbFile.outputStream().use { out ->
+                            bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, out)
+                        }
+                        return@withContext thumbFile.absolutePath
+                    }
+                } catch (e: Exception) {
+                    // Ignore retriever failure
+                } finally {
+                    try { retriever.release() } catch (e: Exception) {}
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return@withContext thumbnailUrl ?: mediaPath
+    }
     
     private val prefs = application.getSharedPreferences("gabi_prefs", android.content.Context.MODE_PRIVATE)
     
@@ -556,7 +603,8 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                         
                         if (succeededCount > 0) {
                             _uiState.value = DownloadState.Success("")
-                            logDao.insertLog(DownloadLog(title = "${result.title ?: "Gallery"} ($succeededCount images)", url = url, status = "Success"))
+                            val cachedThumb = saveThumbnailToCache(_previewMetadata.value?.thumbnail, null)
+                            logDao.insertLog(DownloadLog(title = "${result.title ?: "Gallery"} ($succeededCount images)", url = url, status = "Success", thumbnailPath = cachedThumb))
                             notificationHelper.showProgressNotification(notificationId, result.title ?: "Gallery", 100)
                             logToConsole("Gallery download complete. Successfully saved $succeededCount/$totalFiles files.")
                         } else {
@@ -645,7 +693,8 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                                 }
 
                                 downloader.finalizeFile(targetUri, fileName)
-                                logDao.insertLog(DownloadLog(title = title, url = url, status = "Success", path = targetUri.toString()))
+                                val cachedThumb = saveThumbnailToCache(_previewMetadata.value?.thumbnail, targetUri.toString())
+                                logDao.insertLog(DownloadLog(title = title, url = url, status = "Success", path = targetUri.toString(), thumbnailPath = cachedThumb))
                                 logToConsole("File saved successfully to $targetPath/$fileName")
                                 
                                 _uiState.value = DownloadState.Success(targetUri.toString())
@@ -684,7 +733,8 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                                 if (state is DownloadState.Success) {
                                     val savedUri = Uri.parse(state.path)
                                     downloader.finalizeFile(savedUri, fileName)
-                                    logDao.insertLog(DownloadLog(title = title, url = url, status = "Success", path = state.path))
+                                    val cachedThumb = saveThumbnailToCache(_previewMetadata.value?.thumbnail, state.path)
+                                    logDao.insertLog(DownloadLog(title = title, url = url, status = "Success", path = state.path, thumbnailPath = cachedThumb))
                                     logToConsole("File saved successfully to $targetPath/$fileName")
                                     
                                     val folderUri = if (selectedFolderUri.value != null) {
@@ -711,7 +761,8 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                 } else {
                     val errorMsg = result?.message ?: "Extraction failed"
                     _uiState.value = DownloadState.Error(errorMsg)
-                    logDao.insertLog(DownloadLog(title = "Failed Download", url = url, status = "Error: $errorMsg"))
+                    val cachedThumb = saveThumbnailToCache(_previewMetadata.value?.thumbnail, null)
+                    logDao.insertLog(DownloadLog(title = "Failed Download", url = url, status = "Error: $errorMsg", thumbnailPath = cachedThumb))
                     logToConsole("Download failed: $errorMsg")
                 }
             } catch (e: Exception) {
@@ -723,7 +774,8 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                 } else {
                     val errorMsg = e.message ?: "Unknown error"
                     _uiState.value = DownloadState.Error(errorMsg)
-                    logDao.insertLog(DownloadLog(title = "Failed Download", url = url, status = "Error: $errorMsg"))
+                    val cachedThumb = saveThumbnailToCache(_previewMetadata.value?.thumbnail, null)
+                    logDao.insertLog(DownloadLog(title = "Failed Download", url = url, status = "Error: $errorMsg", thumbnailPath = cachedThumb))
                     logToConsole("Download exception: $errorMsg")
                 }
             }
@@ -731,51 +783,23 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun openSavedFolder() {
-        val context = getApplication<Application>()
-        val uri = if (selectedFolderUri.value != null) {
-            Uri.parse(selectedFolderUri.value)
-        } else {
-            val moviesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
-            Uri.parse("content://media/external/file/").buildUpon()
-                .appendQueryParameter("path", moviesDir.absolutePath + "/" + downloadPath.value)
-                .build()
-        }
-        
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, "resource/folder")
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
-        }
-        
         try {
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            val fallbackIntent = Intent(Intent.ACTION_GET_CONTENT).apply {
-                setDataAndType(uri, "vnd.android.document/directory")
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(Uri.parse(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath), "*/*")
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
-            try { context.startActivity(fallbackIntent) } catch (e2: Exception) {
-                android.widget.Toast.makeText(context, "Could not open folder. Path: ${downloadPath.value}", android.widget.Toast.LENGTH_LONG).show()
-            }
+            getApplication<Application>().startActivity(intent)
+        } catch (e: Exception) {
+            logToConsole("Could not open downloads folder: ${e.message}")
         }
     }
 
     fun cancelDownload() {
         currentDownloadJob?.cancel()
+        currentDownloadJob = null
         _uiState.value = DownloadState.Idle
+
         lastNotificationId?.let { notificationHelper.cancelNotification(it) }
-
-        logToConsole("Cancelling download and cleaning up temporary files...")
-
-        try {
-            val cacheDir = getApplication<Application>().cacheDir
-            cacheDir.listFiles()?.filter { it.name.startsWith("temp_") }?.forEach { tempFile ->
-                try {
-                    if (tempFile.exists()) tempFile.delete()
-                } catch (_: Exception) {}
-            }
-        } catch (e: Exception) {
-            logToConsole("Cache cleanup notice: ${e.message}")
-        }
 
         synchronized(activeTempFiles) {
             activeTempFiles.forEach { file ->
@@ -802,11 +826,28 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun deleteLog(log: DownloadLog) {
-        viewModelScope.launch { logDao.deleteLog(log) }
+        viewModelScope.launch { 
+            log.thumbnailPath?.let { path ->
+                try {
+                    val file = java.io.File(path)
+                    if (file.exists() && file.path.contains("thumbnails")) {
+                        file.delete()
+                    }
+                } catch (_: Exception) {}
+            }
+            logDao.deleteLog(log) 
+        }
     }
 
     fun clearAllLogs() {
-        viewModelScope.launch { logDao.deleteAllLogs() }
+        viewModelScope.launch { 
+            try {
+                val context = getApplication<Application>()
+                val thumbDir = java.io.File(context.cacheDir, "thumbnails")
+                if (thumbDir.exists()) thumbDir.deleteRecursively()
+            } catch (_: Exception) {}
+            logDao.deleteAllLogs() 
+        }
     }
 
     fun resetState() {

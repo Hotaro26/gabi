@@ -2686,9 +2686,44 @@ fun LogsTab(
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                             ) {
                                 Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    val thumbPath = log.thumbnailPath ?: log.path
+                                    Box(
+                                        modifier = Modifier
+                                            .size(56.dp)
+                                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                                            .background(MaterialTheme.colorScheme.surface),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (!thumbPath.isNullOrEmpty()) {
+                                            coil.compose.AsyncImage(
+                                                model = thumbPath,
+                                                contentDescription = null,
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                            )
+                                        } else {
+                                            Icon(
+                                                imageVector = if (log.status == "Success") Icons.Default.PlayArrow else Icons.Default.ErrorOutline,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                    Spacer(Modifier.width(16.dp))
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(log.title, style = MaterialTheme.typography.labelLarge, maxLines = 1)
-                                        Text(log.status, style = MaterialTheme.typography.bodySmall, color = if (log.status == "Success") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                                        Text(
+                                            log.title, 
+                                            style = MaterialTheme.typography.titleMedium, 
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1, 
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                        )
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(
+                                            log.status, 
+                                            style = MaterialTheme.typography.bodySmall, 
+                                            color = if (log.status == "Success") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                        )
                                     }
                                 }
                             }
