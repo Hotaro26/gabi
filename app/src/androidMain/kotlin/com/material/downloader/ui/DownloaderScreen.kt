@@ -984,9 +984,22 @@ fun MainDownloaderTab(
         ) {
             // Engine Selector
             Box(modifier = Modifier.weight(1f)) {
+                val isEngineDefault = engine == "newpipe" || engine == viewModel.getSetting("selected_engine", "newpipe")
+                val engineColors = if (isEngineDefault) {
+                    ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary,
+                        contentColor = MaterialTheme.colorScheme.onSecondary
+                    )
+                }
                 FilledTonalButton(
                     onClick = { engineExpanded = true },
                     shape = RoundedCornerShape(topStart = 100.dp, bottomStart = 100.dp, topEnd = 8.dp, bottomEnd = 8.dp),
+                    colors = engineColors,
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
@@ -1053,9 +1066,22 @@ fun MainDownloaderTab(
 
             // Mode Selector
             Box(modifier = Modifier.weight(1f)) {
+                val isModeDefault = downloadMode == "auto"
+                val modeColors = if (isModeDefault) {
+                    ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary,
+                        contentColor = MaterialTheme.colorScheme.onSecondary
+                    )
+                }
                 FilledTonalButton(
                     onClick = { if (engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe") modeExpanded = true },
                     shape = RoundedCornerShape(8.dp),
+                    colors = modeColors,
                     enabled = engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe",
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(horizontal = 4.dp)
@@ -1077,9 +1103,22 @@ fun MainDownloaderTab(
 
             // Quality Selector
             Box(modifier = Modifier.weight(1f)) {
+                val isQualityDefault = quality == "720"
+                val qualityColors = if (isQualityDefault) {
+                    ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary,
+                        contentColor = MaterialTheme.colorScheme.onSecondary
+                    )
+                }
                 FilledTonalButton(
                     onClick = { if (engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe") qualityExpanded = true },
                     shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp, topEnd = 100.dp, bottomEnd = 100.dp),
+                    colors = qualityColors,
                     enabled = engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe",
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(horizontal = 4.dp)
