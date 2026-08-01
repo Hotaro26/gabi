@@ -988,9 +988,10 @@ fun MainDownloaderTab(
                     containerColor = MaterialTheme.colorScheme.secondary,
                     contentColor = MaterialTheme.colorScheme.onSecondary
                 )
+                val engineInnerCorner by animateDpAsState(if (engineExpanded) 100.dp else 8.dp)
                 FilledTonalButton(
                     onClick = { engineExpanded = true },
-                    shape = RoundedCornerShape(topStart = 100.dp, bottomStart = 100.dp, topEnd = 8.dp, bottomEnd = 8.dp),
+                    shape = RoundedCornerShape(topStart = 100.dp, bottomStart = 100.dp, topEnd = engineInnerCorner, bottomEnd = engineInnerCorner),
                     colors = engineColors,
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(horizontal = 4.dp)
@@ -1070,9 +1071,10 @@ fun MainDownloaderTab(
                         contentColor = MaterialTheme.colorScheme.onSecondary
                     )
                 }
+                val modeCorner by animateDpAsState(if (modeExpanded) 100.dp else 8.dp)
                 FilledTonalButton(
                     onClick = { if (engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe") modeExpanded = true },
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(modeCorner),
                     colors = modeColors,
                     enabled = engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe",
                     modifier = Modifier.fillMaxWidth(),
@@ -1107,9 +1109,10 @@ fun MainDownloaderTab(
                         contentColor = MaterialTheme.colorScheme.onSecondary
                     )
                 }
+                val qualityInnerCorner by animateDpAsState(if (qualityExpanded) 100.dp else 8.dp)
                 FilledTonalButton(
                     onClick = { if (engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe") qualityExpanded = true },
-                    shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp, topEnd = 100.dp, bottomEnd = 100.dp),
+                    shape = RoundedCornerShape(topStart = qualityInnerCorner, bottomStart = qualityInnerCorner, topEnd = 100.dp, bottomEnd = 100.dp),
                     colors = qualityColors,
                     enabled = engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe",
                     modifier = Modifier.fillMaxWidth(),
