@@ -977,16 +977,16 @@ fun MainDownloaderTab(
             }
         }
 
-        // Consolidated Engine/Quality Grouped Buttons
+        // Expressive Connected Button Group (Engine/Mode/Quality)
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy((-1).dp)
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             // Engine Selector
             Box(modifier = Modifier.weight(1f)) {
-                OutlinedButton(
+                FilledTonalButton(
                     onClick = { engineExpanded = true },
-                    shape = RoundedCornerShape(topStartPercent = 50, bottomStartPercent = 50),
+                    shape = RoundedCornerShape(topStart = 100.dp, bottomStart = 100.dp, topEnd = 8.dp, bottomEnd = 8.dp),
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
@@ -1051,11 +1051,11 @@ fun MainDownloaderTab(
                 }
             }
 
-            // Mode/Quality Selector
+            // Mode Selector
             Box(modifier = Modifier.weight(1f)) {
-                OutlinedButton(
+                FilledTonalButton(
                     onClick = { if (engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe") modeExpanded = true },
-                    shape = RectangleShape,
+                    shape = RoundedCornerShape(8.dp),
                     enabled = engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe",
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(horizontal = 4.dp)
@@ -1077,9 +1077,9 @@ fun MainDownloaderTab(
 
             // Quality Selector
             Box(modifier = Modifier.weight(1f)) {
-                OutlinedButton(
+                FilledTonalButton(
                     onClick = { if (engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe") qualityExpanded = true },
-                    shape = RoundedCornerShape(topEndPercent = 50, bottomEndPercent = 50),
+                    shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp, topEnd = 100.dp, bottomEnd = 100.dp),
                     enabled = engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe",
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(horizontal = 4.dp)
