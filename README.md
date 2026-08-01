@@ -40,8 +40,6 @@
 ---
 ## Screenshots
 
-## 📱 App Screenshots
-
 | | | | |
 |:---:|:---:|:---:|:---:|
 | <img width="180" alt="Screenshot 1" src="https://github.com/user-attachments/assets/61de43f7-8d98-4f78-bd7c-499fdbe9caf6" /> | <img width="180" alt="Screenshot 2" src="https://github.com/user-attachments/assets/088cfadf-cb43-44a0-8387-aa33e428419a" /> | <img width="180" alt="Screenshot 4" src="https://github.com/user-attachments/assets/ac151180-b4be-4018-8a30-dc2ff46167a8" /> | <img width="180" alt="Screenshot 5" src="https://github.com/user-attachments/assets/adeaf938-cbfd-4a4c-bf34-988e51b2087b" /> |
