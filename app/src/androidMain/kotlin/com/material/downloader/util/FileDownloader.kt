@@ -23,7 +23,8 @@ class FileDownloader(private val context: Context, private val client: HttpClien
         url: String, 
         fileName: String, 
         relativePath: String = "Movies/ExpressiveDownloader",
-        customFolderUri: String? = null
+        customFolderUri: String? = null,
+        onUriCreated: ((Uri) -> Unit)? = null
     ): Flow<DownloadState> = flow {
         emit(DownloadState.Downloading(0f))
         
@@ -41,6 +42,8 @@ class FileDownloader(private val context: Context, private val client: HttpClien
                 } else {
                     createMediaStoreUri(fileName, relativePath)
                 } ?: throw Exception("Could not create destination file")
+                
+                onUriCreated?.invoke(uri)
                 
                 context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                     var bytesRead = 0L

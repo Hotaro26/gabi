@@ -151,6 +151,9 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     private var currentDownloadJob: Job? = null
     private var lastNotificationId: Int? = null
 
+    private val activeTempFiles = java.util.Collections.synchronizedList(mutableListOf<java.io.File>())
+    private val activeDownloadUris = java.util.Collections.synchronizedList(mutableListOf<Uri>())
+
     private val _uiState = MutableStateFlow<DownloadState>(DownloadState.Idle)
     val uiState: StateFlow<DownloadState> = _uiState
 
@@ -760,6 +763,42 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
         currentDownloadJob?.cancel()
         _uiState.value = DownloadState.Idle
         lastNotificationId?.let { notificationHelper.cancelNotification(it) }
+
+        logToConsole("Cancelling download and cleaning up temporary files...")
+
+        try {
+            val cacheDir = getApplication<Application>().cacheDir
+            cacheDir.listFiles()?.filter { it.name.startsWith("temp_") }?.forEach { tempFile ->
+                try {
+                    if (tempFile.exists()) tempFile.delete()
+                } catch (_: Exception) {}
+            }
+        } catch (e: Exception) {
+            logToConsole("Cache cleanup notice: ${e.message}")
+        }
+
+        synchronized(activeTempFiles) {
+            activeTempFiles.forEach { file ->
+                try {
+                    if (file.exists()) file.delete()
+                } catch (_: Exception) {}
+            }
+            activeTempFiles.clear()
+        }
+
+        val resolver = getApplication<Application>().contentResolver
+        synchronized(activeDownloadUris) {
+            activeDownloadUris.forEach { uri ->
+                try {
+                    resolver.delete(uri, null, null)
+                } catch (e: Exception) {
+                    logToConsole("URI deletion notice: ${e.message}")
+                }
+            }
+            activeDownloadUris.clear()
+        }
+
+        logToConsole("Download cancelled. Leftover files removed successfully.")
     }
 
     fun deleteLog(log: DownloadLog) {

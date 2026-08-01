@@ -25,6 +25,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.ui.window.Dialog
@@ -655,6 +658,7 @@ fun MainDownloaderTab(
     var showSuccessDialog by remember { mutableStateOf(false) }
     var showFullscreenLogs by remember { mutableStateOf(false) }
     var showPreviewSheet by remember { mutableStateOf(false) }
+    var showTerminalCard by remember { mutableStateOf(viewModel.getSetting("show_terminal_card", "true").toBoolean()) }
     var duplicateWarningUrl by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -676,6 +680,10 @@ fun MainDownloaderTab(
         viewModel.saveSetting("selected_engine", engine)
     }
 
+    LaunchedEffect(showTerminalCard) {
+        viewModel.saveSetting("show_terminal_card", showTerminalCard.toString())
+    }
+
     if (duplicateWarningUrl != null) {
         AlertDialog(
             onDismissRequest = { duplicateWarningUrl = null },
@@ -693,6 +701,29 @@ fun MainDownloaderTab(
             dismissButton = {
                 TextButton(onClick = { duplicateWarningUrl = null }) {
                     Text("Cancel")
+                }
+            }
+        )
+    }
+
+    var showCancelConfirmationDialog by remember { mutableStateOf(false) }
+
+    if (showCancelConfirmationDialog) {
+        AlertDialog(
+            onDismissRequest = { showCancelConfirmationDialog = false },
+            title = { Text("Cancel Download?") },
+            text = { Text("Are you sure you want to cancel the active download? Any partially downloaded files will be removed.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showCancelConfirmationDialog = false
+                    viewModel.cancelDownload()
+                }) {
+                    Text("Yes, Cancel")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCancelConfirmationDialog = false }) {
+                    Text("No")
                 }
             }
         )
@@ -725,7 +756,7 @@ fun MainDownloaderTab(
             
             .padding(horizontal = 24.dp)
             .verticalScroll(rememberScrollState())
-            .padding(top = 72.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
+            .padding(top = 108.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -1207,63 +1238,133 @@ fun MainDownloaderTab(
             }
         }
 
-        if (uiState is DownloadState.Downloading) {
-            DownloadProgressBox(progress = uiState.progress, onCancel = { viewModel.cancelDownload() })
-        } else {
-            // Download button interaction state
-            val downloadInteractionSource = remember { MutableInteractionSource() }
-            val isDownloadPressed by downloadInteractionSource.collectIsPressedAsState()
-            val downloadCorner by animateDpAsState(
-                targetValue = if (isDownloadPressed) 6.dp else 20.dp,
-                animationSpec = tween(150),
-                label = "download_corner"
-            )
-            val downloadScale by animateFloatAsState(
-                targetValue = if (isDownloadPressed) 0.95f else 1f,
-                animationSpec = tween(150),
-                label = "download_scale"
-            )
-            
-            val downloadContainerColor by animateColorAsState(
-                targetValue = if (isDownloadPressed) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.secondaryContainer,
-                animationSpec = tween(150),
-                label = "download_container_color"
-            )
-            val downloadContentColor by animateColorAsState(
-                targetValue = if (isDownloadPressed) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSecondaryContainer,
-                animationSpec = tween(150),
-                label = "download_content_color"
-            )
+        // Connected Button Group (Terminal / Download)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            // Terminal Pill Button (Left)
+            Box(modifier = Modifier.weight(1f)) {
+                val terminalInteractionSource = remember { MutableInteractionSource() }
+                val isTerminalPressed by terminalInteractionSource.collectIsPressedAsState()
+                val terminalInnerCorner by animateDpAsState(if (isTerminalPressed || showTerminalCard) 100.dp else 8.dp)
+                
+                val terminalContainerColor by animateColorAsState(
+                    targetValue = if (showTerminalCard) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surfaceVariant,
+                    animationSpec = tween(150),
+                    label = "terminal_container_color"
+                )
+                val terminalContentColor by animateColorAsState(
+                    targetValue = if (showTerminalCard) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    animationSpec = tween(150),
+                    label = "terminal_content_color"
+                )
 
-            FilledTonalButton(
-                onClick = { 
-                    if (url.isNotBlank()) {
-                        coroutineScope.launch {
-                            if (viewModel.hasDownloadedUrl(url)) {
-                                duplicateWarningUrl = url
-                            } else {
-                                viewModel.downloadMedia(url, quality, downloadMode, engine)
+                FilledTonalButton(
+                    onClick = { showTerminalCard = !showTerminalCard },
+                    modifier = Modifier.fillMaxWidth(),
+                    interactionSource = terminalInteractionSource,
+                    shape = RoundedCornerShape(topStart = 100.dp, bottomStart = 100.dp, topEnd = terminalInnerCorner, bottomEnd = terminalInnerCorner),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = terminalContainerColor,
+                        contentColor = terminalContentColor
+                    ),
+                    contentPadding = PaddingValues(14.dp)
+                ) {
+                    Icon(Icons.Default.Terminal, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Terminal", maxLines = 1)
+                }
+            }
+
+            // Download Pill Button (Right)
+            Box(modifier = Modifier.weight(1f)) {
+                val downloadInteractionSource = remember { MutableInteractionSource() }
+                val isDownloadPressed by downloadInteractionSource.collectIsPressedAsState()
+                val isDownloading = uiState is DownloadState.Downloading
+                val downloadInnerCorner by animateDpAsState(if (isDownloadPressed || isDownloading) 100.dp else 8.dp)
+                val downloadContainerColor by animateColorAsState(
+                    targetValue = if (isDownloading) MaterialTheme.colorScheme.primaryContainer else if (isDownloadPressed) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.secondaryContainer,
+                    animationSpec = tween(150),
+                    label = "download_container_color"
+                )
+                val downloadContentColor by animateColorAsState(
+                    targetValue = if (isDownloading) MaterialTheme.colorScheme.onPrimaryContainer else if (isDownloadPressed) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSecondaryContainer,
+                    animationSpec = tween(150),
+                    label = "download_content_color"
+                )
+
+                FilledTonalButton(
+                    onClick = { 
+                        if (isDownloading) {
+                            showCancelConfirmationDialog = true
+                        } else if (url.isNotBlank()) {
+                            coroutineScope.launch {
+                                if (viewModel.hasDownloadedUrl(url)) {
+                                    duplicateWarningUrl = url
+                                } else {
+                                    viewModel.downloadMedia(url, quality, downloadMode, engine)
+                                }
                             }
-                        }
-                    } 
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .graphicsLayer {
-                        scaleX = downloadScale
-                        scaleY = downloadScale
+                        } 
                     },
-                interactionSource = downloadInteractionSource,
-                shape = RoundedCornerShape(downloadCorner),
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = downloadContainerColor,
-                    contentColor = downloadContentColor
-                ),
-                contentPadding = PaddingValues(14.dp)
-            ) {
-                Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Download Now")
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .combinedClickable(
+                            onClick = {
+                                if (isDownloading) {
+                                    showCancelConfirmationDialog = true
+                                } else if (url.isNotBlank()) {
+                                    coroutineScope.launch {
+                                        if (viewModel.hasDownloadedUrl(url)) {
+                                            duplicateWarningUrl = url
+                                        } else {
+                                            viewModel.downloadMedia(url, quality, downloadMode, engine)
+                                        }
+                                    }
+                                }
+                            },
+                            onLongClick = {
+                                if (isDownloading) {
+                                    showCancelConfirmationDialog = true
+                                }
+                            }
+                        ),
+                    interactionSource = downloadInteractionSource,
+                    shape = RoundedCornerShape(topStart = downloadInnerCorner, bottomStart = downloadInnerCorner, topEnd = 100.dp, bottomEnd = 100.dp),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = downloadContainerColor,
+                        contentColor = downloadContentColor
+                    ),
+                    contentPadding = if (isDownloading) PaddingValues(horizontal = 10.dp, vertical = 14.dp) else PaddingValues(14.dp)
+                ) {
+                    if (isDownloading) {
+                        val progress = (uiState as DownloadState.Downloading).progress
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            WavyProgressIndicator(
+                                progress = progress,
+                                modifier = Modifier.weight(1f).height(12.dp),
+                                strokeWidth = 3.dp,
+                                waveAmplitude = 2.dp,
+                                color = downloadContentColor,
+                                trackColor = downloadContentColor.copy(alpha = 0.25f)
+                            )
+                            Text(
+                                "${(progress * 100).toInt()}%",
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1
+                            )
+                        }
+                    } else {
+                        Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Download", maxLines = 1)
+                    }
+                }
             }
         }
 
@@ -1271,80 +1372,87 @@ fun MainDownloaderTab(
             StatusInfo(uiState, viewModel::openSavedFolder)
         }
 
-        Spacer(Modifier.height(16.dp))
-
         // Terminal CLI Component
-        val currentTerminalTheme = viewModel.terminalTheme.value
-        Card(
-            modifier = Modifier.fillMaxWidth().height(180.dp)
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onDoubleTap = { showFullscreenLogs = true }
-                    )
-                },
-            colors = CardDefaults.cardColors(containerColor = Color(currentTerminalTheme.background)),
-            border = BorderStroke(1.dp, Color(currentTerminalTheme.header)),
-            shape = RoundedCornerShape(16.dp)
+        AnimatedVisibility(
+            visible = showTerminalCard,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                // Header (macOS style window control dots)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(currentTerminalTheme.header))
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+            Column {
+                Spacer(Modifier.height(16.dp))
+                val currentTerminalTheme = viewModel.terminalTheme.value
+                Card(
+                    modifier = Modifier.fillMaxWidth().height(180.dp)
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onDoubleTap = { showFullscreenLogs = true }
+                            )
+                        },
+                    colors = CardDefaults.cardColors(containerColor = Color(currentTerminalTheme.background)),
+                    border = BorderStroke(1.dp, Color(currentTerminalTheme.header)),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Box(Modifier.size(8.dp).background(Color(0xFFFF5F56), CircleShape))
-                        Box(Modifier.size(8.dp).background(Color(0xFFFFBD2E), CircleShape))
-                        Box(Modifier.size(8.dp).background(Color(0xFF27C93F), CircleShape))
-                    }
-                    Text(
-                        text = "gabi@terminal: ~",
-                        color = Color(currentTerminalTheme.text).copy(alpha = 0.6f),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontFamily = FontFamily.Monospace
-                    )
-                    IconButton(
-                        onClick = { viewModel.clearConsole() },
-                        modifier = Modifier.size(16.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Clear Console",
-                            tint = Color(currentTerminalTheme.text).copy(alpha = 0.6f),
-                            modifier = Modifier.size(12.dp)
-                        )
-                    }
-                }
-                
-                Divider(color = Color(currentTerminalTheme.header), thickness = 1.dp)
-                
-                // Logs Box
-                val lazyListState = rememberLazyListState()
-                LaunchedEffect(consoleLogs.size) {
-                    if (consoleLogs.isNotEmpty()) {
-                        lazyListState.animateScrollToItem(consoleLogs.size - 1)
-                    }
-                }
-                
-                LazyColumn(
-                    state = lazyListState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    items(consoleLogs) { log ->
-                        Text(
-                            text = log,
-                            color = Color(currentTerminalTheme.text),
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 11.sp,
-                            lineHeight = 14.sp
-                        )
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        // Header (macOS style window control dots)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(currentTerminalTheme.header))
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Box(Modifier.size(8.dp).background(Color(0xFFFF5F56), CircleShape))
+                                Box(Modifier.size(8.dp).background(Color(0xFFFFBD2E), CircleShape))
+                                Box(Modifier.size(8.dp).background(Color(0xFF27C93F), CircleShape))
+                            }
+                            Text(
+                                text = "gabi@terminal: ~",
+                                color = Color(currentTerminalTheme.text).copy(alpha = 0.6f),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontFamily = FontFamily.Monospace
+                            )
+                            IconButton(
+                                onClick = { viewModel.clearConsole() },
+                                modifier = Modifier.size(16.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Clear Console",
+                                    tint = Color(currentTerminalTheme.text).copy(alpha = 0.6f),
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                        }
+                        
+                        Divider(color = Color(currentTerminalTheme.header), thickness = 1.dp)
+                        
+                        // Logs Box
+                        val lazyListState = rememberLazyListState()
+                        LaunchedEffect(consoleLogs.size) {
+                            if (consoleLogs.isNotEmpty()) {
+                                lazyListState.animateScrollToItem(consoleLogs.size - 1)
+                            }
+                        }
+                        
+                        LazyColumn(
+                            state = lazyListState,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            items(consoleLogs) { log ->
+                                Text(
+                                    text = log,
+                                    color = Color(currentTerminalTheme.text),
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 11.sp,
+                                    lineHeight = 14.sp
+                                )
+                            }
+                        }
                     }
                 }
             }
