@@ -1439,12 +1439,78 @@ fun DownloadProgressBox(progress: Float, onCancel: () -> Unit) {
                     Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.error)
                 }
             }
-            LinearProgressIndicator(
+            WavyProgressIndicator(
                 progress = progress,
-                modifier = Modifier.fillMaxWidth().height(8.dp).clip(MaterialTheme.shapes.small),
-                strokeCap = StrokeCap.Round
+                modifier = Modifier.fillMaxWidth().height(16.dp)
             )
             Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.labelMedium, modifier = Modifier.align(Alignment.End))
+        }
+    }
+}
+
+@Composable
+fun WavyProgressIndicator(
+    progress: Float,
+    modifier: Modifier = Modifier,
+    waveAmplitude: androidx.compose.ui.unit.Dp = 3.dp,
+    waveFrequency: Float = 0.08f,
+    strokeWidth: androidx.compose.ui.unit.Dp = 6.dp,
+    color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary,
+    trackColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primaryContainer
+) {
+    val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition()
+    val phase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2.0 * kotlin.math.PI).toFloat(),
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(1500, easing = androidx.compose.animation.core.LinearEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Restart
+        ),
+        label = "wave_phase"
+    )
+
+    androidx.compose.foundation.Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val centerY = h / 2f
+        val amplitude = waveAmplitude.toPx()
+        val freq = waveFrequency
+        
+        val filledWidth = w * progress
+
+        // Draw straight track for the remaining
+        if (filledWidth < w) {
+            drawLine(
+                color = trackColor,
+                start = androidx.compose.ui.geometry.Offset(filledWidth, centerY),
+                end = androidx.compose.ui.geometry.Offset(w, centerY),
+                strokeWidth = strokeWidth.toPx(),
+                cap = androidx.compose.ui.graphics.StrokeCap.Round
+            )
+        }
+
+        // Draw wavy filled part
+        if (filledWidth > 0f) {
+            val path = androidx.compose.ui.graphics.Path()
+            var first = true
+            for (x in 0..filledWidth.toInt() step 2) {
+                val y = centerY + amplitude * kotlin.math.sin(x * freq - phase)
+                if (first) {
+                    path.moveTo(x.toFloat(), y)
+                    first = false
+                } else {
+                    path.lineTo(x.toFloat(), y)
+                }
+            }
+            drawPath(
+                path = path,
+                color = color,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(
+                    width = strokeWidth.toPx(), 
+                    cap = androidx.compose.ui.graphics.StrokeCap.Round, 
+                    join = androidx.compose.ui.graphics.StrokeJoin.Round
+                )
+            )
         }
     }
 }
