@@ -711,7 +711,7 @@ fun MainDownloaderTab(
             
             .padding(horizontal = 24.dp)
             .verticalScroll(rememberScrollState())
-            .padding(top = 48.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
+            .padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -1645,14 +1645,14 @@ fun SettingsMainList(onNavigate: (String) -> Unit, contentPadding: PaddingValues
             .fillMaxSize()
             
             .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState()).padding(top = 48.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
+            .verticalScroll(rememberScrollState()).padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
             text = "Settings",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(vertical = 16.dp)
+            modifier = Modifier
         )
         
         Card(
@@ -1705,10 +1705,10 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
             .fillMaxSize()
             
             .padding(horizontal = 24.dp)
-            .verticalScroll(rememberScrollState()).padding(top = 48.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
+            .verticalScroll(rememberScrollState()).padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier) {
             IconButton(
                 onClick = onBack,
                 modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
@@ -1905,10 +1905,10 @@ fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, 
             .fillMaxSize()
             
             .padding(horizontal = 24.dp)
-            .verticalScroll(rememberScrollState()).padding(top = 48.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
+            .verticalScroll(rememberScrollState()).padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier) {
             IconButton(
                 onClick = onBack,
                 modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
@@ -2172,10 +2172,10 @@ fun DeveloperScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
             .fillMaxSize()
             
             .padding(horizontal = 24.dp)
-            .verticalScroll(rememberScrollState()).padding(top = 48.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
+            .verticalScroll(rememberScrollState()).padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier) {
             IconButton(
                 onClick = onBack,
                 modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
@@ -2263,10 +2263,10 @@ fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
             .fillMaxSize()
             
             .padding(horizontal = 24.dp)
-            .verticalScroll(rememberScrollState()).padding(top = 48.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
+            .verticalScroll(rememberScrollState()).padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier) {
             IconButton(
                 onClick = onBack,
                 modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
@@ -2375,7 +2375,7 @@ fun LogsTab(
         } else {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(top = 48.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding())
+                contentPadding = PaddingValues(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding())
             ) {
                 items(history) { log ->
                     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
