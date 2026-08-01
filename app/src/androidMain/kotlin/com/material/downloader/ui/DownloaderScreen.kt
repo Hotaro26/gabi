@@ -926,7 +926,20 @@ fun MainDownloaderTab(
                         if (streamUrlToPlay.isNotBlank()) {
                             val exoPlayer = remember { androidx.media3.exoplayer.ExoPlayer.Builder(context).build() }
                             DisposableEffect(streamUrlToPlay) {
-                                exoPlayer.setMediaItem(androidx.media3.common.MediaItem.fromUri(android.net.Uri.parse(streamUrlToPlay)))
+                                val videoUri = android.net.Uri.parse(streamUrlToPlay)
+                                val videoSource = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context)
+                                    .createMediaSource(androidx.media3.common.MediaItem.fromUri(videoUri))
+                                
+                                val audioUrl = meta.audio_url
+                                if (!audioUrl.isNullOrBlank()) {
+                                    val audioSource = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context)
+                                        .createMediaSource(androidx.media3.common.MediaItem.fromUri(android.net.Uri.parse(audioUrl)))
+                                    val mergedSource = androidx.media3.exoplayer.source.MergingMediaSource(videoSource, audioSource)
+                                    exoPlayer.setMediaSource(mergedSource)
+                                } else {
+                                    exoPlayer.setMediaSource(videoSource)
+                                }
+                                
                                 exoPlayer.prepare()
                                 exoPlayer.playWhenReady = true
                                 onDispose { exoPlayer.release() }
@@ -941,7 +954,8 @@ fun MainDownloaderTab(
                             ) {
                                 androidx.compose.ui.viewinterop.AndroidView(
                                     factory = { ctx ->
-                                        androidx.media3.ui.PlayerView(ctx).apply {
+                                        val view = android.view.LayoutInflater.from(ctx).inflate(com.material.downloader.R.layout.player_view_layout, null) as androidx.media3.ui.PlayerView
+                                        view.apply {
                                             player = exoPlayer
                                             useController = true
                                         }
