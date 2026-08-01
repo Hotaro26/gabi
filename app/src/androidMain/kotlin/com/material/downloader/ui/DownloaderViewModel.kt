@@ -109,10 +109,16 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     )
     
     var isNavBarBlurEnabled = mutableStateOf(prefs.getBoolean("nav_bar_blur", true))
+    var isNavBarOpaque = mutableStateOf(prefs.getBoolean("nav_bar_opaque", false))
 
     fun toggleNavBarBlur(enabled: Boolean) {
         isNavBarBlurEnabled.value = enabled
         prefs.edit().putBoolean("nav_bar_blur", enabled).apply()
+    }
+    
+    fun toggleNavBarOpaque(enabled: Boolean) {
+        isNavBarOpaque.value = enabled
+        prefs.edit().putBoolean("nav_bar_opaque", enabled).apply()
     }
     
     fun updateTerminalTheme(theme: TerminalTheme) {
@@ -180,6 +186,19 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
         prefs.edit().putBoolean("auto_check_updates", enabled).apply()
         logToConsole("Auto version check ${if (enabled) "enabled" else "disabled"}")
     }
+
+    private val client = HttpClient(CIO) {
+        install(HttpTimeout) {
+            requestTimeoutMillis = 600_000
+            connectTimeoutMillis = 30_000
+            socketTimeoutMillis = 30_000
+        }
+        install(DefaultRequest) {
+            header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+        }
+    }
+
+    private val downloader = FileDownloader(application, client)
 
     init {
         if (autoCheckUpdates.value) {
@@ -265,19 +284,6 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     private val _externalUrl = MutableStateFlow<String?>(null)
     val externalUrl: StateFlow<String?> = _externalUrl
 
-    private val client = HttpClient(CIO) {
-        install(HttpTimeout) {
-            requestTimeoutMillis = 600_000
-            connectTimeoutMillis = 30_000
-            socketTimeoutMillis = 30_000
-        }
-        install(DefaultRequest) {
-            header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
-        }
-    }
-
-    private val downloader = FileDownloader(application, client)
-    
     val downloadHistory = logDao.getAllLogs()
 
     fun handleSharedUrl(url: String) {

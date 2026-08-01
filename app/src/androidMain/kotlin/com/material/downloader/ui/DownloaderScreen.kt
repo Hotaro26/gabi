@@ -327,6 +327,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .navigationBarsPadding()
                             .padding(bottom = 24.dp, start = 16.dp, end = 16.dp),
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
@@ -336,7 +337,9 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                                 .shadow(8.dp, CircleShape)
                                 .clip(CircleShape)
                                 .let { m ->
-                                    if (viewModel.isNavBarBlurEnabled.value) {
+                                    if (viewModel.isNavBarOpaque.value) {
+                                        m.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                                    } else if (viewModel.isNavBarBlurEnabled.value) {
                                         m.hazeChild(state = hazeState, shape = CircleShape, style = HazeStyle(tint = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f), blurRadius = 24.dp))
                                     } else {
                                         m.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f), CircleShape)
@@ -1938,6 +1941,19 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
                         onCheckedChange = { viewModel.toggleNavBarBlur(it) }
                     )
                 }
+                
+                Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 12.dp))
+                
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Opaque Navigation Bar", style = MaterialTheme.typography.titleMedium)
+                        Text("Make floating navigation solid color", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(
+                        checked = viewModel.isNavBarOpaque.value,
+                        onCheckedChange = { viewModel.toggleNavBarOpaque(it) }
+                    )
+                }
             }
         }
         
@@ -2461,6 +2477,8 @@ fun DeveloperScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentP
     val profileImageRequest = remember(context) {
         coil.request.ImageRequest.Builder(context)
             .data("https://github.com/Hotaro26.png")
+            .diskCacheKey("hotaro_avatar")
+            .memoryCacheKey("hotaro_avatar")
             .diskCachePolicy(coil.request.CachePolicy.ENABLED)
             .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
             .crossfade(true)
