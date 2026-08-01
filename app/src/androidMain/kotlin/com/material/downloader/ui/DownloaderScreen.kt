@@ -1430,7 +1430,7 @@ fun MainDownloaderTab(
 fun DownloadProgressBox(progress: Float, onCancel: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f))
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1456,7 +1456,7 @@ fun WavyProgressIndicator(
     waveFrequency: Float = 0.08f,
     strokeWidth: androidx.compose.ui.unit.Dp = 6.dp,
     color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary,
-    trackColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primaryContainer
+    trackColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
 ) {
     val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition()
     val phase by infiniteTransition.animateFloat(
@@ -1478,14 +1478,29 @@ fun WavyProgressIndicator(
         
         val filledWidth = w * progress
 
-        // Draw straight track for the remaining
+        val lastY = if (filledWidth > 0f) centerY + amplitude * kotlin.math.sin(filledWidth * freq - phase) else centerY
+
+        // Draw track connected to the end of the wave and tapered to center
         if (filledWidth < w) {
-            drawLine(
+            val trackPath = androidx.compose.ui.graphics.Path()
+            trackPath.moveTo(filledWidth, lastY)
+            val distanceToCenter = kotlin.math.min(40f, w - filledWidth)
+            if (distanceToCenter > 0f) {
+                trackPath.cubicTo(
+                    filledWidth + distanceToCenter / 2, lastY,
+                    filledWidth + distanceToCenter / 2, centerY,
+                    filledWidth + distanceToCenter, centerY
+                )
+            }
+            trackPath.lineTo(w, centerY)
+
+            drawPath(
+                path = trackPath,
                 color = trackColor,
-                start = androidx.compose.ui.geometry.Offset(filledWidth, centerY),
-                end = androidx.compose.ui.geometry.Offset(w, centerY),
-                strokeWidth = strokeWidth.toPx(),
-                cap = androidx.compose.ui.graphics.StrokeCap.Round
+                style = androidx.compose.ui.graphics.drawscope.Stroke(
+                    width = strokeWidth.toPx(),
+                    cap = androidx.compose.ui.graphics.StrokeCap.Round
+                )
             )
         }
 
