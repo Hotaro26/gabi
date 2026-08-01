@@ -1164,13 +1164,24 @@ fun MainDownloaderTab(
             val isDownloadPressed by downloadInteractionSource.collectIsPressedAsState()
             val downloadCorner by animateDpAsState(
                 targetValue = if (isDownloadPressed) 6.dp else 20.dp,
-                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                animationSpec = tween(150),
                 label = "download_corner"
             )
             val downloadScale by animateFloatAsState(
-                targetValue = if (isDownloadPressed) 1.05f else 1f,
-                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                targetValue = if (isDownloadPressed) 0.95f else 1f,
+                animationSpec = tween(150),
                 label = "download_scale"
+            )
+            
+            val downloadContainerColor by animateColorAsState(
+                targetValue = if (isDownloadPressed) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.secondaryContainer,
+                animationSpec = tween(150),
+                label = "download_container_color"
+            )
+            val downloadContentColor by animateColorAsState(
+                targetValue = if (isDownloadPressed) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSecondaryContainer,
+                animationSpec = tween(150),
+                label = "download_content_color"
             )
 
             FilledTonalButton(
@@ -1193,6 +1204,10 @@ fun MainDownloaderTab(
                     },
                 interactionSource = downloadInteractionSource,
                 shape = RoundedCornerShape(downloadCorner),
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = downloadContainerColor,
+                    contentColor = downloadContentColor
+                ),
                 contentPadding = PaddingValues(14.dp)
             ) {
                 Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
