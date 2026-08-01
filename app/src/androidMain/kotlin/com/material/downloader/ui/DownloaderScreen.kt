@@ -732,6 +732,7 @@ fun MainDownloaderTab(
     }
 
     var showCancelConfirmationDialog by remember { mutableStateOf(false) }
+    var showDownloadingDetailsSheet by remember { mutableStateOf(false) }
 
     if (showCancelConfirmationDialog) {
         AlertDialog(
@@ -752,6 +753,73 @@ fun MainDownloaderTab(
                 }
             }
         )
+    }
+
+    if (showDownloadingDetailsSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showDownloadingDetailsSheet = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            windowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text("Downloading...", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                
+                if (preview != null) {
+                    AsyncImage(
+                        model = preview?.thumbnail,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                    Text(preview?.title ?: "", style = MaterialTheme.typography.bodyMedium, maxLines = 2)
+                }
+
+                if (uiState is DownloadState.Downloading) {
+                    val state = uiState as DownloadState.Downloading
+                    val prog = state.progress
+                    val downloadedMb = state.downloadedBytes / 1_048_576f
+                    val totalMb = state.totalBytes / 1_048_576f
+                    val speedKbps = state.speedBps / 1024f
+                    
+                    WavyProgressIndicator(
+                        progress = prog,
+                        modifier = Modifier.fillMaxWidth().height(12.dp),
+                        waveAmplitude = 3.dp,
+                        waveFrequency = 0.05f
+                    )
+                    
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(if (state.totalBytes > 0) String.format("%.1f MB / %.1f MB", downloadedMb, totalMb) else String.format("%.1f MB downloaded", downloadedMb), style = MaterialTheme.typography.bodySmall)
+                        Text(String.format("%.1f KB/s", speedKbps), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        viewModel.cancelDownload()
+                        showDownloadingDetailsSheet = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Close, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Cancel Download")
+                }
+            }
+        }
     }
 
     viewModel.updateAvailable.value?.let { updateInfo ->
@@ -800,7 +868,7 @@ fun MainDownloaderTab(
             },
             placeholder = { Text("Search or paste link") },
             modifier = Modifier.fillMaxWidth(),
-            leadingIcon = { Icon(Icons.Default.Movie, null, modifier = Modifier.size(20.dp)) },
+            leadingIcon = { Icon(YoutubeOutline, null, modifier = Modifier.size(20.dp)) },
             trailingIcon = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (url.isNotEmpty()) {
@@ -1325,7 +1393,7 @@ fun MainDownloaderTab(
                 FilledTonalButton(
                     onClick = { 
                         if (isDownloading) {
-                            showCancelConfirmationDialog = true
+                            showDownloadingDetailsSheet = true
                         } else if (url.isNotBlank()) {
                             coroutineScope.launch {
                                 if (viewModel.hasDownloadedUrl(url)) {
@@ -1341,7 +1409,7 @@ fun MainDownloaderTab(
                         .combinedClickable(
                             onClick = {
                                 if (isDownloading) {
-                                    showCancelConfirmationDialog = true
+                                    showDownloadingDetailsSheet = true
                                 } else if (url.isNotBlank()) {
                                     coroutineScope.launch {
                                         if (viewModel.hasDownloadedUrl(url)) {
@@ -1354,7 +1422,7 @@ fun MainDownloaderTab(
                             },
                             onLongClick = {
                                 if (isDownloading) {
-                                    showCancelConfirmationDialog = true
+                                    showDownloadingDetailsSheet = true
                                 }
                             }
                         ),

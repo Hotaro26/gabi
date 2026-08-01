@@ -29,7 +29,10 @@ class FileDownloader(private val context: Context, private val client: HttpClien
         emit(DownloadState.Downloading(0f))
         
         try {
-            client.prepareGet(url).execute { response ->
+            client.prepareGet(url) {
+                header(io.ktor.http.HttpHeaders.UserAgent, "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                header("Accept", "*/*")
+            }.execute { response ->
                 if (response.status.value !in 200..299) {
                     throw Exception("Server returned status ${response.status.value}: ${response.status.description}")
                 }
@@ -48,16 +51,22 @@ class FileDownloader(private val context: Context, private val client: HttpClien
                 context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                     var bytesRead = 0L
                     val buffer = ByteArray(8192)
+                    var lastEmitTime = System.currentTimeMillis()
+                    var bytesSinceLastEmit = 0L
                     while (!channel.isClosedForRead) {
-                        val packet = channel.readRemaining(buffer.size.toLong())
-                        while (!packet.isEmpty) {
-                            val length = packet.remaining.toInt()
-                            packet.readAvailable(buffer, 0, length)
-                            outputStream.write(buffer, 0, length)
-                            bytesRead += length
-                            
-                            if (contentLength > 0) {
-                                emit(DownloadState.Downloading(bytesRead.toFloat() / contentLength))
+                        val read = channel.readAvailable(buffer, 0, buffer.size)
+                        if (read > 0) {
+                            outputStream.write(buffer, 0, read)
+                            bytesRead += read
+                            bytesSinceLastEmit += read
+                            val now = System.currentTimeMillis()
+                            val timeDiff = now - lastEmitTime
+                            if (timeDiff >= 500 || channel.isClosedForRead) {
+                                val speedBps = (bytesSinceLastEmit * 1000L) / timeDiff.coerceAtLeast(1L)
+                                val prog = if (contentLength > 0) bytesRead.toFloat() / contentLength else 0f
+                                emit(DownloadState.Downloading(prog, bytesRead, contentLength, speedBps))
+                                lastEmitTime = now
+                                bytesSinceLastEmit = 0L
                             }
                         }
                     }
@@ -75,7 +84,10 @@ class FileDownloader(private val context: Context, private val client: HttpClien
     ): Flow<DownloadState> = flow {
         emit(DownloadState.Downloading(0f))
         try {
-            client.prepareGet(url).execute { response ->
+            client.prepareGet(url) {
+                header(io.ktor.http.HttpHeaders.UserAgent, "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                header("Accept", "*/*")
+            }.execute { response ->
                 if (response.status.value !in 200..299) {
                     throw Exception("Server returned status ${response.status.value}: ${response.status.description}")
                 }
@@ -86,16 +98,22 @@ class FileDownloader(private val context: Context, private val client: HttpClien
                 destFile.outputStream().use { outputStream ->
                     var bytesRead = 0L
                     val buffer = ByteArray(8192)
+                    var lastEmitTime = System.currentTimeMillis()
+                    var bytesSinceLastEmit = 0L
                     while (!channel.isClosedForRead) {
-                        val packet = channel.readRemaining(buffer.size.toLong())
-                        while (!packet.isEmpty) {
-                            val length = packet.remaining.toInt()
-                            packet.readAvailable(buffer, 0, length)
-                            outputStream.write(buffer, 0, length)
-                            bytesRead += length
-                            
-                            if (contentLength > 0) {
-                                emit(DownloadState.Downloading(bytesRead.toFloat() / contentLength))
+                        val read = channel.readAvailable(buffer, 0, buffer.size)
+                        if (read > 0) {
+                            outputStream.write(buffer, 0, read)
+                            bytesRead += read
+                            bytesSinceLastEmit += read
+                            val now = System.currentTimeMillis()
+                            val timeDiff = now - lastEmitTime
+                            if (timeDiff >= 500 || channel.isClosedForRead) {
+                                val speedBps = (bytesSinceLastEmit * 1000L) / timeDiff.coerceAtLeast(1L)
+                                val prog = if (contentLength > 0) bytesRead.toFloat() / contentLength else 0f
+                                emit(DownloadState.Downloading(prog, bytesRead, contentLength, speedBps))
+                                lastEmitTime = now
+                                bytesSinceLastEmit = 0L
                             }
                         }
                     }
@@ -179,7 +197,7 @@ class FileDownloader(private val context: Context, private val client: HttpClien
 
 sealed class DownloadState {
     data object Idle : DownloadState()
-    data class Downloading(val progress: Float) : DownloadState()
+    data class Downloading(val progress: Float, val downloadedBytes: Long = 0L, val totalBytes: Long = 0L, val speedBps: Long = 0L) : DownloadState()
     data class Success(val path: String) : DownloadState()
     data class Error(val message: String) : DownloadState()
 }

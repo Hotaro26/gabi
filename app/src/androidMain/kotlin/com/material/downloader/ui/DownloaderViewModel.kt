@@ -635,7 +635,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                                 if (state is DownloadState.Downloading) {
                                     val fileProgress = state.progress
                                     val overallProgress = (index + fileProgress) / totalFiles
-                                    _uiState.value = DownloadState.Downloading(overallProgress)
+                                    _uiState.value = DownloadState.Downloading(overallProgress, state.downloadedBytes, state.totalBytes, state.speedBps)
                                     notificationHelper.showProgressNotification(notificationId, "$title (${index + 1}/$totalFiles)", (overallProgress * 100).toInt())
                                 }
                                 if (state is DownloadState.Success) {
@@ -687,7 +687,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                                 downloader.downloadFileToPath(downloadUrl, tempVideoFile).collect { state ->
                                     if (state is DownloadState.Downloading) {
                                         val progress = state.progress / 2f
-                                        _uiState.value = DownloadState.Downloading(progress)
+                                        _uiState.value = DownloadState.Downloading(progress, state.downloadedBytes, state.totalBytes, state.speedBps)
                                         notificationHelper.showProgressNotification(notificationId, "$title (Video)", (progress * 100).toInt())
                                     }
                                     if (state is DownloadState.Success) {
@@ -707,7 +707,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                                 downloader.downloadFileToPath(audioUrl, tempAudioFile).collect { state ->
                                     if (state is DownloadState.Downloading) {
                                         val progress = 0.5f + (state.progress / 2f)
-                                        _uiState.value = DownloadState.Downloading(progress)
+                                        _uiState.value = DownloadState.Downloading(progress, state.downloadedBytes, state.totalBytes, state.speedBps)
                                         notificationHelper.showProgressNotification(notificationId, "$title (Audio)", (progress * 100).toInt())
                                     }
                                     if (state is DownloadState.Success) {

@@ -95,8 +95,8 @@ android {
         applicationId = "com.material.downloader"
         minSdk = 24
         targetSdk = 34
-        versionCode = 7
-        versionName = "4.1"
+        versionCode = 8
+        versionName = "4.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
 

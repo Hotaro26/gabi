@@ -85,7 +85,7 @@ fun NewPipeTab(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(modifier = Modifier.fillMaxHeight(0.3f))
                 Icon(
-                    painter = androidx.compose.ui.res.painterResource(android.R.drawable.ic_media_play),
+                    imageVector = YoutubeOutline,
                     contentDescription = "YouTube",
                     modifier = Modifier.size(72.dp).padding(bottom = 16.dp),
                     tint = MaterialTheme.colorScheme.primary
