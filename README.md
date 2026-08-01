@@ -131,8 +131,8 @@ Gabi uses several open-source libraries. Please check the "Licenses" section in 
 
 <a href="https://www.star-history.com/?repos=Hotaro26%2Fgabi&type=timeline&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Hotaro26/gabi&type=timeline&theme=dark&legend=top-left&sealed_token=ICPEoeSPUIyTI9HBhaQd1cqwb__bF6AARXPx5LoseAlpI0DhDpMNhAi15soYs5XNIcgPt7QUfbsnuw748rjHCU_gNViIzM8Hhmm-zTMHAXnmzY5oB0nLbgvFrdeXt2ZXkvIZwqaS3qpPW0Q89-orZRJ4jho89hKAys16mgNUPW4XURZSjd1sBChLXzu7" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Hotaro26/gabi&type=timeline&legend=top-left&sealed_token=ICPEoeSPUIyTI9HBhaQd1cqwb__bF6AARXPx5LoseAlpI0DhDpMNhAi15soYs5XNIcgPt7QUfbsnuw748rjHCU_gNViIzM8Hhmm-zTMHAXnmzY5oB0nLbgvFrdeXt2ZXkvIZwqaS3qpPW0Q89-orZRJ4jho89hKAys16mgNUPW4XURZSjd1sBChLXzu7" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Hotaro26/gabi&type=timeline&legend=top-left&sealed_token=ICPEoeSPUIyTI9HBhaQd1cqwb__bF6AARXPx5LoseAlpI0DhDpMNhAi15soYs5XNIcgPt7QUfbsnuw748rjHCU_gNViIzM8Hhmm-zTMHAXnmzY5oB0nLbgvFrdeXt2ZXkvIZwqaS3qpPW0Q89-orZRJ4jho89hKAys16mgNUPW4XURZSjd1sBChLXzu7" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Hotaro26/gabi&type=timeline&theme=dark&legend=top-left&sealed_token=2O9JIfnAG5PVvrVo5HDThBD5x2Tld5b5uoFGJWNo3Rhnk6BkD8yhQKvjDlFjZ_NzusXcMEdoL2VLDnlCstjzWOFs1hylFipMpKWTjsNp6QHAytaJEhhCLOPTQ6M7os6rB-cK0nRaCNLivagwgPDYbPzJVIDMzTG99D5H-3QyMwc1CuFQ891j-bD1y8C_" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Hotaro26/gabi&type=timeline&legend=top-left&sealed_token=2O9JIfnAG5PVvrVo5HDThBD5x2Tld5b5uoFGJWNo3Rhnk6BkD8yhQKvjDlFjZ_NzusXcMEdoL2VLDnlCstjzWOFs1hylFipMpKWTjsNp6QHAytaJEhhCLOPTQ6M7os6rB-cK0nRaCNLivagwgPDYbPzJVIDMzTG99D5H-3QyMwc1CuFQ891j-bD1y8C_" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Hotaro26/gabi&type=timeline&legend=top-left&sealed_token=2O9JIfnAG5PVvrVo5HDThBD5x2Tld5b5uoFGJWNo3Rhnk6BkD8yhQKvjDlFjZ_NzusXcMEdoL2VLDnlCstjzWOFs1hylFipMpKWTjsNp6QHAytaJEhhCLOPTQ6M7os6rB-cK0nRaCNLivagwgPDYbPzJVIDMzTG99D5H-3QyMwc1CuFQ891j-bD1y8C_" />
  </picture>
 </a>
