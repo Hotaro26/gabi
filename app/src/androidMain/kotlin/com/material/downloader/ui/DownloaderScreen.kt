@@ -1173,7 +1173,7 @@ fun MainDownloaderTab(
                 label = "download_scale"
             )
 
-            Button(
+            FilledTonalButton(
                 onClick = { 
                     if (url.isNotBlank()) {
                         coroutineScope.launch {
@@ -1195,7 +1195,7 @@ fun MainDownloaderTab(
                 shape = RoundedCornerShape(downloadCorner),
                 contentPadding = PaddingValues(14.dp)
             ) {
-                Icon(Icons.Default.VerticalAlignBottom, null, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text("Download Now")
             }
