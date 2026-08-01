@@ -40,12 +40,12 @@
 ---
 ## Screenshots
 
+## 📱 App Screenshots
 
-| | | |
-|:---:|:---:|:---:|
-| <img width="250" alt="screenshot1" src="https://github.com/user-attachments/assets/dd2b5c92-de47-457f-9def-421329705fea" /> | <img width="250" alt="screenshot2" src="https://github.com/user-attachments/assets/9fc8da79-2ff8-43ac-91ac-5975bc152931" /> | <img width="250" alt="screenshot3" src="https://github.com/user-attachments/assets/152530de-672e-4f14-b387-9dd78c918cb1" /> |
-| <img width="250" alt="screenshot4" src="https://github.com/user-attachments/assets/8a9f5d3a-e273-484a-b7ae-f0b95cef9e51" /> | <img width="250" alt="screenshot5" src="https://github.com/user-attachments/assets/7bc01473-96c8-478c-a1cf-dfd3a9116038" /> | <img width="250" alt="screenshot6" src="https://github.com/user-attachments/assets/59d0fc22-d312-466d-ab36-be67e8264a37" /> |
-
+| | | | |
+|:---:|:---:|:---:|:---:|
+| <img width="180" alt="Screenshot 1" src="https://github.com/user-attachments/assets/61de43f7-8d98-4f78-bd7c-499fdbe9caf6" /> | <img width="180" alt="Screenshot 2" src="https://github.com/user-attachments/assets/088cfadf-cb43-44a0-8387-aa33e428419a" /> | <img width="180" alt="Screenshot 4" src="https://github.com/user-attachments/assets/ac151180-b4be-4018-8a30-dc2ff46167a8" /> | <img width="180" alt="Screenshot 5" src="https://github.com/user-attachments/assets/adeaf938-cbfd-4a4c-bf34-988e51b2087b" /> |
+| <img width="180" alt="Screenshot 6" src="https://github.com/user-attachments/assets/f71b11c0-90be-4912-a1f4-d06fd02611d9" /> | <img width="180" alt="Screenshot 7" src="https://github.com/user-attachments/assets/c4513fe2-b71a-4fe0-8b9a-370779714cc7" /> | <img width="180" alt="Screenshot 8" src="https://github.com/user-attachments/assets/67db7c74-f38a-4abd-a1b7-45afafbd6863" /> | <img width="180" alt="Screenshot 9" src="https://github.com/user-attachments/assets/245a40ce-37b3-49de-a7f6-4e80333e3fde" /> |
 
 <table>
   <tr>
