@@ -302,10 +302,15 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
         }
 
         val hazeState = remember { HazeState() }
+        var showHelpFab by remember { mutableStateOf(true) }
+        LaunchedEffect(Unit) {
+            kotlinx.coroutines.delay(5000)
+            showHelpFab = false
+        }
         Scaffold(
             containerColor = androidx.compose.ui.graphics.Color.Transparent,
             floatingActionButton = {
-                if (selectedTab == 0 && uiState !is DownloadState.Downloading) {
+                if (showHelpFab && selectedTab == 0 && uiState !is DownloadState.Downloading) {
                     FloatingActionButton(
                         onClick = { showSupportedSitesDialog = true },
                         shape = CircleShape,
@@ -330,7 +335,13 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             modifier = Modifier
                                 .shadow(8.dp, CircleShape)
                                 .clip(CircleShape)
-                                .hazeChild(state = hazeState, shape = CircleShape, style = HazeStyle(tint = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f), blurRadius = 24.dp))
+                                .let { m ->
+                                    if (viewModel.isNavBarBlurEnabled.value) {
+                                        m.hazeChild(state = hazeState, shape = CircleShape, style = HazeStyle(tint = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f), blurRadius = 24.dp))
+                                    } else {
+                                        m.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f), CircleShape)
+                                    }
+                                }
                                 .padding(horizontal = 12.dp, vertical = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -1036,20 +1047,23 @@ fun MainDownloaderTab(
                     
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         val isAudio = downloadMode == "audio" || meta.ext == "mp3" || meta.ext == "m4a"
+                        val isImageOrGallery = downloadMode == "image" || meta.ext in listOf("jpg", "jpeg", "png", "webp", "gif") || engine == "gallery-dl"
                         
-                        Button(
-                            onClick = { }, // Just informational in this context
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            shape = RoundedCornerShape(24.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        ) {
-                            Icon(if (isAudio) Icons.Default.MusicNote else Icons.Default.PlayArrow, null)
-                            Spacer(Modifier.width(8.dp))
-                            val qual = if (quality == "best") "Best" else "${quality}p"
-                            Text(if (isAudio) "Audio" else "Video ($qual)", maxLines = 1)
+                        if (!isImageOrGallery) {
+                            Button(
+                                onClick = { }, // Just informational in this context
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                shape = RoundedCornerShape(24.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            ) {
+                                Icon(if (isAudio) Icons.Default.MusicNote else Icons.Default.PlayArrow, null)
+                                Spacer(Modifier.width(8.dp))
+                                val qual = if (quality == "best") "Best" else "${quality}p"
+                                Text(if (isAudio) "Audio" else "Video ($qual)", maxLines = 1)
+                            }
                         }
 
                         Button(
@@ -1914,6 +1928,25 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
             shape = RoundedCornerShape(20.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Navigation Bar Blur", style = MaterialTheme.typography.titleMedium)
+                        Text("Enable haze effect on floating navigation bar", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(
+                        checked = viewModel.isNavBarBlurEnabled.value,
+                        onCheckedChange = { viewModel.toggleNavBarBlur(it) }
+                    )
+                }
+            }
+        }
+        
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
                 Text("Appearance", style = MaterialTheme.typography.titleMedium)
                 Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                     val options = listOf("System", "Light", "Dark")
@@ -1937,7 +1970,7 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
                             )
                         }
                         FilledTonalButton(
-                            onClick = { viewModel.themeMode.intValue = index },
+                            onClick = { viewModel.updateThemeMode(index) },
                             shape = shape,
                             colors = colors,
                             modifier = Modifier.weight(1f),
@@ -1981,7 +2014,7 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
                                     )
                                 }
                                 FilledTonalButton(
-                                    onClick = { viewModel.selectedTheme.value = theme },
+                                    onClick = { viewModel.updateSelectedTheme(theme) },
                                     shape = shape,
                                     colors = colors,
                                     modifier = Modifier.weight(1f),

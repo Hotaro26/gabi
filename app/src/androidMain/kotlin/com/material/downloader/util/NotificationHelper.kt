@@ -53,6 +53,7 @@ class NotificationHelper(private val context: Context) {
             builder.setContentText("Downloading... $progress%")
                 .setOngoing(true)
                 .setProgress(100, progress, false)
+            notificationManager.notify(id, builder.build())
         } else {
             builder.setContentText("Download Complete")
                 .setOngoing(false)
@@ -61,9 +62,9 @@ class NotificationHelper(private val context: Context) {
             if (pendingIntent != null) {
                 builder.setContentIntent(pendingIntent)
             }
+            notificationManager.cancel(id) // Cancel the ongoing notification
+            notificationManager.notify(id + 10000, builder.build()) // Use new ID to guarantee status bar icon refresh
         }
-
-        notificationManager.notify(id, builder.build())
     }
 
     fun cancelNotification(id: Int) {

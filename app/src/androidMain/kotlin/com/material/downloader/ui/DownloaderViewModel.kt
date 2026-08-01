@@ -45,7 +45,7 @@ enum class TerminalTheme(
     CLASSIC("Classic Green", 0xFF0C0C0C, 0xFF00FF66, 0xFF1E1E1E),
     MOCHA("Mocha", 0xFF1E1E2E, 0xFFF5E0DC, 0xFF181825),
     PINK("Pink Sakura", 0xFF1F121F, 0xFFFF85A2, 0xFF2E1A2E),
-    DRACULA("Dracula", 0xFF282A36, 0xFF50FA7B, 0xFF21222C)
+    DRACULA("Dracula", 0xFF282A36, 0xFFF8F8F2, 0xFF21222C)
 }
 
 class DownloaderViewModel(application: Application) : AndroidViewModel(application) {
@@ -105,8 +105,15 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     private val prefs = application.getSharedPreferences("gabi_prefs", android.content.Context.MODE_PRIVATE)
     
     var terminalTheme = mutableStateOf(
-        TerminalTheme.valueOf(prefs.getString("terminal_theme", TerminalTheme.PINK.name) ?: TerminalTheme.PINK.name)
+        TerminalTheme.valueOf(prefs.getString("terminal_theme", TerminalTheme.MOCHA.name) ?: TerminalTheme.MOCHA.name)
     )
+    
+    var isNavBarBlurEnabled = mutableStateOf(prefs.getBoolean("nav_bar_blur", true))
+
+    fun toggleNavBarBlur(enabled: Boolean) {
+        isNavBarBlurEnabled.value = enabled
+        prefs.edit().putBoolean("nav_bar_blur", enabled).apply()
+    }
     
     fun updateTerminalTheme(theme: TerminalTheme) {
         terminalTheme.value = theme
@@ -241,8 +248,18 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     var newPipeResults = mutableStateOf<List<org.schabi.newpipe.extractor.stream.StreamInfoItem>>(emptyList())
 
     // Appearance Settings
-    var themeMode = mutableIntStateOf(0)
-    var selectedTheme = mutableStateOf(AppTheme.Dynamic)
+    var themeMode = mutableIntStateOf(prefs.getInt("theme_mode", 0))
+    var selectedTheme = mutableStateOf(AppTheme.valueOf(prefs.getString("app_theme", AppTheme.Dynamic.name) ?: AppTheme.Dynamic.name))
+
+    fun updateThemeMode(mode: Int) {
+        themeMode.intValue = mode
+        prefs.edit().putInt("theme_mode", mode).apply()
+    }
+
+    fun updateSelectedTheme(theme: AppTheme) {
+        selectedTheme.value = theme
+        prefs.edit().putString("app_theme", theme.name).apply()
+    }
     
     // External Share Support
     private val _externalUrl = MutableStateFlow<String?>(null)
