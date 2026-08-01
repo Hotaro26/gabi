@@ -31,6 +31,7 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
+            implementation("dev.chrisbanes.haze:haze:0.7.2")
             
             // Ktor
             val ktor_version = "2.3.8"

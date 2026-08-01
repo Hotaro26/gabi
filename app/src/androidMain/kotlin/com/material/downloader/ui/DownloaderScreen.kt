@@ -1,6 +1,11 @@
 @file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.material.downloader.ui
 
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.haze
+import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.HazeStyle
+
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -288,6 +293,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
             }
         }
 
+        val hazeState = remember { HazeState() }
         Scaffold(
             containerColor = androidx.compose.ui.graphics.Color.Transparent,
             floatingActionButton = {
@@ -355,7 +361,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             modifier = Modifier
                                 .shadow(8.dp, CircleShape)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f))
+                                .hazeChild(state = hazeState, shape = CircleShape, style = HazeStyle(tint = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f), blurRadius = 24.dp))
                                 .padding(horizontal = 12.dp, vertical = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -444,7 +450,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
         ) { padding ->
             val configuration = androidx.compose.ui.platform.LocalConfiguration.current
             val screenMargin = if (isExpanded) (configuration.screenWidthDp * 0.20f).dp else 0.dp
-            Box(modifier = Modifier.fillMaxSize().padding(horizontal = screenMargin)) {
+            Box(modifier = Modifier.fillMaxSize().padding(horizontal = screenMargin).haze(state = hazeState)) {
                 AnimatedContent(
                     targetState = selectedTab,
                     label = "tab_transition"
