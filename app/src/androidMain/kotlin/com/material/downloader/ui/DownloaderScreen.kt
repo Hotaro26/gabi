@@ -721,7 +721,7 @@ fun MainDownloaderTab(
             
             .padding(horizontal = 24.dp)
             .verticalScroll(rememberScrollState())
-            .padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
+            .padding(top = 72.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
