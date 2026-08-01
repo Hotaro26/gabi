@@ -315,20 +315,6 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                     ) {
                         Icon(Icons.Default.HelpOutline, contentDescription = "Supported Sites", modifier = Modifier.size(22.dp))
                     }
-                } else if (selectedTab == 2 && history.isNotEmpty()) {
-                    FloatingActionButton(
-                        onClick = { showClearLogsDialog = true },
-                        modifier = Modifier.graphicsLayer {
-                            scaleX = clearLogsScale
-                            scaleY = clearLogsScale
-                        },
-                        interactionSource = clearLogsInteractionSource,
-                        shape = RoundedCornerShape(clearLogsCorner),
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer
-                    ) {
-                        Icon(Icons.Default.DeleteSweep, contentDescription = "Clear All Logs")
-                    }
                 }
             },
             bottomBar = {
@@ -456,6 +442,29 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                                 ) {
                                     Icon(Icons.Default.Bolt, contentDescription = "Instant Download")
+                                }
+                            }
+                        } else if (selectedTab == 2 && history.isNotEmpty()) {
+                            Spacer(Modifier.width(10.dp))
+                            TooltipBox(
+                                positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                                tooltip = { PlainTooltip { Text("Clear History") } },
+                                state = rememberTooltipState()
+                            ) {
+                                FloatingActionButton(
+                                    onClick = { showClearLogsDialog = true },
+                                    modifier = Modifier
+                                        .size(52.dp)
+                                        .graphicsLayer {
+                                            scaleX = clearLogsScale
+                                            scaleY = clearLogsScale
+                                        },
+                                    interactionSource = clearLogsInteractionSource,
+                                    shape = CircleShape,
+                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                ) {
+                                    Icon(Icons.Default.DeleteSweep, contentDescription = "Clear All Logs")
                                 }
                             }
                         }
