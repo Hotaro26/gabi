@@ -1690,17 +1690,51 @@ fun WavyProgressIndicator(
 }
 
 @Composable
+fun SegmentCard(
+    onClick: () -> Unit,
+    defaultTopStart: androidx.compose.ui.unit.Dp = 4.dp,
+    defaultTopEnd: androidx.compose.ui.unit.Dp = 4.dp,
+    defaultBottomStart: androidx.compose.ui.unit.Dp = 4.dp,
+    defaultBottomEnd: androidx.compose.ui.unit.Dp = 4.dp,
+    content: @Composable () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    
+    val topStart by animateDpAsState(if (isPressed) 100.dp else defaultTopStart, animationSpec = tween(150), label = "topStart")
+    val topEnd by animateDpAsState(if (isPressed) 100.dp else defaultTopEnd, animationSpec = tween(150), label = "topEnd")
+    val bottomStart by animateDpAsState(if (isPressed) 100.dp else defaultBottomStart, animationSpec = tween(150), label = "bottomStart")
+    val bottomEnd by animateDpAsState(if (isPressed) 100.dp else defaultBottomEnd, animationSpec = tween(150), label = "bottomEnd")
+    
+    val cardContainerColor by animateColorAsState(
+        targetValue = if (isPressed) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        animationSpec = tween(150),
+        label = "card_color"
+    )
+
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        interactionSource = interactionSource,
+        shape = RoundedCornerShape(topStart = topStart, topEnd = topEnd, bottomStart = bottomStart, bottomEnd = bottomEnd),
+        colors = CardDefaults.cardColors(containerColor = cardContainerColor)
+    ) {
+        content()
+    }
+}
+
+@Composable
 fun SettingsListItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     iconColor: androidx.compose.ui.graphics.Color,
     title: String,
     subtitle: String,
-    onClick: () -> Unit
+    onClick: (() -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
             .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -1779,42 +1813,64 @@ fun SettingsMainList(onNavigate: (String) -> Unit, contentPadding: PaddingValues
             modifier = Modifier
         )
         
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-        ) {
-            Column {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            SegmentCard(
+                onClick = { onNavigate("Customisation") },
+                defaultTopStart = 24.dp,
+                defaultTopEnd = 24.dp,
+                defaultBottomStart = 4.dp,
+                defaultBottomEnd = 4.dp
+            ) {
                 SettingsListItem(
                     icon = Icons.Default.Palette,
                     iconColor = Color(0xFF88637B), // Mauve
                     title = "Customisation",
-                    subtitle = "Themes, App Appearance, Terminal",
-                    onClick = { onNavigate("Customisation") }
+                    subtitle = "Themes, App Appearance, Terminal"
                 )
-                HorizontalDivider(modifier = Modifier.alpha(0.1f))
+            }
+
+            SegmentCard(
+                onClick = { onNavigate("Downloads") },
+                defaultTopStart = 4.dp,
+                defaultTopEnd = 4.dp,
+                defaultBottomStart = 4.dp,
+                defaultBottomEnd = 4.dp
+            ) {
                 SettingsListItem(
                     icon = Icons.Default.FolderOpen,
                     iconColor = Color(0xFF00758F), // Teal
                     title = "Downloads",
-                    subtitle = "Storage location, rules",
-                    onClick = { onNavigate("Downloads") }
+                    subtitle = "Storage location, rules"
                 )
-                HorizontalDivider(modifier = Modifier.alpha(0.1f))
+            }
+
+            SegmentCard(
+                onClick = { onNavigate("Developer") },
+                defaultTopStart = 4.dp,
+                defaultTopEnd = 4.dp,
+                defaultBottomStart = 4.dp,
+                defaultBottomEnd = 4.dp
+            ) {
                 SettingsListItem(
                     icon = Icons.Default.Code,
                     iconColor = Color(0xFF4C6B8B), // Slate blue
                     title = "Developer",
-                    subtitle = "App Info, Platforms, Licenses",
-                    onClick = { onNavigate("Developer") }
+                    subtitle = "App Info, Platforms, Licenses"
                 )
-                HorizontalDivider(modifier = Modifier.alpha(0.1f))
+            }
+
+            SegmentCard(
+                onClick = { onNavigate("Support") },
+                defaultTopStart = 4.dp,
+                defaultTopEnd = 4.dp,
+                defaultBottomStart = 24.dp,
+                defaultBottomEnd = 24.dp
+            ) {
                 SettingsListItem(
                     icon = Icons.Default.Favorite,
                     iconColor = Color(0xFF7A4F5C), // Burgundy
                     title = "Support",
-                    subtitle = "Help keep Gabi alive",
-                    onClick = { onNavigate("Support") }
+                    subtitle = "Help keep Gabi alive"
                 )
             }
         }
@@ -2509,6 +2565,8 @@ fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp)
                 ) {
+                    Icon(Icons.Default.AttachMoney, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text("Donate via UPI")
                 }
             }
