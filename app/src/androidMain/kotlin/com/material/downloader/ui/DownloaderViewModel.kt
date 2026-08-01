@@ -381,6 +381,10 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
         logToConsole("Cleared preview metadata")
     }
 
+    fun setPreviewMetadata(result: com.material.downloader.api.ExtractionResult) {
+        _previewMetadata.value = result
+    }
+
     private fun muxVideoAudio(videoFile: java.io.File, audioFile: java.io.File, outputFile: java.io.File) {
         val videoExtractor = android.media.MediaExtractor()
         videoExtractor.setDataSource(videoFile.absolutePath)
@@ -388,7 +392,12 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
         val audioExtractor = android.media.MediaExtractor()
         audioExtractor.setDataSource(audioFile.absolutePath)
         
-        val muxer = android.media.MediaMuxer(outputFile.absolutePath, android.media.MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+        val format = if (outputFile.absolutePath.endsWith(".webm", ignoreCase = true)) {
+            android.media.MediaMuxer.OutputFormat.MUXER_OUTPUT_WEBM
+        } else {
+            android.media.MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4
+        }
+        val muxer = android.media.MediaMuxer(outputFile.absolutePath, format)
         
         var videoTrackIndex = -1
         for (i in 0 until videoExtractor.trackCount) {
@@ -568,9 +577,9 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                         if (audioUrl != null) {
                             logToConsole("DASH stream detected. Starting split video and audio downloads...")
                             val cacheDir = getApplication<Application>().cacheDir
-                            val tempVideoFile = java.io.File(cacheDir, "temp_video_${System.currentTimeMillis()}.mp4")
+                            val tempVideoFile = java.io.File(cacheDir, "temp_video_${System.currentTimeMillis()}.$extension")
                             val tempAudioFile = java.io.File(cacheDir, "temp_audio_${System.currentTimeMillis()}.m4a")
-                            val tempMuxedFile = java.io.File(cacheDir, "temp_muxed_${System.currentTimeMillis()}.mp4")
+                            val tempMuxedFile = java.io.File(cacheDir, "temp_muxed_${System.currentTimeMillis()}.$extension")
 
                             try {
                                 logToConsole("Downloading video track: $downloadUrl")

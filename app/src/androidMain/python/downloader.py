@@ -8,103 +8,74 @@ import threading
 # Thread lock to prevent concurrent extraction crashes (generator already executing)
 extraction_lock = threading.Lock()
 
-def extract_info(url, quality='720', mode='auto', engine='yt-dlp'):
+def extract_info(url, quality='720', mode='auto', engine='yt-dlp', cookies_path=None):
     if engine == 'gallery-dl':
-        return extract_gallery(url)
+        return extract_gallery(url, cookies_path)
     else:
-        return extract_video(url, quality, mode)
+        return extract_video(url, quality, mode, cookies_path)
 
-def extract_video(url, quality='720', mode='auto'):
+def extract_video(url, quality='720', mode='auto', cookies_path=None):
     with extraction_lock:
-        # Robust configuration for direct stream extraction
+        # Determine format string
+        try:
+            target_h = int(quality.replace('p', ''))
+        except:
+            target_h = 720
+            
+        if mode == 'audio':
+            fmt_str = 'bestaudio[ext=m4a][protocol^=http]/bestaudio[protocol^=http]/best[protocol^=http]'
+        else:
+            if quality == 'max':
+                fmt_str = 'bestvideo[protocol^=http]+bestaudio[protocol^=http]/best[protocol^=http]'
+            else:
+                fmt_str = f'bestvideo[height<={target_h}][protocol^=http]+bestaudio[protocol^=http]/best[height<={target_h}][protocol^=http]/best[protocol^=http]'
+
         ydl_opts = {
+            'format': fmt_str,
             'quiet': False, 
             'no_warnings': False,
             'nocheckcertificate': True,
             'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-us,en;q=0.5',
-                'Referer': 'https://www.google.com/',
-            },
             'socket_timeout': 60,
-            'extract_flat': False, # Resolve direct URLs
+            'extract_flat': False,
         }
         
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            try:
+        if cookies_path:
+            ydl_opts['cookiefile'] = cookies_path
+            
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url.strip(), download=False)
-                
-                # Handle playlists or multi-video entries
                 video = info['entries'][0] if 'entries' in info and len(info['entries']) > 0 else info
                 
+                # Determine all available video qualities
                 formats = video.get('formats', [])
-                
-                # 1. Determine all available video qualities and max_resolution
                 available_qualities = []
                 max_res = 0
                 for fmt in formats:
-                    h = fmt.get('height')
-                    if h and isinstance(h, int):
-                        if h > max_res:
-                            max_res = h
-                        res_str = f"{h}p"
-                        if res_str not in available_qualities:
-                            available_qualities.append(res_str)
-                
-                # Sort descending
+                    if fmt.get('protocol', '').startswith('http'):
+                        h = fmt.get('height')
+                        if h and isinstance(h, int):
+                            if h > max_res:
+                                max_res = h
+                            res_str = f"{h}p"
+                            if res_str not in available_qualities:
+                                available_qualities.append(res_str)
                 available_qualities.sort(key=lambda x: int(x.replace('p', '')), reverse=True)
                 max_res_str = f"{max_res}p" if max_res > 0 else None
 
                 video_url = None
                 audio_url = None
                 
-                # 2. Select formats based on mode & requested quality
-                if mode == 'audio':
-                    audio_fmts = [f for f in formats if f.get('acodec') != 'none' and f.get('vcodec') == 'none' and f.get('url')]
-                    if audio_fmts:
-                        # Prefer m4a for compatibility
-                        m4a_audio = [f for f in audio_fmts if f.get('ext') == 'm4a']
-                        if m4a_audio:
-                            audio_fmts = m4a_audio
-                        audio_fmts.sort(key=lambda x: x.get('abr') or x.get('bitrate') or 0)
-                        video_url = audio_fmts[-1].get('url')
-                    else:
-                        video_url = video.get('url')
+                if 'requested_formats' in video:
+                    # yt-dlp selected separate video and audio
+                    req_formats = video['requested_formats']
+                    video_url = req_formats[0].get('url')
+                    audio_url = req_formats[1].get('url') if len(req_formats) > 1 else None
                 else:
-                    video_fmts = [f for f in formats if f.get('vcodec') != 'none' and f.get('url')]
-                    if video_fmts:
-                        if quality == 'max':
-                            video_fmts.sort(key=lambda x: (x.get('height') or 0, x.get('tbr') or x.get('bitrate') or 0))
-                            selected_video = video_fmts[-1]
-                        else:
-                            try:
-                                target_h = int(quality.replace('p', ''))
-                            except ValueError:
-                                target_h = 720
-                            
-                            matching_fmts = [f for f in video_fmts if f.get('height') and f.get('height') <= target_h]
-                            if matching_fmts:
-                                matching_fmts.sort(key=lambda x: (x.get('height') or 0, x.get('tbr') or x.get('bitrate') or 0))
-                                selected_video = matching_fmts[-1]
-                            else:
-                                video_fmts.sort(key=lambda x: (x.get('height') or 0, x.get('tbr') or x.get('bitrate') or 0))
-                                selected_video = video_fmts[-1]
-                        
-                        video_url = selected_video.get('url')
-                        
-                        if selected_video.get('acodec') == 'none':
-                            audio_fmts = [f for f in formats if f.get('acodec') != 'none' and f.get('vcodec') == 'none' and f.get('url')]
-                            if audio_fmts:
-                                m4a_audio = [f for f in audio_fmts if f.get('ext') == 'm4a']
-                                if m4a_audio:
-                                    audio_fmts = m4a_audio
-                                audio_fmts.sort(key=lambda x: x.get('abr') or x.get('bitrate') or 0)
-                                audio_url = audio_fmts[-1].get('url')
-                    else:
-                        video_url = video.get('url')
-
+                    # yt-dlp selected a single merged format
+                    video_url = video.get('url')
+                    
                 if not video_url:
                     return json.dumps({'status': 'error', 'message': 'Could not resolve a direct download URL.'})
 
@@ -120,16 +91,20 @@ def extract_video(url, quality='720', mode='auto'):
                     'max_resolution': max_res_str,
                     'available_qualities': available_qualities
                 })
-            except Exception as e:
-                return json.dumps({'status': 'error', 'message': f"yt-dlp error: {str(e)}"})
+        except Exception as e:
+            return json.dumps({'status': 'error', 'message': f"yt-dlp error: {str(e)}"})
 
-def extract_gallery(url):
+def extract_gallery(url, cookies_path=None):
     with extraction_lock:
         try:
             from gallery_dl import job
             import gallery_dl
             gallery_dl.config.load()
             gallery_dl.config.set(("extractor",), "base-directory", ".")
+            
+            if cookies_path:
+                gallery_dl.config.set(("extractor",), "cookies", cookies_path)
+
             
             # Enable URL resolution (resolve=True) to follow redirects/short URLs
             j = job.DataJob(url, resolve=True)

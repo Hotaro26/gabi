@@ -492,7 +492,11 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                                 playingUrl = selectedUrl
                             }
                         )
-                        2 -> LogsTab(history, viewModel::deleteLog, contentPadding = padding)
+                        2 -> LogsTab(
+                            history = history, 
+                            onDelete = viewModel::deleteLog,
+                            contentPadding = padding
+                        )
                         3 -> SettingsTab(viewModel, contentPadding = padding)
                     }
                 }
@@ -889,10 +893,12 @@ fun MainDownloaderTab(
             ModalBottomSheet(
                 onDismissRequest = { showPreviewSheet = false },
                 sheetState = sheetState,
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = MaterialTheme.colorScheme.surface,
+                shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp),
+                windowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
             ) {
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
+                    modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -2439,9 +2445,12 @@ fun LicenseItem(name: String, license: String) {
 fun LogsTab(
     history: List<com.material.downloader.model.DownloadLog>, 
     onDelete: (com.material.downloader.model.DownloadLog) -> Unit,
+    onItemClick: (com.material.downloader.model.DownloadLog) -> Unit = {},
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     var itemToDelete by remember { mutableStateOf<com.material.downloader.model.DownloadLog?>(null) }
+    var selectedLog by remember { mutableStateOf<com.material.downloader.model.DownloadLog?>(null) }
+    val context = LocalContext.current
     
     if (itemToDelete != null) {
         AlertDialog(
@@ -2503,7 +2512,11 @@ fun LogsTab(
                             }
                         },
                         content = {
-                            Card(modifier = Modifier.fillMaxWidth(), shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth().clickable { selectedLog = log }, 
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp), 
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                            ) {
                                 Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(log.title, style = MaterialTheme.typography.labelLarge, maxLines = 1)
@@ -2514,6 +2527,80 @@ fun LogsTab(
                         }
                     )
                 }
+            }
+        }
+    }
+
+    if (selectedLog != null && selectedLog?.path != null) {
+        val log = selectedLog!!
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val ext = log.path?.substringAfterLast('.', "") ?: ""
+        val isGallery = ext.equals("jpg", true) || ext.equals("png", true) || ext.equals("jpeg", true) || ext.equals("webp", true) || ext.equals("gif", true) || (log.title.contains("Gallery", true) && !ext.equals("mp4", true))
+
+        ModalBottomSheet(
+            onDismissRequest = { selectedLog = null },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp),
+            windowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                if (isGallery) {
+                    coil.compose.AsyncImage(
+                        model = log.path,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxWidth().height(300.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp)),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                    )
+                } else {
+                    val streamUrlToPlay = log.path ?: ""
+                    if (streamUrlToPlay.isNotBlank()) {
+                        val exoPlayer = remember { androidx.media3.exoplayer.ExoPlayer.Builder(context).build() }
+                        DisposableEffect(streamUrlToPlay) {
+                            val videoUri = android.net.Uri.parse(streamUrlToPlay)
+                            val mediaItem = androidx.media3.common.MediaItem.fromUri(videoUri)
+                            exoPlayer.setMediaItem(mediaItem)
+                            exoPlayer.prepare()
+                            exoPlayer.playWhenReady = true
+                            onDispose { exoPlayer.release() }
+                        }
+                        
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(250.dp)
+                                .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                                .background(androidx.compose.ui.graphics.Color.Black)
+                        ) {
+                            androidx.compose.ui.viewinterop.AndroidView(
+                                factory = { ctx ->
+                                    val view = android.view.LayoutInflater.from(ctx).inflate(com.material.downloader.R.layout.player_view_layout, null) as androidx.media3.ui.PlayerView
+                                    view.apply {
+                                        player = exoPlayer
+                                        useController = true
+                                    }
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+                }
+                
+                Text(log.title, style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Text("Local File", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                
+                Button(
+                    onClick = { selectedLog = null },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
+                ) {
+                    Text("Close")
+                }
+                Spacer(Modifier.height(16.dp))
             }
         }
     }
