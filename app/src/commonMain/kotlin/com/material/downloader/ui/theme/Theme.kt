@@ -38,6 +38,10 @@ enum class AppTheme(val label: String) {
     Forest("Forest"),
     Midnight("Midnight"),
     Rose("Rose"),
+    Ocean("Ocean"),
+    Sunset("Sunset"),
+    Amethyst("Amethyst"),
+    Cyberpunk("Cyberpunk"),
     Monochrome("Monochrome"),
     Dynamic("Dynamic (M3)")
 }
@@ -80,23 +84,129 @@ fun ExpressiveTheme(
         }
         AppTheme.Forest -> {
             if (darkTheme) {
-                darkColorScheme(primary = Color(0xFF81C784), secondary = Color(0xFFA5D6A7))
+                darkColorScheme(
+                    primary = Color(0xFF81C784), onPrimary = Color(0xFF00390A),
+                    primaryContainer = Color(0xFF005313), onPrimaryContainer = Color(0xFF9DF49E),
+                    secondary = Color(0xFFA5D6A7), onSecondary = Color(0xFF00390A),
+                    secondaryContainer = Color(0xFF005313), onSecondaryContainer = Color(0xFFC0F3C2)
+                )
             } else {
-                lightColorScheme(primary = Color(0xFF2E7D32), secondary = Color(0xFF4CAF50))
+                lightColorScheme(
+                    primary = Color(0xFF2E7D32), onPrimary = Color.White,
+                    primaryContainer = Color(0xFF9DF49E), onPrimaryContainer = Color(0xFF002204),
+                    secondary = Color(0xFF4CAF50), onSecondary = Color.White,
+                    secondaryContainer = Color(0xFFC0F3C2), onSecondaryContainer = Color(0xFF002204)
+                )
             }
         }
         AppTheme.Midnight -> {
             if (darkTheme) {
-                darkColorScheme(primary = Color(0xFF90CAF9), secondary = Color(0xFF64B5F6))
+                darkColorScheme(
+                    primary = Color(0xFF90CAF9), onPrimary = Color(0xFF003258),
+                    primaryContainer = Color(0xFF00497D), onPrimaryContainer = Color(0xFFD1E4FF),
+                    secondary = Color(0xFF64B5F6), onSecondary = Color(0xFF003258),
+                    secondaryContainer = Color(0xFF00497D), onSecondaryContainer = Color(0xFFD1E4FF)
+                )
             } else {
-                lightColorScheme(primary = Color(0xFF1565C0), secondary = Color(0xFF1E88E5))
+                lightColorScheme(
+                    primary = Color(0xFF1565C0), onPrimary = Color.White,
+                    primaryContainer = Color(0xFFD1E4FF), onPrimaryContainer = Color(0xFF001D36),
+                    secondary = Color(0xFF1E88E5), onSecondary = Color.White,
+                    secondaryContainer = Color(0xFFD1E4FF), onSecondaryContainer = Color(0xFF001D36)
+                )
             }
         }
         AppTheme.Rose -> {
             if (darkTheme) {
-                darkColorScheme(primary = Color(0xFFF48FB1), secondary = Color(0xFFF06292))
+                darkColorScheme(
+                    primary = Color(0xFFF48FB1), onPrimary = Color(0xFF5C1133),
+                    primaryContainer = Color(0xFF7D2649), onPrimaryContainer = Color(0xFFFFD9E2),
+                    secondary = Color(0xFFF06292), onSecondary = Color(0xFF5C1133),
+                    secondaryContainer = Color(0xFF7D2649), onSecondaryContainer = Color(0xFFFFD9E2)
+                )
             } else {
-                lightColorScheme(primary = Color(0xFFC2185B), secondary = Color(0xFFE91E63))
+                lightColorScheme(
+                    primary = Color(0xFFC2185B), onPrimary = Color.White,
+                    primaryContainer = Color(0xFFFFD9E2), onPrimaryContainer = Color(0xFF3E001D),
+                    secondary = Color(0xFFE91E63), onSecondary = Color.White,
+                    secondaryContainer = Color(0xFFFFD9E2), onSecondaryContainer = Color(0xFF3E001D)
+                )
+            }
+        }
+        AppTheme.Ocean -> {
+            if (darkTheme) {
+                darkColorScheme(
+                    primary = Color(0xFF80DEEA), onPrimary = Color(0xFF00363D),
+                    primaryContainer = Color(0xFF004F58), onPrimaryContainer = Color(0xFF9FF0FA),
+                    secondary = Color(0xFF4DD0E1), onSecondary = Color(0xFF00363D),
+                    secondaryContainer = Color(0xFF004F58), onSecondaryContainer = Color(0xFF9FF0FA),
+                    tertiary = Color(0xFF81D4FA)
+                )
+            } else {
+                lightColorScheme(
+                    primary = Color(0xFF00838F), onPrimary = Color.White,
+                    primaryContainer = Color(0xFF9FF0FA), onPrimaryContainer = Color(0xFF001F24),
+                    secondary = Color(0xFF0097A7), onSecondary = Color.White,
+                    secondaryContainer = Color(0xFF9FF0FA), onSecondaryContainer = Color(0xFF001F24),
+                    tertiary = Color(0xFF0277BD)
+                )
+            }
+        }
+        AppTheme.Sunset -> {
+            if (darkTheme) {
+                darkColorScheme(
+                    primary = Color(0xFFFFB74D), onPrimary = Color(0xFF4C2700),
+                    primaryContainer = Color(0xFF6F3C00), onPrimaryContainer = Color(0xFFFFDCC1),
+                    secondary = Color(0xFFFF8A65), onSecondary = Color(0xFF4C2700),
+                    secondaryContainer = Color(0xFF6F3C00), onSecondaryContainer = Color(0xFFFFDCC1),
+                    tertiary = Color(0xFFFFD54F)
+                )
+            } else {
+                lightColorScheme(
+                    primary = Color(0xFFEF6C00), onPrimary = Color.White,
+                    primaryContainer = Color(0xFFFFDCC1), onPrimaryContainer = Color(0xFF2E1500),
+                    secondary = Color(0xFFD84315), onSecondary = Color.White,
+                    secondaryContainer = Color(0xFFFFDCC1), onSecondaryContainer = Color(0xFF2E1500),
+                    tertiary = Color(0xFFF57F17)
+                )
+            }
+        }
+        AppTheme.Amethyst -> {
+            if (darkTheme) {
+                darkColorScheme(
+                    primary = Color(0xFFCE93D8), onPrimary = Color(0xFF4A0072),
+                    primaryContainer = Color(0xFF6A00A3), onPrimaryContainer = Color(0xFFEADDFF),
+                    secondary = Color(0xFFBA68C8), onSecondary = Color(0xFF4A0072),
+                    secondaryContainer = Color(0xFF6A00A3), onSecondaryContainer = Color(0xFFEADDFF),
+                    tertiary = Color(0xFFE1BEE7)
+                )
+            } else {
+                lightColorScheme(
+                    primary = Color(0xFF6A1B9A), onPrimary = Color.White,
+                    primaryContainer = Color(0xFFEADDFF), onPrimaryContainer = Color(0xFF270046),
+                    secondary = Color(0xFF8E24AA), onSecondary = Color.White,
+                    secondaryContainer = Color(0xFFEADDFF), onSecondaryContainer = Color(0xFF270046),
+                    tertiary = Color(0xFF4A148C)
+                )
+            }
+        }
+        AppTheme.Cyberpunk -> {
+            if (darkTheme) {
+                darkColorScheme(
+                    primary = Color(0xFF00E5FF), onPrimary = Color(0xFF000000),
+                    primaryContainer = Color(0xFF003B42), onPrimaryContainer = Color(0xFF00E5FF),
+                    secondary = Color(0xFFFF007F), onSecondary = Color(0xFF000000),
+                    secondaryContainer = Color(0xFF5A002C), onSecondaryContainer = Color(0xFFFF007F),
+                    background = Color(0xFF121212), surface = Color(0xFF1E1E1E)
+                )
+            } else {
+                lightColorScheme(
+                    primary = Color(0xFF00B8D4), onPrimary = Color.White,
+                    primaryContainer = Color(0xFFB3F5FC), onPrimaryContainer = Color(0xFF003B42),
+                    secondary = Color(0xFFF50057), onSecondary = Color.White,
+                    secondaryContainer = Color(0xFFFFB3CA), onSecondaryContainer = Color(0xFF5A002C),
+                    background = Color(0xFFF5F5F5), surface = Color.White
+                )
             }
         }
         else -> {

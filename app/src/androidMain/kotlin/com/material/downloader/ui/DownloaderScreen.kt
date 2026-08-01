@@ -1734,15 +1734,36 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Appearance", style = MaterialTheme.typography.titleMedium)
-                Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("System", "Light", "Dark").forEachIndexed { index, label ->
-                        FilterChip(
-                            selected = viewModel.themeMode.intValue == index,
-                            onClick = { viewModel.themeMode.intValue = index },
-                            label = { Text(label) },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(24.dp)
+                Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    val options = listOf("System", "Light", "Dark")
+                    options.forEachIndexed { index, label ->
+                        val isSelected = viewModel.themeMode.intValue == index
+                        val shape = RoundedCornerShape(
+                            topStart = if (index == 0) 100.dp else 8.dp,
+                            bottomStart = if (index == 0) 100.dp else 8.dp,
+                            topEnd = if (index == options.lastIndex) 100.dp else 8.dp,
+                            bottomEnd = if (index == options.lastIndex) 100.dp else 8.dp
                         )
+                        val colors = if (isSelected) {
+                            ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.secondary,
+                                contentColor = MaterialTheme.colorScheme.onSecondary
+                            )
+                        } else {
+                            ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        FilledTonalButton(
+                            onClick = { viewModel.themeMode.intValue = index },
+                            shape = shape,
+                            colors = colors,
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 4.dp)
+                        ) {
+                            Text(label, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                        }
                     }
                 }
             }
@@ -1755,21 +1776,46 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Color Scheme", style = MaterialTheme.typography.titleMedium)
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    AppTheme.values().forEach { theme ->
-                        FilterChip(
-                            selected = viewModel.selectedTheme.value == theme,
-                            onClick = { viewModel.selectedTheme.value = theme },
-                            label = { Text(theme.label) },
-                            leadingIcon = if (viewModel.selectedTheme.value == theme) {
-                                { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
-                            } else null,
-                            shape = RoundedCornerShape(24.dp)
-                        )
+                Column(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val themes = AppTheme.values().toList()
+                    themes.chunked(3).forEach { rowThemes ->
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            rowThemes.forEachIndexed { index, theme ->
+                                val isSelected = viewModel.selectedTheme.value == theme
+                                val shape = RoundedCornerShape(
+                                    topStart = if (index == 0) 100.dp else 8.dp,
+                                    bottomStart = if (index == 0) 100.dp else 8.dp,
+                                    topEnd = if (index == rowThemes.lastIndex) 100.dp else 8.dp,
+                                    bottomEnd = if (index == rowThemes.lastIndex) 100.dp else 8.dp
+                                )
+                                val colors = if (isSelected) {
+                                    ButtonDefaults.filledTonalButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.secondary,
+                                        contentColor = MaterialTheme.colorScheme.onSecondary
+                                    )
+                                } else {
+                                    ButtonDefaults.filledTonalButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                FilledTonalButton(
+                                    onClick = { viewModel.selectedTheme.value = theme },
+                                    shape = shape,
+                                    colors = colors,
+                                    modifier = Modifier.weight(1f),
+                                    contentPadding = PaddingValues(horizontal = 4.dp)
+                                ) {
+                                    Text(theme.label, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                }
+                            }
+                            // Fill remaining space if chunk is smaller than 3
+                            if (rowThemes.size < 3) {
+                                repeat(3 - rowThemes.size) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1783,21 +1829,45 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Terminal Theme", style = MaterialTheme.typography.titleMedium)
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    TerminalTheme.values().forEach { theme ->
-                        FilterChip(
-                            selected = viewModel.terminalTheme.value == theme,
-                            onClick = { viewModel.updateTerminalTheme(theme) },
-                            label = { Text(theme.displayName) },
-                            leadingIcon = if (viewModel.terminalTheme.value == theme) {
-                                { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
-                            } else null,
-                            shape = RoundedCornerShape(24.dp)
-                        )
+                Column(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val themes = TerminalTheme.values().toList()
+                    themes.chunked(2).forEach { rowThemes ->
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            rowThemes.forEachIndexed { index, theme ->
+                                val isSelected = viewModel.terminalTheme.value == theme
+                                val shape = RoundedCornerShape(
+                                    topStart = if (index == 0) 100.dp else 8.dp,
+                                    bottomStart = if (index == 0) 100.dp else 8.dp,
+                                    topEnd = if (index == rowThemes.lastIndex) 100.dp else 8.dp,
+                                    bottomEnd = if (index == rowThemes.lastIndex) 100.dp else 8.dp
+                                )
+                                val colors = if (isSelected) {
+                                    ButtonDefaults.filledTonalButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.secondary,
+                                        contentColor = MaterialTheme.colorScheme.onSecondary
+                                    )
+                                } else {
+                                    ButtonDefaults.filledTonalButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                FilledTonalButton(
+                                    onClick = { viewModel.updateTerminalTheme(theme) },
+                                    shape = shape,
+                                    colors = colors,
+                                    modifier = Modifier.weight(1f),
+                                    contentPadding = PaddingValues(horizontal = 4.dp)
+                                ) {
+                                    Text(theme.displayName, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                }
+                            }
+                            if (rowThemes.size < 2) {
+                                repeat(2 - rowThemes.size) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
                     }
                 }
             }
