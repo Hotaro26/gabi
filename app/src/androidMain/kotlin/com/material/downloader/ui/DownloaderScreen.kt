@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.ui.graphics.Color
@@ -976,150 +977,146 @@ fun MainDownloaderTab(
             }
         }
 
-        // Consolidated Engine/Quality Card
-        Card(
+        // Consolidated Engine/Quality Grouped Buttons
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-            shape = MaterialTheme.shapes.medium
+            horizontalArrangement = Arrangement.spacedBy((-1).dp)
         ) {
-            Row(
-                modifier = Modifier.height(IntrinsicSize.Min).fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Engine Selector
-                Box(modifier = Modifier.weight(1f)) {
-                    TextButton(
-                        onClick = { engineExpanded = true },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            val engineIcon = when (engine) {
-                                "newpipe" -> Icons.Default.PlayArrow
-                                "yt-dlp" -> Icons.Default.Movie
-                                "gallery-dl" -> Icons.Default.Image
-                                else -> Icons.Default.CloudDownload
-                            }
-                            val engineLabel = when (engine) {
-                                "newpipe" -> "NewPipe"
-                                "yt-dlp" -> "yt-dlp"
-                                "gallery-dl" -> "gallery-dl"
-                                else -> "Cobalt"
-                            }
-                            Icon(engineIcon, null, modifier = Modifier.size(16.dp))
-                            Text(engineLabel, style = MaterialTheme.typography.bodySmall)
+            // Engine Selector
+            Box(modifier = Modifier.weight(1f)) {
+                OutlinedButton(
+                    onClick = { engineExpanded = true },
+                    shape = RoundedCornerShape(topStartPercent = 50, bottomStartPercent = 50),
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        val engineIcon = when (engine) {
+                            "newpipe" -> Icons.Default.PlayArrow
+                            "yt-dlp" -> Icons.Default.Movie
+                            "gallery-dl" -> Icons.Default.Image
+                            else -> Icons.Default.CloudDownload
                         }
+                        val engineLabel = when (engine) {
+                            "newpipe" -> "NewPipe"
+                            "yt-dlp" -> "yt-dlp"
+                            "gallery-dl" -> "gallery-dl"
+                            else -> "Cobalt"
+                        }
+                        Icon(engineIcon, null, modifier = Modifier.size(14.dp))
+                        Text(engineLabel, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     }
-                    DropdownMenu(expanded = engineExpanded, onDismissRequest = { engineExpanded = false }) {
+                }
+                DropdownMenu(expanded = engineExpanded, onDismissRequest = { engineExpanded = false }) {
+                    DropdownMenuItem(
+                        text = { Text("NewPipe") },
+                        leadingIcon = { Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp)) },
+                        onClick = { 
+                            onEngineChange("newpipe")
+                            engineExpanded = false
+                            viewModel.clearPreview()
+                            viewModel.logToConsole("Switched engine to: NewPipe")
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("yt-dlp") },
+                        leadingIcon = { Icon(Icons.Default.Movie, null, modifier = Modifier.size(18.dp)) },
+                        onClick = { 
+                            onEngineChange("yt-dlp")
+                            engineExpanded = false
+                            viewModel.clearPreview()
+                            viewModel.logToConsole("Switched engine to: yt-dlp")
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("gallery-dl") },
+                        leadingIcon = { Icon(Icons.Default.Image, null, modifier = Modifier.size(18.dp)) },
+                        onClick = { 
+                            onEngineChange("gallery-dl")
+                            engineExpanded = false
+                            viewModel.clearPreview()
+                            viewModel.logToConsole("Switched engine to: gallery-dl")
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Cobalt") },
+                        leadingIcon = { Icon(Icons.Default.CloudDownload, null, modifier = Modifier.size(18.dp)) },
+                        onClick = { 
+                            onEngineChange("cobalt")
+                            engineExpanded = false
+                            viewModel.clearPreview()
+                            viewModel.logToConsole("Switched engine to: Cobalt")
+                        }
+                    )
+                }
+            }
+
+            // Mode/Quality Selector
+            Box(modifier = Modifier.weight(1f)) {
+                OutlinedButton(
+                    onClick = { if (engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe") modeExpanded = true },
+                    shape = RectangleShape,
+                    enabled = engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe",
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Icon(Icons.Default.Settings, null, modifier = Modifier.size(14.dp))
+                        Text(if (engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe") downloadMode.replaceFirstChar { it.uppercase() } else "Original", style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    }
+                }
+                DropdownMenu(expanded = modeExpanded, onDismissRequest = { modeExpanded = false }) {
+                    listOf("auto", "video", "audio").forEach { mode ->
                         DropdownMenuItem(
-                            text = { Text("NewPipe") },
-                            leadingIcon = { Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp)) },
-                            onClick = { 
-                                onEngineChange("newpipe")
-                                engineExpanded = false
-                                viewModel.clearPreview()
-                                viewModel.logToConsole("Switched engine to: NewPipe")
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("yt-dlp") },
-                            leadingIcon = { Icon(Icons.Default.Movie, null, modifier = Modifier.size(18.dp)) },
-                            onClick = { 
-                                onEngineChange("yt-dlp")
-                                engineExpanded = false
-                                viewModel.clearPreview()
-                                viewModel.logToConsole("Switched engine to: yt-dlp")
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("gallery-dl") },
-                            leadingIcon = { Icon(Icons.Default.Image, null, modifier = Modifier.size(18.dp)) },
-                            onClick = { 
-                                onEngineChange("gallery-dl")
-                                engineExpanded = false
-                                viewModel.clearPreview()
-                                viewModel.logToConsole("Switched engine to: gallery-dl")
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Cobalt") },
-                            leadingIcon = { Icon(Icons.Default.CloudDownload, null, modifier = Modifier.size(18.dp)) },
-                            onClick = { 
-                                onEngineChange("cobalt")
-                                engineExpanded = false
-                                viewModel.clearPreview()
-                                viewModel.logToConsole("Switched engine to: Cobalt")
-                            }
+                            text = { Text(mode.replaceFirstChar { it.uppercase() }) },
+                            onClick = { onModeChange(mode); modeExpanded = false }
                         )
                     }
                 }
+            }
 
-                Divider(modifier = Modifier.fillMaxHeight().width(1.dp).padding(vertical = 12.dp))
-
-                // Mode/Quality Selector
-                Box(modifier = Modifier.weight(1f)) {
-                    TextButton(
-                        onClick = { if (engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe") modeExpanded = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe"
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Default.Settings, null, modifier = Modifier.size(16.dp))
-                            Text(if (engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe") downloadMode.replaceFirstChar { it.uppercase() } else "Original", style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                    DropdownMenu(expanded = modeExpanded, onDismissRequest = { modeExpanded = false }) {
-                        listOf("auto", "video", "audio").forEach { mode ->
-                            DropdownMenuItem(
-                                text = { Text(mode.replaceFirstChar { it.uppercase() }) },
-                                onClick = { onModeChange(mode); modeExpanded = false }
-                            )
-                        }
-                    }
-                }
-
-                Divider(modifier = Modifier.fillMaxHeight().width(1.dp).padding(vertical = 12.dp))
-
-                // Quality Selector
-                Box(modifier = Modifier.weight(1f)) {
-                    TextButton(
-                        onClick = { if (engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe") qualityExpanded = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe"
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            val label = if (downloadMode == "audio") {
-                                when(quality) {
-                                    "max" -> "Best"
-                                    "1080" -> "High"
-                                    "720" -> "Med"
-                                    else -> "Low"
-                                }
-                            } else {
-                                if (quality == "max") "Max" else "${quality}p"
+            // Quality Selector
+            Box(modifier = Modifier.weight(1f)) {
+                OutlinedButton(
+                    onClick = { if (engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe") qualityExpanded = true },
+                    shape = RoundedCornerShape(topEndPercent = 50, bottomEndPercent = 50),
+                    enabled = engine == "yt-dlp" || engine == "cobalt" || engine == "newpipe",
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        val label = if (downloadMode == "audio") {
+                            when(quality) {
+                                "max" -> "Best"
+                                "1080" -> "High"
+                                "720" -> "Med"
+                                else -> "Low"
                             }
-                            Text(label, style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                    DropdownMenu(expanded = qualityExpanded, onDismissRequest = { qualityExpanded = false }) {
-                        val options = if (downloadMode == "audio") {
-                            listOf("480" to "Low", "720" to "Medium", "1080" to "High", "max" to "Best")
                         } else {
-                            val avQuals = preview?.available_qualities
-                            if (!avQuals.isNullOrEmpty()) {
-                                avQuals.map { 
-                                    val clean = it.replace("p", "")
-                                    clean to it
-                                } + listOf("max" to "Max Quality")
-                            } else {
-                                listOf("480" to "480p", "720" to "720p", "1080" to "1080p", "max" to "Max Quality")
-                            }
+                            if (quality == "max") "Max" else "${quality}p"
                         }
-                        options.forEach { (valStr, label) ->
-                            DropdownMenuItem(
-                                text = { Text(label) },
-                                onClick = { onQualityChange(valStr); qualityExpanded = false }
-                            )
+                        Text(label, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    }
+                }
+                DropdownMenu(expanded = qualityExpanded, onDismissRequest = { qualityExpanded = false }) {
+                    val options = if (downloadMode == "audio") {
+                        listOf("480" to "Low", "720" to "Medium", "1080" to "High", "max" to "Best")
+                    } else {
+                        val avQuals = preview?.available_qualities
+                        if (!avQuals.isNullOrEmpty()) {
+                            avQuals.map { 
+                                val clean = it.replace("p", "")
+                                clean to it
+                            } + listOf("max" to "Max Quality")
+                        } else {
+                            listOf("480" to "480p", "720" to "720p", "1080" to "1080p", "max" to "Max Quality")
                         }
+                    }
+                    options.forEach { (valStr, label) ->
+                        DropdownMenuItem(
+                            text = { Text(label) },
+                            onClick = { onQualityChange(valStr); qualityExpanded = false }
+                        )
                     }
                 }
             }
