@@ -111,13 +111,20 @@ To build Gabi yourself:
 
 ## 🤝 Support
 
-Gabi is built with ❤️ by **hotaro**. If you find the app useful, consider supporting the development via UPI (Totally Optional).
+Gabi is built with ❤️ by **hotaro**. If you find the app useful, consider supporting the development (Totally Optional).
 or Just ⭐ star the project!
 
 -   **GitHub**: [Hotaro26](https://github.com/Hotaro26)
--   **Discord**: `oi.hotaro`
+-   **Discord**: `flawed_mango`
 
 ---
+## Donate
+You can support Gabi development through [kofi](buymeacoffee.com/oi.hotaro)
+
+<a href="buymeacoffee.com/oi.hotaro)
+">
+  <img src="https://github.com/user-attachments/assets/f62638ee-9ad9-42c6-b275-a620b4cabe25" width="128px">
+</a>
 
 ##  License
 
@@ -126,7 +133,7 @@ Gabi uses several open-source libraries. Please check the "Licenses" section in 
 - `gallery-dl`: GPLv2
 - `Chaquopy`: BSD 3-Clause
 - `cobalt` : open source
-
+- `newpipe extractor`: open source
 ## Star History
 
 <a href="https://www.star-history.com/?repos=Hotaro26%2Fgabi&type=timeline&legend=top-left">
