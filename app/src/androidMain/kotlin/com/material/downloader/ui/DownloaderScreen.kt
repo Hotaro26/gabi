@@ -1872,10 +1872,22 @@ fun SettingsListItem(
             .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        val shapesList = remember {
+            listOf(
+                androidx.graphics.shapes.RoundedPolygon(numVertices = 8, rounding = androidx.graphics.shapes.CornerRounding(1f)), // Circle / Octagon
+                androidx.graphics.shapes.RoundedPolygon(numVertices = 6, rounding = androidx.graphics.shapes.CornerRounding(0.2f)), // Hexagon
+                androidx.graphics.shapes.RoundedPolygon(numVertices = 4, rounding = androidx.graphics.shapes.CornerRounding(0.3f)), // Rounded Square
+                androidx.graphics.shapes.RoundedPolygon(numVertices = 5, rounding = androidx.graphics.shapes.CornerRounding(0.3f)), // Rounded Pentagon
+                androidx.graphics.shapes.RoundedPolygon(numVertices = 3, rounding = androidx.graphics.shapes.CornerRounding(0.2f)) // Trigance
+            )
+        }
+        val randomPolygon = remember { shapesList.random() }
+        val shape = remember(randomPolygon) { PolygonShape(randomPolygon) }
+
         Box(
             modifier = Modifier
                 .size(48.dp)
-                .background(iconColor, shape = CircleShape),
+                .background(iconColor, shape = shape),
             contentAlignment = Alignment.Center
         ) {
             Icon(icon, contentDescription = null, tint = Color.White)

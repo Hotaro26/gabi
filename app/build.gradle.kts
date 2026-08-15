@@ -59,6 +59,8 @@ kotlin {
             implementation("io.insert-koin:koin-android:3.5.3")
             implementation("io.insert-koin:koin-androidx-compose:3.5.3")
             
+            implementation("androidx.graphics:graphics-shapes:1.0.1")
+            
             // Old Android-only dependencies (will break if moved to commonMain)
             implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
             implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
