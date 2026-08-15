@@ -2774,7 +2774,7 @@ fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
                     )
                     OutlinedCard(
                         onClick = {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://ko-fi.com/hotaro")))
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://ko-fi.com/oi.hotaro")))
                         },
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
@@ -2786,7 +2786,7 @@ fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
                         ) {
                             Icon(Icons.Default.Link, contentDescription = null, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("ko-fi.com/hotaro", fontWeight = FontWeight.Bold)
+                            Text("ko-fi.com/oi.hotaro", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
