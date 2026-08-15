@@ -692,53 +692,53 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                         }
 
                         val audioUrl = result.audio_url
+                        
+                        suspend fun downloadTrack(trackUrl: String, destFile: java.io.File, trackName: String, progressOffset: Float, progressScale: Float): Boolean {
+                            if (trackUrl.contains(".m3u8")) {
+                                logToConsole("Downloading $trackName track with yt-dlp native downloader...")
+                                val engineKey = if (engine == "gallery-dl") "gallery_dl" else "yt_dlp"
+                                val cookiesPath = if (useCookies.value) prefs.getString("${engineKey}_cookies_path", null) else null
+                                val pythonResult = extractor.downloadVideo(trackUrl, destFile.absolutePath, cookiesPath)
+                                if (pythonResult["status"] == "success") {
+                                    _uiState.value = DownloadState.Downloading(progressOffset + progressScale)
+                                    return true
+                                } else {
+                                    logToConsole("$trackName download failed: ${pythonResult["message"]}")
+                                    return false
+                                }
+                            } else {
+                                logToConsole("Downloading $trackName track via Ktor: $trackUrl")
+                                var success = false
+                                downloader.downloadFileToPath(trackUrl, destFile).collect { state ->
+                                    if (state is DownloadState.Downloading) {
+                                        val progress = progressOffset + (state.progress * progressScale)
+                                        _uiState.value = DownloadState.Downloading(progress, state.downloadedBytes, state.totalBytes, state.speedBps)
+                                        notificationHelper.showProgressNotification(notificationId, "$title ($trackName)", (progress * 100).toInt())
+                                    }
+                                    if (state is DownloadState.Success) {
+                                        success = true
+                                    }
+                                    if (state is DownloadState.Error) {
+                                        logToConsole("$trackName download failed: ${state.message}")
+                                    }
+                                }
+                                return success
+                            }
+                        }
+
                         if (audioUrl != null) {
-                            logToConsole("DASH stream detected. Starting split video and audio downloads...")
+                            logToConsole("Split video and audio streams detected. Starting downloads...")
                             val cacheDir = getApplication<Application>().cacheDir
                             val tempVideoFile = java.io.File(cacheDir, "temp_video_${System.currentTimeMillis()}.$extension")
                             val tempAudioFile = java.io.File(cacheDir, "temp_audio_${System.currentTimeMillis()}.m4a")
                             val tempMuxedFile = java.io.File(cacheDir, "temp_muxed_${System.currentTimeMillis()}.$extension")
 
                             try {
-                                logToConsole("Downloading video track: $downloadUrl")
-                                var videoSuccess = false
-                                downloader.downloadFileToPath(downloadUrl, tempVideoFile).collect { state ->
-                                    if (state is DownloadState.Downloading) {
-                                        val progress = state.progress / 2f
-                                        _uiState.value = DownloadState.Downloading(progress, state.downloadedBytes, state.totalBytes, state.speedBps)
-                                        notificationHelper.showProgressNotification(notificationId, "$title (Video)", (progress * 100).toInt())
-                                    }
-                                    if (state is DownloadState.Success) {
-                                        videoSuccess = true
-                                    }
-                                    if (state is DownloadState.Error) {
-                                        logToConsole("Video download failed: ${state.message}")
-                                    }
-                                }
+                                val videoSuccess = downloadTrack(downloadUrl, tempVideoFile, "Video", 0f, 0.5f)
+                                if (!videoSuccess) throw Exception("Failed to download video track")
 
-                                if (!videoSuccess) {
-                                    throw Exception("Failed to download video track")
-                                }
-
-                                logToConsole("Downloading audio track: $audioUrl")
-                                var audioSuccess = false
-                                downloader.downloadFileToPath(audioUrl, tempAudioFile).collect { state ->
-                                    if (state is DownloadState.Downloading) {
-                                        val progress = 0.5f + (state.progress / 2f)
-                                        _uiState.value = DownloadState.Downloading(progress, state.downloadedBytes, state.totalBytes, state.speedBps)
-                                        notificationHelper.showProgressNotification(notificationId, "$title (Audio)", (progress * 100).toInt())
-                                    }
-                                    if (state is DownloadState.Success) {
-                                        audioSuccess = true
-                                    }
-                                    if (state is DownloadState.Error) {
-                                        logToConsole("Audio download failed: ${state.message}")
-                                    }
-                                }
-
-                                if (!audioSuccess) {
-                                    throw Exception("Failed to download audio track")
-                                }
+                                val audioSuccess = downloadTrack(audioUrl, tempAudioFile, "Audio", 0.5f, 0.5f)
+                                if (!audioSuccess) throw Exception("Failed to download audio track")
 
                                 logToConsole("Muxing video and audio tracks...")
                                 _uiState.value = DownloadState.Downloading(0.99f)
@@ -784,6 +784,50 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                                 if (tempVideoFile.exists()) tempVideoFile.delete()
                                 if (tempAudioFile.exists()) tempAudioFile.delete()
                                 if (tempMuxedFile.exists()) tempMuxedFile.delete()
+                            }
+                        } else if (downloadUrl.contains(".m3u8")) {
+                            logToConsole("Single HLS stream detected. Starting native download...")
+                            val cacheDir = getApplication<Application>().cacheDir
+                            val tempFinalFile = java.io.File(cacheDir, "temp_single_${System.currentTimeMillis()}.$extension")
+                            
+                            try {
+                                val success = downloadTrack(downloadUrl, tempFinalFile, "Media", 0f, 1f)
+                                if (!success) throw Exception("Failed to download HLS stream")
+                                
+                                val targetUri = if (selectedFolderUri.value != null) {
+                                    downloader.createSafUri(Uri.parse(selectedFolderUri.value), fileName)
+                                } else {
+                                    downloader.createMediaStoreUri(fileName, targetPath)
+                                } ?: throw Exception("Could not create destination file")
+                                
+                                getApplication<Application>().contentResolver.openOutputStream(targetUri)?.use { outStream ->
+                                    tempFinalFile.inputStream().use { inStream ->
+                                        inStream.copyTo(outStream)
+                                    }
+                                }
+                                
+                                downloader.finalizeFile(targetUri, fileName)
+                                val cachedThumb = saveThumbnailToCache(_previewMetadata.value?.thumbnail, targetUri.toString())
+                                logDao.insertLog(DownloadLog(title = title, url = url, status = "Success", path = targetUri.toString(), thumbnailPath = cachedThumb))
+                                logToConsole("File saved successfully to $targetPath/$fileName")
+                                _uiState.value = DownloadState.Success(targetUri.toString())
+                                
+                                val folderUri = if (selectedFolderUri.value != null) {
+                                    Uri.parse(selectedFolderUri.value)
+                                } else {
+                                    val mediaDir = when {
+                                        targetPath.startsWith("Pictures") -> Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                                        targetPath.startsWith("Music") -> Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)
+                                        targetPath.startsWith("Downloads") -> Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                                        else -> Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
+                                    }
+                                    Uri.parse("content://media/external/file/").buildUpon()
+                                        .appendQueryParameter("path", mediaDir.absolutePath + "/" + targetPath)
+                                        .build()
+                                }
+                                notificationHelper.showProgressNotification(notificationId, title, 100, folderUri)
+                            } finally {
+                                if (tempFinalFile.exists()) tempFinalFile.delete()
                             }
                         } else {
                             logToConsole("Downloading file: $fileName")

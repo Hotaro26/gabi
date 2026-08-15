@@ -18,6 +18,15 @@ class PythonExtractor {
         }
     }
 
+    fun downloadVideo(url: String, outputPath: String, cookiesPath: String? = null): Map<String, String> {
+        return try {
+            val resultJson = module.callAttr("download_video", url, outputPath, cookiesPath).toString()
+            json.decodeFromString<Map<String, String>>(resultJson)
+        } catch (e: Exception) {
+            mapOf("status" to "error", "message" to (e.message ?: "Python execution failed"))
+        }
+    }
+
     fun getVersions(): Map<String, String> {
         return try {
             val resultJson = module.callAttr("get_versions").toString()

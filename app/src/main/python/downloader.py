@@ -187,3 +187,21 @@ def update_extractors(target_path):
             return json.dumps({'status': 'error', 'message': f'Pip failed with code {exit_code}. Output: {output}'})
     except Exception as e:
         return json.dumps({'status': 'error', 'message': str(e)})
+
+def download_video(url, output_path, cookies_path=None):
+    try:
+        import yt_dlp
+        ydl_opts = {
+            'outtmpl': output_path,
+            'quiet': True,
+            'no_warnings': True
+        }
+        if cookies_path:
+            ydl_opts['cookiefile'] = cookies_path
+            
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+            
+        return json.dumps({'status': 'success', 'path': output_path})
+    except Exception as e:
+        return json.dumps({'status': 'error', 'message': str(e)})
