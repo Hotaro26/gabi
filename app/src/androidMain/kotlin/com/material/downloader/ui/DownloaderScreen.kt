@@ -339,6 +339,8 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                                 .let { m ->
                                     if (viewModel.isNavBarOpaque.value) {
                                         m.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                                    } else if (viewModel.isNavBarTrueGlass.value) {
+                                        m.hazeChild(state = hazeState, shape = CircleShape, style = HazeStyle(tint = Color.White.copy(alpha = 0.05f), blurRadius = 32.dp))
                                     } else if (viewModel.isNavBarBlurEnabled.value) {
                                         m.hazeChild(state = hazeState, shape = CircleShape, style = HazeStyle(tint = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f), blurRadius = 24.dp))
                                     } else {
@@ -359,7 +361,13 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                                 state = rememberTooltipState()
                             ) {
                                 Box(
-                                    modifier = Modifier.clip(CircleShape).background(bg0).clickable {
+                                    modifier = Modifier.clip(CircleShape).let { m ->
+                                        if (selectedTab == 0 && viewModel.isNavBarTrueGlass.value) {
+                                            m.hazeChild(state = hazeState, shape = CircleShape, style = HazeStyle(tint = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f), blurRadius = 16.dp)).background(Color.Transparent)
+                                        } else {
+                                            m.background(bg0)
+                                        }
+                                    }.clickable {
                                         selectedTab = 0
                                     }.padding(horizontal = pad0, vertical = 10.dp),
                                     contentAlignment = Alignment.Center
@@ -378,7 +386,13 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                                 state = rememberTooltipState()
                             ) {
                                 Box(
-                                    modifier = Modifier.clip(CircleShape).background(bg1).clickable {
+                                    modifier = Modifier.clip(CircleShape).let { m ->
+                                        if (selectedTab == 1 && viewModel.isNavBarTrueGlass.value) {
+                                            m.hazeChild(state = hazeState, shape = CircleShape, style = HazeStyle(tint = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f), blurRadius = 16.dp)).background(Color.Transparent)
+                                        } else {
+                                            m.background(bg1)
+                                        }
+                                    }.clickable {
                                         selectedTab = 1
                                     }.padding(horizontal = pad1, vertical = 10.dp),
                                     contentAlignment = Alignment.Center
@@ -397,7 +411,13 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                                 state = rememberTooltipState()
                             ) {
                                 Box(
-                                    modifier = Modifier.clip(CircleShape).background(bg2).clickable {
+                                    modifier = Modifier.clip(CircleShape).let { m ->
+                                        if (selectedTab == 2 && viewModel.isNavBarTrueGlass.value) {
+                                            m.hazeChild(state = hazeState, shape = CircleShape, style = HazeStyle(tint = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f), blurRadius = 16.dp)).background(Color.Transparent)
+                                        } else {
+                                            m.background(bg2)
+                                        }
+                                    }.clickable {
                                         selectedTab = 2
                                     }.padding(horizontal = pad2, vertical = 10.dp),
                                     contentAlignment = Alignment.Center
@@ -417,7 +437,13 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                                 state = rememberTooltipState()
                             ) {
                                 Box(
-                                    modifier = Modifier.clip(CircleShape).background(bg3).clickable {
+                                    modifier = Modifier.clip(CircleShape).let { m ->
+                                        if (selectedTab == 3 && viewModel.isNavBarTrueGlass.value) {
+                                            m.hazeChild(state = hazeState, shape = CircleShape, style = HazeStyle(tint = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f), blurRadius = 16.dp)).background(Color.Transparent)
+                                        } else {
+                                            m.background(bg3)
+                                        }
+                                    }.clickable {
                                         selectedTab = 3
                                     }.padding(horizontal = pad3, vertical = 10.dp),
                                     contentAlignment = Alignment.Center
@@ -2022,6 +2048,19 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
                     Switch(
                         checked = viewModel.isNavBarBlurEnabled.value,
                         onCheckedChange = { viewModel.toggleNavBarBlur(it) }
+                    )
+                }
+                
+                Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 12.dp))
+                
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("True Glass Navigation", style = MaterialTheme.typography.titleMedium)
+                        Text("Make navigation bar fully transparent glass", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(
+                        checked = viewModel.isNavBarTrueGlass.value,
+                        onCheckedChange = { viewModel.toggleNavBarTrueGlass(it) }
                     )
                 }
                 

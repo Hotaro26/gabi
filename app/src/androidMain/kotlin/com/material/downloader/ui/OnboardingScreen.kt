@@ -68,6 +68,13 @@ fun OnboardingScreen(
         hasNotificationPermission = isGranted
     }
 
+    val batteryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val pm = context.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
+            hasBatteryPermission = pm.isIgnoringBatteryOptimizations(context.packageName)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -138,7 +145,7 @@ fun OnboardingScreen(
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                         val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
                         intent.data = Uri.parse("package:${context.packageName}")
-                        context.startActivity(intent)
+                        batteryLauncher.launch(intent)
                     }
                 }
             )
@@ -153,7 +160,7 @@ fun OnboardingScreen(
                 } else if (!hasBatteryPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
                     intent.data = Uri.parse("package:${context.packageName}")
-                    context.startActivity(intent)
+                    batteryLauncher.launch(intent)
                 } else {
                     onComplete()
                 }

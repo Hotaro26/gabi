@@ -110,6 +110,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     
     var isNavBarBlurEnabled = mutableStateOf(prefs.getBoolean("nav_bar_blur", true))
     var isNavBarOpaque = mutableStateOf(prefs.getBoolean("nav_bar_opaque", false))
+    var isNavBarTrueGlass = mutableStateOf(prefs.getBoolean("nav_bar_true_glass", false))
     var isOnboardingCompleted = mutableStateOf(prefs.getBoolean("onboarding_completed", false))
 
     fun toggleNavBarBlur(enabled: Boolean) {
@@ -125,6 +126,11 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     fun toggleNavBarOpaque(enabled: Boolean) {
         isNavBarOpaque.value = enabled
         prefs.edit().putBoolean("nav_bar_opaque", enabled).apply()
+    }
+    
+    fun toggleNavBarTrueGlass(enabled: Boolean) {
+        isNavBarTrueGlass.value = enabled
+        prefs.edit().putBoolean("nav_bar_true_glass", enabled).apply()
     }
     
     fun updateTerminalTheme(theme: TerminalTheme) {

@@ -1,0 +1,32 @@
+Categories:
+  - Multimedia
+License: MIT
+WebSite: https://hotaro26.github.io/gabi/
+SourceCode: https://github.com/Hotaro26/gabi
+IssueTracker: https://github.com/Hotaro26/gabi/issues
+
+Name: Gabi
+
+RepoType: git
+Repo: https://github.com/Hotaro26/gabi
+
+Builds:
+  - versionName: '4.3'
+    versionCode: 9
+    commit: 145f0e1df946bb9b103e06215cf51aafad11928d
+    subdir: app
+    sudo:
+      - apt-get update || true
+      - apt-get install -y wget build-essential libffi-dev libssl-dev zlib1g-dev
+      - wget https://www.python.org/ftp/python/3.11.9/Python-3.11.9.tgz
+      - tar -xf Python-3.11.9.tgz
+      - cd Python-3.11.9 && ./configure && make -j4 && make altinstall
+    gradle:
+      - yes
+
+AllowedAPKSigningKeys: c68c7f78cfb1bc2da2816462ded37563ae5ab83f3378a385acc5167cc39be0ec
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: '4.3'
+CurrentVersionCode: 9
