@@ -36,12 +36,11 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None):
         if mode == 'audio':
             ydl_opts['format'] = 'bestaudio/best'
         else:
-            # Prefer merged mp4 or the best single file that contains both video and audio
-            # DASH streams (bestvideo+bestaudio) require ffmpeg to merge, which isn't available
             if quality == 'max':
-                ydl_opts['format'] = 'best[ext=mp4]/best'
+                ydl_opts['format'] = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
             else:
-                ydl_opts['format'] = f'best[height<={quality}][ext=mp4]/best[height<={quality}]/best'
+                q_val = quality.replace('p', '') if isinstance(quality, str) else quality
+                ydl_opts['format'] = f'bestvideo[height<={q_val}][ext=mp4]+bestaudio[ext=m4a]/best[height<={q_val}][ext=mp4]/bestvideo[height<={q_val}]+bestaudio/best[height<={q_val}]/best'
 
         if cookies_path and os.path.exists(cookies_path):
             ydl_opts['cookiefile'] = cookies_path
@@ -55,6 +54,19 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None):
                 
                 # Find the best direct URL
                 download_url = video.get('url')
+                audio_url = None
+                
+                if 'requested_formats' in video:
+                    for f in video['requested_formats']:
+                        if f.get('vcodec') != 'none' and f.get('acodec') == 'none':
+                            download_url = f.get('url')
+                        elif f.get('acodec') != 'none' and f.get('vcodec') == 'none':
+                            audio_url = f.get('url')
+                    if not download_url or not audio_url:
+                        for f in video['requested_formats']:
+                            if f.get('vcodec') != 'none': download_url = f.get('url')
+                            if f.get('acodec') != 'none': audio_url = f.get('url')
+
                 if not download_url and 'formats' in video:
                     # Fallback to the best resolved format URL
                     formats = [f for f in video['formats'] if f.get('url')]
@@ -67,6 +79,7 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None):
                 return json.dumps({
                     'status': 'success',
                     'url': download_url,
+                    'audio_url': audio_url,
                     'title': video.get('title', 'video'),
                     'author': video.get('uploader') or video.get('channel') or 'Unknown',
                     'thumbnail': video.get('thumbnail'),

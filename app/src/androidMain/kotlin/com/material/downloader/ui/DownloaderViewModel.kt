@@ -112,6 +112,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     var isNavBarOpaque = mutableStateOf(prefs.getBoolean("nav_bar_opaque", false))
     var isNavBarTrueGlass = mutableStateOf(prefs.getBoolean("nav_bar_true_glass", false))
     var isOnboardingCompleted = mutableStateOf(prefs.getBoolean("onboarding_completed", false))
+    var useCookies = mutableStateOf(prefs.getBoolean("use_cookies", true))
 
     fun toggleNavBarBlur(enabled: Boolean) {
         isNavBarBlurEnabled.value = enabled
@@ -131,6 +132,11 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     fun toggleNavBarTrueGlass(enabled: Boolean) {
         isNavBarTrueGlass.value = enabled
         prefs.edit().putBoolean("nav_bar_true_glass", enabled).apply()
+    }
+    
+    fun toggleUseCookies(enabled: Boolean) {
+        useCookies.value = enabled
+        prefs.edit().putBoolean("use_cookies", enabled).apply()
     }
     
     fun updateTerminalTheme(theme: TerminalTheme) {
@@ -425,7 +431,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
             } else {
                 logToConsole("Executing $engine extractor in Python...")
                 val engineKey = if (engine == "gallery-dl") "gallery_dl" else "yt_dlp"
-                val cookiesPath = prefs.getString("${engineKey}_cookies_path", null)
+                val cookiesPath = if (useCookies.value) prefs.getString("${engineKey}_cookies_path", null) else null
                 val res = extractor.extract(url, quality, mode, engine, cookiesPath)
                 if (res.status == "success") {
                     if (res.is_gallery == true) {

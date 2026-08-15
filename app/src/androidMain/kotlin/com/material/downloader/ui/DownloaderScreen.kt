@@ -1039,10 +1039,6 @@ fun MainDownloaderTab(
                                 Text(meta.title ?: "Unknown Title", style = MaterialTheme.typography.titleSmall, maxLines = 2, fontWeight = FontWeight.Bold)
                                 Spacer(Modifier.height(4.dp))
                                 Text(meta.author ?: "Unknown Author", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                if (meta.size != null && meta.size > 0) {
-                                    Spacer(Modifier.height(4.dp))
-                                    Text("${"%.1f".format(meta.size / 1024f / 1024f)} MB", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                                }
                             }
                         }
                     }
@@ -1927,6 +1923,7 @@ fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = 
             "Main" -> SettingsMainList(onNavigate = { currentScreen = it }, contentPadding = contentPadding)
             "Customisation" -> CustomisationScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
             "Downloads" -> DownloadsSettingsScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
+            "Cookies" -> CookiesSettingsScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
             "Developer" -> DeveloperScreen(viewModel = viewModel, onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
             "Support" -> SupportScreen(onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
         }
@@ -1978,6 +1975,21 @@ fun SettingsMainList(onNavigate: (String) -> Unit, contentPadding: PaddingValues
                     iconColor = Color(0xFF00758F), // Teal
                     title = "Downloads",
                     subtitle = "Storage location, rules"
+                )
+            }
+
+            SegmentCard(
+                onClick = { onNavigate("Cookies") },
+                defaultTopStart = 4.dp,
+                defaultTopEnd = 4.dp,
+                defaultBottomStart = 4.dp,
+                defaultBottomEnd = 4.dp
+            ) {
+                SettingsListItem(
+                    icon = Icons.Default.Cookie,
+                    iconColor = Color(0xFFD4A373), // Cookie color
+                    title = "Cookies",
+                    subtitle = "Manage authentication cookies"
                 )
             }
 
@@ -2526,7 +2538,8 @@ fun saveCookiesToNetscapeFormat(context: android.content.Context, url: String, c
         if (parts.size == 2) {
             val name = parts[0]
             val value = parts[1]
-            out.append("$domain\tTRUE\t/\tFALSE\t2147483647\t$name\t$value\n")
+            val domainWithDot = if (domain.startsWith(".")) domain else ".$domain"
+            out.append("$domainWithDot\tTRUE\t/\tFALSE\t2147483647\t$name\t$value\n")
         }
     }
     cookiesFile.writeText(out.toString())
@@ -2534,9 +2547,9 @@ fun saveCookiesToNetscapeFormat(context: android.content.Context, url: String, c
 }
 
 @Composable
-fun CookieExtractorDialog(fileName: String, onDismiss: () -> Unit, onCookiesExtracted: (String) -> Unit) {
-    var url by remember { mutableStateOf("https://youtube.com") }
-    var currentUrl by remember { mutableStateOf("https://youtube.com") }
+fun CookieExtractorDialog(initialUrl: String = "https://youtube.com", fileName: String, onDismiss: () -> Unit, onCookiesExtracted: (String) -> Unit) {
+    var url by remember { mutableStateOf(initialUrl) }
+    var currentUrl by remember { mutableStateOf(initialUrl) }
     val context = LocalContext.current
     
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
@@ -2558,6 +2571,10 @@ fun CookieExtractorDialog(fileName: String, onDismiss: () -> Unit, onCookiesExtr
                     AndroidView(
                         factory = { ctx ->
                             WebView(ctx).apply {
+                                layoutParams = android.view.ViewGroup.LayoutParams(
+                                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                                    android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                                )
                                 settings.javaScriptEnabled = true
                                 settings.domStorageEnabled = true
                                 webViewClient = object : WebViewClient() {
@@ -3075,6 +3092,209 @@ fun StatusInfo(state: DownloadState, onOpenFolder: () -> Unit) {
                 } else if (state is DownloadState.Success) {
                     Text("Check your selected folder", style = MaterialTheme.typography.bodySmall, color = color)
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CookiesSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentPadding: PaddingValues) {
+    val context = LocalContext.current
+    var showNewCookieSheet by remember { mutableStateOf(false) }
+    
+    // For the extractor dialog
+    var showCookieExtractor by remember { mutableStateOf(false) }
+    var targetEngineForCookies by remember { mutableStateOf<String?>(null) }
+    var extractUrl by remember { mutableStateOf("https://") }
+    
+    // Status
+    var ytCookies by remember { mutableStateOf(viewModel.getSetting("yt_dlp_cookies_path", "").isNotEmpty()) }
+    var galleryCookies by remember { mutableStateOf(viewModel.getSetting("gallery_dl_cookies_path", "").isNotEmpty()) }
+
+    var cookieContentToShow by remember { mutableStateOf<Pair<String, String>?>(null) }
+    
+    if (cookieContentToShow != null) {
+        AlertDialog(
+            onDismissRequest = { cookieContentToShow = null },
+            title = { Text(cookieContentToShow!!.first) },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Text(cookieContentToShow!!.second, style = MaterialTheme.typography.bodySmall, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { cookieContentToShow = null }) { Text("Close") }
+            }
+        )
+    }
+
+    if (showCookieExtractor && targetEngineForCookies != null) {
+        CookieExtractorDialog(
+            initialUrl = extractUrl,
+            fileName = "${targetEngineForCookies}_cookies.txt",
+            onDismiss = { showCookieExtractor = false },
+            onCookiesExtracted = { path ->
+                val engine = targetEngineForCookies!!
+                viewModel.saveSetting("${engine}_cookies_path", path)
+                if (engine == "yt_dlp") ytCookies = true else galleryCookies = true
+                android.widget.Toast.makeText(context, "Cookies extracted for $engine", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp)
+            .verticalScroll(rememberScrollState()).padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+            ) { Icon(Icons.Default.ArrowBack, "Back") }
+            Spacer(Modifier.width(16.dp))
+            Text("Cookies", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        }
+        
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+            Text("Use cookies", style = MaterialTheme.typography.titleMedium)
+            Switch(
+                checked = viewModel.useCookies.value,
+                onCheckedChange = { viewModel.toggleUseCookies(it) }
+            )
+        }
+        
+        OutlinedButton(
+            onClick = { showNewCookieSheet = true },
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(Icons.Default.Add, "Add")
+            Spacer(Modifier.width(8.dp))
+            Text("New cookie")
+        }
+        
+        // List existing cookies
+        if (ytCookies || galleryCookies) {
+            Text("Saved Cookies", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
+            if (ytCookies) {
+                CookieItem(name = "yt-dlp", onDelete = {
+                    val ytFile = java.io.File(context.filesDir, "yt_dlp_cookies.txt")
+                    if (ytFile.exists()) ytFile.delete()
+                    viewModel.saveSetting("yt_dlp_cookies_path", "")
+                    ytCookies = false
+                }, onView = {
+                    val ytFile = java.io.File(context.filesDir, "yt_dlp_cookies.txt")
+                    if (ytFile.exists()) cookieContentToShow = "yt-dlp Cookies" to ytFile.readText()
+                })
+            }
+            if (galleryCookies) {
+                CookieItem(name = "gallery-dl", onDelete = {
+                    val galFile = java.io.File(context.filesDir, "gallery_dl_cookies.txt")
+                    if (galFile.exists()) galFile.delete()
+                    viewModel.saveSetting("gallery_dl_cookies_path", "")
+                    galleryCookies = false
+                }, onView = {
+                    val galFile = java.io.File(context.filesDir, "gallery_dl_cookies.txt")
+                    if (galFile.exists()) cookieContentToShow = "gallery-dl Cookies" to galFile.readText()
+                })
+            }
+        }
+    }
+
+    if (showNewCookieSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        var tempUrl by remember { mutableStateOf("https://") }
+        var selectedTag by remember { mutableStateOf<String?>(null) }
+        var tagExpanded by remember { mutableStateOf(false) }
+
+        ModalBottomSheet(
+            onDismissRequest = { showNewCookieSheet = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            windowInsets = WindowInsets(0, 0, 0, 0)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                OutlinedTextField(
+                    value = tempUrl,
+                    onValueChange = { tempUrl = it },
+                    label = { Text("URL") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                
+                ExposedDropdownMenuBox(
+                    expanded = tagExpanded,
+                    onExpandedChange = { tagExpanded = !tagExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = when (selectedTag) {
+                            "yt_dlp" -> "yt-dlp"
+                            "gallery_dl" -> "gallery-dl"
+                            else -> "Select extractor..."
+                        },
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Target Extractor") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = tagExpanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = tagExpanded,
+                        onDismissRequest = { tagExpanded = false }
+                    ) {
+                        DropdownMenuItem(text = { Text("yt-dlp") }, onClick = { selectedTag = "yt_dlp"; tagExpanded = false })
+                        DropdownMenuItem(text = { Text("gallery-dl") }, onClick = { selectedTag = "gallery_dl"; tagExpanded = false })
+                    }
+                }
+                
+                Button(
+                    onClick = {
+                        showNewCookieSheet = false
+                        extractUrl = tempUrl
+                        targetEngineForCookies = selectedTag
+                        showCookieExtractor = true
+                    },
+                    modifier = Modifier.align(Alignment.End),
+                    enabled = selectedTag != null && tempUrl.isNotBlank()
+                ) {
+                    Icon(Icons.Default.Cookie, "Cookie")
+                    Spacer(Modifier.width(8.dp))
+                    Text("Get cookies")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CookieItem(name: String, onDelete: () -> Unit, onView: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        modifier = Modifier.fillMaxWidth().clickable { onView() }
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.size(8.dp).background(Color.Green, CircleShape))
+                Spacer(Modifier.width(8.dp))
+                Text(name, style = MaterialTheme.typography.bodyMedium)
+            }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
             }
         }
     }
