@@ -27,6 +27,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -2754,6 +2755,49 @@ fun DeveloperScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentP
 fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
     val context = LocalContext.current
     val myUpiId = "9693703723@fam"
+    var showKofiDialog by androidx.compose.runtime.remember { mutableStateOf(false) }
+    
+    if (showKofiDialog) {
+        AlertDialog(
+            onDismissRequest = { showKofiDialog = false },
+            title = { Text("Support on Ko-fi", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    androidx.compose.foundation.Image(
+                        painter = painterResource(id = R.drawable.kofi_qr),
+                        contentDescription = "Ko-fi QR Code",
+                        modifier = Modifier.size(200.dp).clip(RoundedCornerShape(16.dp))
+                    )
+                    OutlinedCard(
+                        onClick = {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://ko-fi.com/hotaro")))
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(Icons.Default.Link, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("ko-fi.com/hotaro", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showKofiDialog = false }) { Text("Close") }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
     
     Column(
         modifier = Modifier
@@ -2790,31 +2834,43 @@ fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Spacer(Modifier.height(16.dp))
-                Button(
-                    onClick = {
-                        val payeeName = "Hotaro"
-                        val transactionNote = "Support Gabi Development"
-                        val uri = Uri.parse("upi://pay").buildUpon()
-                            .appendQueryParameter("pa", myUpiId)
-                            .appendQueryParameter("pn", payeeName)
-                            .appendQueryParameter("tn", transactionNote)
-                            .appendQueryParameter("am", "0")
-                            .appendQueryParameter("cu", "INR")
-                            .build()
-                        val intent = Intent(Intent.ACTION_VIEW).apply { data = uri }
-                        val chooser = Intent.createChooser(intent, "Pay with...")
-                        try {
-                            context.startActivity(chooser)
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "No UPI app found", Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Icon(Icons.Default.AttachMoney, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Donate via UPI")
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(
+                        onClick = {
+                            val payeeName = "Hotaro"
+                            val transactionNote = "Support Gabi Development"
+                            val uri = Uri.parse("upi://pay").buildUpon()
+                                .appendQueryParameter("pa", myUpiId)
+                                .appendQueryParameter("pn", payeeName)
+                                .appendQueryParameter("tn", transactionNote)
+                                .appendQueryParameter("am", "0")
+                                .appendQueryParameter("cu", "INR")
+                                .build()
+                            val intent = Intent(Intent.ACTION_VIEW).apply { data = uri }
+                            val chooser = Intent.createChooser(intent, "Pay with...")
+                            try {
+                                context.startActivity(chooser)
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "No UPI app found", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Icon(Icons.Default.AttachMoney, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("UPI")
+                    }
+                    Button(
+                        onClick = { showKofiDialog = true },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color(0xFF00B9FE))
+                    ) {
+                        Icon(Icons.Default.LocalCafe, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Ko-fi")
+                    }
                 }
             }
         }
