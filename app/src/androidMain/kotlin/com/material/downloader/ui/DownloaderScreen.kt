@@ -3176,30 +3176,50 @@ fun CookiesSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, co
             Text("New cookie")
         }
         
-        // List existing cookies
         if (ytCookies || galleryCookies) {
             Text("Saved Cookies", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
             if (ytCookies) {
-                CookieItem(name = "yt-dlp", onDelete = {
-                    val ytFile = java.io.File(context.filesDir, "yt_dlp_cookies.txt")
+                val ytFile = java.io.File(context.filesDir, "yt_dlp_cookies.txt")
+                val ytDomain = if (ytFile.exists()) {
+                    ytFile.useLines { lines -> lines.firstOrNull { it.isNotBlank() && !it.startsWith("#") }?.substringBefore('\t')?.removePrefix(".") } ?: "Unknown Site"
+                } else "Unknown Site"
+                CookieItem(siteName = ytDomain, tag = "yt-dlp", onDelete = {
                     if (ytFile.exists()) ytFile.delete()
                     viewModel.saveSetting("yt_dlp_cookies_path", "")
                     ytCookies = false
                 }, onView = {
-                    val ytFile = java.io.File(context.filesDir, "yt_dlp_cookies.txt")
                     if (ytFile.exists()) cookieContentToShow = "yt-dlp Cookies" to ytFile.readText()
                 })
             }
             if (galleryCookies) {
-                CookieItem(name = "gallery-dl", onDelete = {
-                    val galFile = java.io.File(context.filesDir, "gallery_dl_cookies.txt")
+                val galFile = java.io.File(context.filesDir, "gallery_dl_cookies.txt")
+                val galDomain = if (galFile.exists()) {
+                    galFile.useLines { lines -> lines.firstOrNull { it.isNotBlank() && !it.startsWith("#") }?.substringBefore('\t')?.removePrefix(".") } ?: "Unknown Site"
+                } else "Unknown Site"
+                CookieItem(siteName = galDomain, tag = "gallery-dl", onDelete = {
                     if (galFile.exists()) galFile.delete()
                     viewModel.saveSetting("gallery_dl_cookies_path", "")
                     galleryCookies = false
                 }, onView = {
-                    val galFile = java.io.File(context.filesDir, "gallery_dl_cookies.txt")
                     if (galFile.exists()) cookieContentToShow = "gallery-dl Cookies" to galFile.readText()
                 })
+            }
+        }
+        
+        Spacer(Modifier.height(16.dp))
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Info, contentDescription = "Info", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    "Cookies allow the extractors to access sites that require you to be logged in (like age-restricted videos or private galleries).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -3277,7 +3297,7 @@ fun CookiesSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, co
 }
 
 @Composable
-fun CookieItem(name: String, onDelete: () -> Unit, onView: () -> Unit) {
+fun CookieItem(siteName: String, tag: String, onDelete: () -> Unit, onView: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -3290,8 +3310,17 @@ fun CookieItem(name: String, onDelete: () -> Unit, onView: () -> Unit) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(modifier = Modifier.size(8.dp).background(Color.Green, CircleShape))
-                Spacer(Modifier.width(8.dp))
-                Text(name, style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.width(16.dp))
+                Column {
+                    Text(siteName, style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(4.dp))
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Text(tag, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    }
+                }
             }
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)

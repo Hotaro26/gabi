@@ -36,11 +36,12 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None):
         if mode == 'audio':
             ydl_opts['format'] = 'bestaudio/best'
         else:
-            if quality == 'max':
-                ydl_opts['format'] = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
-            else:
+            ydl_opts['format'] = 'bestvideo+bestaudio/best'
+            if quality != 'max':
                 q_val = quality.replace('p', '') if isinstance(quality, str) else quality
-                ydl_opts['format'] = f'bestvideo[height<={q_val}][ext=mp4]+bestaudio[ext=m4a]/best[height<={q_val}][ext=mp4]/bestvideo[height<={q_val}]+bestaudio/best[height<={q_val}]/best'
+                ydl_opts['format_sort'] = [f'res:{q_val}', 'ext:mp4:m4a']
+            else:
+                ydl_opts['format_sort'] = ['ext:mp4:m4a']
 
         if cookies_path and os.path.exists(cookies_path):
             ydl_opts['cookiefile'] = cookies_path
