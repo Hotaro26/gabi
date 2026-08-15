@@ -1863,6 +1863,7 @@ fun SettingsListItem(
     iconColor: androidx.compose.ui.graphics.Color,
     title: String,
     subtitle: String,
+    useMaterialShapes: Boolean = true,
     onClick: (() -> Unit)? = null
 ) {
     Row(
@@ -1882,12 +1883,13 @@ fun SettingsListItem(
             )
         }
         val randomPolygon = remember { shapesList.random() }
-        val shape = remember(randomPolygon) { PolygonShape(randomPolygon) }
+        val expressiveShape = remember(randomPolygon) { PolygonShape(randomPolygon) }
+        val finalShape = if (useMaterialShapes) expressiveShape else CircleShape
 
         Box(
             modifier = Modifier
                 .size(48.dp)
-                .background(iconColor, shape = shape),
+                .background(iconColor, shape = finalShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(icon, contentDescription = null, tint = Color.White)
@@ -1933,7 +1935,7 @@ fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = 
         label = "settings_nav"
     ) { screen ->
         when (screen) {
-            "Main" -> SettingsMainList(onNavigate = { currentScreen = it }, contentPadding = contentPadding)
+            "Main" -> SettingsMainList(viewModel = viewModel, onNavigate = { currentScreen = it }, contentPadding = contentPadding)
             "Customisation" -> CustomisationScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
             "Downloads" -> DownloadsSettingsScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
             "Cookies" -> CookiesSettingsScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
@@ -1944,7 +1946,7 @@ fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = 
 }
 
 @Composable
-fun SettingsMainList(onNavigate: (String) -> Unit, contentPadding: PaddingValues) {
+fun SettingsMainList(viewModel: DownloaderViewModel, onNavigate: (String) -> Unit, contentPadding: PaddingValues) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -1972,7 +1974,8 @@ fun SettingsMainList(onNavigate: (String) -> Unit, contentPadding: PaddingValues
                     icon = Icons.Default.Palette,
                     iconColor = Color(0xFF88637B), // Mauve
                     title = "Customisation",
-                    subtitle = "Themes, App Appearance, Terminal"
+                    subtitle = "Themes, App Appearance, Terminal",
+                    useMaterialShapes = viewModel.isMaterialShapesEnabled.value
                 )
             }
 
@@ -1987,7 +1990,8 @@ fun SettingsMainList(onNavigate: (String) -> Unit, contentPadding: PaddingValues
                     icon = Icons.Default.FolderOpen,
                     iconColor = Color(0xFF00758F), // Teal
                     title = "Downloads",
-                    subtitle = "Storage location, rules"
+                    subtitle = "Storage location, rules",
+                    useMaterialShapes = viewModel.isMaterialShapesEnabled.value
                 )
             }
 
@@ -2002,7 +2006,8 @@ fun SettingsMainList(onNavigate: (String) -> Unit, contentPadding: PaddingValues
                     icon = Icons.Default.Cookie,
                     iconColor = Color(0xFFD4A373), // Cookie color
                     title = "Cookies",
-                    subtitle = "Manage authentication cookies"
+                    subtitle = "Manage authentication cookies",
+                    useMaterialShapes = viewModel.isMaterialShapesEnabled.value
                 )
             }
 
@@ -2017,7 +2022,8 @@ fun SettingsMainList(onNavigate: (String) -> Unit, contentPadding: PaddingValues
                     icon = Icons.Default.Code,
                     iconColor = Color(0xFF4C6B8B), // Slate blue
                     title = "Developer",
-                    subtitle = "App Info, Platforms, Licenses"
+                    subtitle = "App Info, Platforms, Licenses",
+                    useMaterialShapes = viewModel.isMaterialShapesEnabled.value
                 )
             }
 
@@ -2032,7 +2038,8 @@ fun SettingsMainList(onNavigate: (String) -> Unit, contentPadding: PaddingValues
                     icon = Icons.Default.Favorite,
                     iconColor = Color(0xFF7A4F5C), // Burgundy
                     title = "Support",
-                    subtitle = "Help keep Gabi alive"
+                    subtitle = "Help keep Gabi alive",
+                    useMaterialShapes = viewModel.isMaterialShapesEnabled.value
                 )
             }
         }
@@ -2110,7 +2117,20 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
             shape = RoundedCornerShape(20.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Appearance", style = MaterialTheme.typography.titleMedium)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Material Expressive Shapes", style = MaterialTheme.typography.titleMedium)
+                        Text("Use dynamic shapes for settings icons", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(
+                        checked = viewModel.isMaterialShapesEnabled.value,
+                        onCheckedChange = { viewModel.toggleMaterialShapes(it) }
+                    )
+                }
+                
+                Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 12.dp))
+
+                Text("Theme Mode", style = MaterialTheme.typography.titleMedium)
                 Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                     val options = listOf("System", "Light", "Dark")
                     options.forEachIndexed { index, label ->

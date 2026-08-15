@@ -113,7 +113,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     var isNavBarTrueGlass = mutableStateOf(prefs.getBoolean("nav_bar_true_glass", false))
     var isOnboardingCompleted = mutableStateOf(prefs.getBoolean("onboarding_completed", false))
     var useCookies = mutableStateOf(prefs.getBoolean("use_cookies", true))
-
+    var isMaterialShapesEnabled = mutableStateOf(prefs.getBoolean("material_shapes", true))
     fun toggleNavBarBlur(enabled: Boolean) {
         isNavBarBlurEnabled.value = enabled
         prefs.edit().putBoolean("nav_bar_blur", enabled).apply()
@@ -139,6 +139,10 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
         prefs.edit().putBoolean("use_cookies", enabled).apply()
     }
     
+    fun toggleMaterialShapes(enabled: Boolean) {
+        isMaterialShapesEnabled.value = enabled
+        prefs.edit().putBoolean("material_shapes", enabled).apply()
+    }    
     fun updateTerminalTheme(theme: TerminalTheme) {
         terminalTheme.value = theme
         prefs.edit().putString("terminal_theme", theme.name).apply()
