@@ -12,6 +12,12 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE download_logs ADD COLUMN author TEXT")
+    }
+}
+
 @Dao
 interface DownloadLogDao {
     @Query("SELECT * FROM download_logs ORDER BY timestamp DESC")
@@ -30,7 +36,7 @@ interface DownloadLogDao {
     suspend fun hasUrl(url: String): Int
 }
 
-@Database(entities = [DownloadLog::class], version = 2)
+@Database(entities = [DownloadLog::class], version = 3)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun downloadLogDao(): DownloadLogDao
 }

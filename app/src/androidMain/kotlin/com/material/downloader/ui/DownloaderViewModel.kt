@@ -27,6 +27,9 @@ import io.ktor.client.statement.*
 import androidx.room.Room
 import com.material.downloader.db.AppDatabase
 import com.material.downloader.model.DownloadLog
+import com.material.downloader.model.CookieSession
+import kotlinx.serialization.encodeToString
+import java.util.UUID
 import com.material.downloader.util.NotificationHelper
 
 import androidx.compose.runtime.mutableStateOf
@@ -52,7 +55,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     private val extractor = PythonExtractor()
     private val cobaltRepository = CobaltRepository()
     private val db = Room.databaseBuilder(application, AppDatabase::class.java, "gabi_db")
-        .addMigrations(com.material.downloader.db.MIGRATION_1_2)
+        .addMigrations(com.material.downloader.db.MIGRATION_1_2, com.material.downloader.db.MIGRATION_2_3)
         .fallbackToDestructiveMigration()
         .build()
     private val logDao = db.downloadLogDao()
@@ -149,6 +152,75 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
         logToConsole("Terminal theme changed to: ${theme.displayName}")
     }
 
+    
+    private val _cookieSessions = MutableStateFlow<List<CookieSession>>(emptyList())
+    val cookieSessions: StateFlow<List<CookieSession>> = _cookieSessions
+
+    private fun loadCookieSessions() {
+        val jsonStr = prefs.getString("cookie_sessions", "[]") ?: "[]"
+        try {
+            val sessions = kotlinx.serialization.json.Json.decodeFromString<List<CookieSession>>(jsonStr)
+            _cookieSessions.value = sessions
+        } catch (e: Exception) {
+            _cookieSessions.value = emptyList()
+        }
+    }
+
+    fun addCookieSession(session: CookieSession) {
+        val newList = _cookieSessions.value + session
+        saveCookieSessions(newList)
+    }
+
+    fun removeCookieSession(id: String) {
+        val newList = _cookieSessions.value.filter { it.id != id }
+        saveCookieSessions(newList)
+    }
+
+    fun reorderCookieSessions(from: Int, to: Int) {
+        val list = _cookieSessions.value.toMutableList()
+        val item = list.removeAt(from)
+        list.add(to, item)
+        saveCookieSessions(list)
+    }
+
+    private fun saveCookieSessions(sessions: List<CookieSession>) {
+        _cookieSessions.value = sessions
+        val jsonStr = kotlinx.serialization.json.Json.encodeToString(sessions)
+        prefs.edit().putString("cookie_sessions", jsonStr).apply()
+        regenerateCookiesTxt("yt_dlp")
+        regenerateCookiesTxt("gallery_dl")
+    }
+    
+    private fun regenerateCookiesTxt(engine: String) {
+        val context = getApplication<Application>()
+        val file = java.io.File(context.filesDir, "${engine}_cookies.txt")
+        val sessions = _cookieSessions.value.filter { it.engine == engine }
+        
+        if (sessions.isEmpty()) {
+            if (file.exists()) file.delete()
+            saveSetting("${engine}_cookies_path", "")
+            return
+        }
+        
+        val out = StringBuilder()
+        out.append("# Netscape HTTP Cookie File\n\n")
+        
+        for (session in sessions) {
+            val cookies = session.cookieString.split(";")
+            for (cookie in cookies) {
+                val parts = cookie.trim().split("=", limit = 2)
+                if (parts.size == 2) {
+                    val name = parts[0]
+                    val value = parts[1]
+                    val domainWithDot = if (session.domain.startsWith(".")) session.domain else ".${session.domain}"
+                    out.append("$domainWithDot\tTRUE\t/\tFALSE\t2147483647\t$name\t$value\n")
+                }
+            }
+        }
+        file.writeText(out.toString())
+        saveSetting("${engine}_cookies_path", file.absolutePath)
+    }
+
     fun getDynamicEngine(url: String): String {
         val lowerUrl = url.lowercase()
         return when {
@@ -223,6 +295,8 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     private val downloader = FileDownloader(application, client)
 
     init {
+        loadCookieSessions()
+
         if (autoCheckUpdates.value) {
             checkForUpdates(manual = false)
         }
@@ -675,7 +749,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                         if (succeededCount > 0) {
                             _uiState.value = DownloadState.Success("")
                             val cachedThumb = saveThumbnailToCache(_previewMetadata.value?.thumbnail, null)
-                            logDao.insertLog(DownloadLog(title = "${result.title ?: "Gallery"} ($succeededCount images)", url = url, status = "Success", thumbnailPath = cachedThumb))
+                            logDao.insertLog(DownloadLog(title = "${result.title ?: "Gallery"} ($succeededCount images)", url = url, status = "Success", thumbnailPath = cachedThumb, author = result.author))
                             notificationHelper.showProgressNotification(notificationId, result.title ?: "Gallery", 100)
                             logToConsole("Gallery download complete. Successfully saved $succeededCount/$totalFiles files.")
                         } else {
@@ -765,7 +839,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
 
                                 downloader.finalizeFile(targetUri, fileName)
                                 val cachedThumb = saveThumbnailToCache(_previewMetadata.value?.thumbnail, targetUri.toString())
-                                logDao.insertLog(DownloadLog(title = title, url = url, status = "Success", path = targetUri.toString(), thumbnailPath = cachedThumb))
+                                logDao.insertLog(DownloadLog(title = title, url = url, status = "Success", path = targetUri.toString(), thumbnailPath = cachedThumb, author = result.author))
                                 logToConsole("File saved successfully to $targetPath/$fileName")
                                 
                                 _uiState.value = DownloadState.Success(targetUri.toString())

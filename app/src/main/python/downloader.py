@@ -131,12 +131,43 @@ def extract_gallery(url, cookies_path=None):
 
 def get_versions():
     try:
-        import yt_dlp.version
-        import gallery_dl
+        yt_dlp_version = None
+        gallery_dl_version = None
+        import os
+        import sys
+        
+        try:
+            for p in sys.path:
+                if 'python_packages' in p:
+                    v_file = os.path.join(p, 'yt_dlp', 'version.py')
+                    if os.path.exists(v_file):
+                        with open(v_file, 'r') as f:
+                            for line in f:
+                                if '__version__' in line:
+                                    yt_dlp_version = line.split('=')[1].strip().strip("'").strip('"')
+                                    break
+                    g_file = os.path.join(p, 'gallery_dl', '__init__.py')
+                    if os.path.exists(g_file):
+                        with open(g_file, 'r') as f:
+                            for line in f:
+                                if '__version__' in line:
+                                    gallery_dl_version = line.split('=')[1].strip().strip("'").strip('"')
+                                    break
+        except Exception:
+            pass
+
+        if not yt_dlp_version:
+            import yt_dlp.version
+            yt_dlp_version = yt_dlp.version.__version__
+            
+        if not gallery_dl_version:
+            import gallery_dl
+            gallery_dl_version = gallery_dl.__version__
+
         return json.dumps({
             'status': 'success',
-            'yt_dlp': yt_dlp.version.__version__,
-            'gallery_dl': gallery_dl.__version__
+            'yt_dlp': yt_dlp_version,
+            'gallery_dl': gallery_dl_version
         })
     except Exception as e:
         return json.dumps({'status': 'error', 'message': str(e)})

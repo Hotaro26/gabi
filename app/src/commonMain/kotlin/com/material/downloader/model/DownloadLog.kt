@@ -11,5 +11,6 @@ data class DownloadLog(
     val timestamp: Long = System.currentTimeMillis(),
     val status: String,
     val path: String? = null,
-    val thumbnailPath: String? = null
+    val thumbnailPath: String? = null,
+    val author: String? = null
 )

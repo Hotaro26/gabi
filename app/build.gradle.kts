@@ -31,6 +31,7 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
+            implementation("org.burnoutcrew.composereorderable:reorderable:0.9.6")
             implementation("dev.chrisbanes.haze:haze:0.7.2")
             
             // Ktor
