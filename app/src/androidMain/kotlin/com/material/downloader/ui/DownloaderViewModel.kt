@@ -361,7 +361,31 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                         val latestVersion = match.groupValues[1]
                         val apkUrl = urlMatch?.groupValues?.getOrNull(1) ?: "https://github.com/Hotaro26/gabi/releases/latest"
                         val currentVersion = "v" + com.material.downloader.BuildConfig.VERSION_NAME
-                        if (latestVersion != currentVersion && !latestVersion.contains("beta", ignoreCase = true)) {
+                        
+                        val cleanLatest = latestVersion.substringBefore("-").removePrefix("v").trim()
+                        val cleanCurrent = com.material.downloader.BuildConfig.VERSION_NAME.substringBefore("-").removePrefix("v").trim()
+                        
+                        var isNewer = false
+                        try {
+                            val lParts = cleanLatest.split('.').map { it.toIntOrNull() ?: 0 }
+                            val cParts = cleanCurrent.split('.').map { it.toIntOrNull() ?: 0 }
+                            val maxLen = maxOf(lParts.size, cParts.size)
+                            for (i in 0 until maxLen) {
+                                val l = lParts.getOrNull(i) ?: 0
+                                val c = cParts.getOrNull(i) ?: 0
+                                if (l > c) {
+                                    isNewer = true
+                                    break
+                                } else if (l < c) {
+                                    break
+                                }
+                            }
+                        } catch (e: Exception) {
+                            // Fallback if parsing fails
+                            isNewer = latestVersion != currentVersion && !latestVersion.contains("beta", ignoreCase = true)
+                        }
+
+                        if (isNewer && !latestVersion.contains("beta", ignoreCase = true)) {
                             updateAvailable.value = Pair(latestVersion, apkUrl)
                             updateCheckMessage.value = "New version $latestVersion available!"
                         } else {
