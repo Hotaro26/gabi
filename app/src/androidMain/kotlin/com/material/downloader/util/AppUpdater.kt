@@ -45,7 +45,7 @@ class AppUpdater(private val context: Context) {
         )
     }
 
-    private fun installApk(fileName: String) {
+    fun installApk(fileName: String) {
         val apkFile = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName)
         if (!apkFile.exists()) {
             Toast.makeText(context, "Downloaded update file not found", Toast.LENGTH_SHORT).show()

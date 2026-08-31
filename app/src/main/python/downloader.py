@@ -146,11 +146,11 @@ def get_versions():
                                 if '__version__' in line:
                                     yt_dlp_version = line.split('=')[1].strip().strip("'").strip('"')
                                     break
-                    g_file = os.path.join(p, 'gallery_dl', '__init__.py')
+                    g_file = os.path.join(p, 'gallery_dl', 'version.py')
                     if os.path.exists(g_file):
                         with open(g_file, 'r') as f:
                             for line in f:
-                                if '__version__' in line:
+                                if line.startswith('__version__'):
                                     gallery_dl_version = line.split('=')[1].strip().strip("'").strip('"')
                                     break
         except Exception:

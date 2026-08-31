@@ -985,20 +985,46 @@ fun MainDownloaderTab(
     }
 
     viewModel.updateAvailable.value?.let { updateInfo ->
+        val progress = viewModel.updateDownloadProgress.value
+        val isDownloading = progress >= 0f
+        
         AlertDialog(
-            onDismissRequest = { viewModel.updateAvailable.value = null },
-            title = { Text("Update Available: ${updateInfo.first}") },
-            text = { Text(stringResource(R.string.a_new_version_of_gabi_is_avail)) },
+            onDismissRequest = { if (!isDownloading) viewModel.updateAvailable.value = null },
+            title = { Text(if (isDownloading) "Downloading Update..." else "Update Available: ${updateInfo.first}") },
+            text = { 
+                Column {
+                    Text(if (isDownloading) "Please wait while the update downloads." else stringResource(R.string.a_new_version_of_gabi_is_avail))
+                    if (isDownloading) {
+                        Spacer(Modifier.height(16.dp))
+                        LinearProgressIndicator(
+                            progress = { progress.coerceIn(0f, 1f) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Text(
+                            text = "${(progress * 100).toInt()}%",
+                            modifier = Modifier.align(Alignment.End).padding(top = 8.dp),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.updateAvailable.value = null
-                    com.material.downloader.util.AppUpdater(context).downloadAndInstallUpdate(updateInfo.second)
-                }) {
-                    Text(stringResource(R.string.update_now))
+                TextButton(
+                    onClick = {
+                        if (!isDownloading) {
+                            viewModel.downloadUpdate(context, updateInfo.second)
+                        }
+                    },
+                    enabled = !isDownloading
+                ) {
+                    Text(if (isDownloading) "Downloading..." else stringResource(R.string.update_now))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.updateAvailable.value = null }) {
+                TextButton(
+                    onClick = { viewModel.updateAvailable.value = null },
+                    enabled = !isDownloading
+                ) {
                     Text(stringResource(R.string.later))
                 }
             }
@@ -2604,6 +2630,52 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
             }
         }
 
+        Card(
+            modifier = Modifier.fillMaxWidth().onGloballyPositioned { positions["Home Search Style"] = it.parentLayoutCoordinates?.parentLayoutCoordinates?.positionInParent()?.y ?: 0f },
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Home Search Style", style = MaterialTheme.typography.titleMedium)
+                Column(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    var currentSearchStyle by remember { mutableStateOf(viewModel.getSetting("home_search_style", "unified")) }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        listOf("unified" to "Unified Pill", "split" to "Split (Older)").forEachIndexed { index, (value, label) ->
+                            val isSelected = currentSearchStyle == value
+                            val shape = RoundedCornerShape(
+                                topStart = if (index == 0) 100.dp else 8.dp,
+                                bottomStart = if (index == 0) 100.dp else 8.dp,
+                                topEnd = if (index == 1) 100.dp else 8.dp,
+                                bottomEnd = if (index == 1) 100.dp else 8.dp
+                            )
+                            val colors = if (isSelected) {
+                                ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.secondary,
+                                    contentColor = MaterialTheme.colorScheme.onSecondary
+                                )
+                            } else {
+                                ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            FilledTonalButton(
+                                onClick = { 
+                                    currentSearchStyle = value
+                                    viewModel.saveSetting("home_search_style", value)
+                                },
+                                shape = shape,
+                                colors = colors,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(label, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
         Spacer(Modifier.height(16.dp))
         Card(
             modifier = Modifier.fillMaxWidth(),

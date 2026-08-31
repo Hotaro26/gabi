@@ -272,8 +272,53 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
 
     var autoCheckUpdates = mutableStateOf(prefs.getBoolean("auto_check_updates", true))
     var updateAvailable = mutableStateOf<Pair<String, String>?>(null)
+    var updateDownloadProgress = mutableStateOf(-1f)
     var isCheckingUpdates = mutableStateOf(false)
     var updateCheckMessage = mutableStateOf<String?>(null)
+
+    fun downloadUpdate(context: android.content.Context, url: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                updateDownloadProgress.value = 0f
+                val connection = java.net.URL(url).openConnection()
+                connection.connect()
+                
+                val fileLength = connection.contentLength
+                val input = connection.getInputStream()
+                
+                val fileName = "update.apk"
+                val apkFile = java.io.File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), fileName)
+                val output = java.io.FileOutputStream(apkFile)
+                
+                val data = ByteArray(8192)
+                var total: Long = 0
+                var count: Int
+                
+                while (input.read(data).also { count = it } != -1) {
+                    total += count
+                    if (fileLength > 0) {
+                        updateDownloadProgress.value = total.toFloat() / fileLength.toFloat()
+                    }
+                    output.write(data, 0, count)
+                }
+                
+                output.flush()
+                output.close()
+                input.close()
+                
+                updateDownloadProgress.value = -1f
+                updateAvailable.value = null
+                withContext(Dispatchers.Main) {
+                    com.material.downloader.util.AppUpdater(context).installApk(fileName)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    updateDownloadProgress.value = -1f
+                    android.widget.Toast.makeText(context, "Download failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
     fun toggleAutoCheckUpdates(enabled: Boolean) {
         autoCheckUpdates.value = enabled
