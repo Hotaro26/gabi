@@ -67,6 +67,10 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None):
                         for f in video['requested_formats']:
                             if f.get('vcodec') != 'none': download_url = f.get('url')
                             if f.get('acodec') != 'none': audio_url = f.get('url')
+                            
+                # If both point to the exact same file, it's already merged.
+                if download_url and audio_url and download_url == audio_url:
+                    audio_url = None
 
                 if not download_url and 'formats' in video:
                     # Fallback to the best resolved format URL
