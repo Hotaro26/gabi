@@ -67,6 +67,7 @@ import androidx.compose.ui.res.stringResource
 
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.draw.clip
@@ -834,13 +835,15 @@ fun MainDownloaderTab(
     onModeChange: (String) -> Unit,
     engine: String,
     onEngineChange: (String) -> Unit,
-    contentPadding: PaddingValues = PaddingValues(0.dp)
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    onYoutubeSearch: () -> Unit = {}
 ) {
     var qualityExpanded by remember { mutableStateOf(false) }
     var modeExpanded by remember { mutableStateOf(false) }
     var engineExpanded by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
     var showFullscreenLogs by remember { mutableStateOf(false) }
+    var isYoutubeSearchMode by remember { mutableStateOf(false) }
     var showPreviewSheet by remember { mutableStateOf(false) }
     var showTerminalCard by remember { mutableStateOf(viewModel.getSetting("show_terminal_card", "true").toBoolean()) }
     var duplicateWarningUrl by remember { mutableStateOf<String?>(null) }
@@ -1018,13 +1021,51 @@ fun MainDownloaderTab(
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        Surface(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(100),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        ) {
+        val homeSearchStyle = viewModel.getSetting("home_search_style", "unified")
+        
+        val actionButtonContent: @Composable () -> Unit = {
+            val icon = if (isYoutubeSearchMode) Icons.Default.Search else Icons.Default.ContentPaste
+            val tint = MaterialTheme.colorScheme.onPrimaryContainer
+            androidx.compose.animation.AnimatedContent(targetState = icon, label = "icon_anim") { targetIcon ->
+                Icon(targetIcon, contentDescription = "Action", tint = tint)
+            }
+        }
+        
+        val performAction: () -> Unit = {
+            if (isYoutubeSearchMode) {
+                if (url.isNotBlank()) {
+                    viewModel.newPipeQuery.value = url
+                    // To switch tab, we need a way, but since we can't easily here without callback, 
+                    // let's just trigger newPipe search in background or show a toast if we can't switch tab.
+                    // Wait, we can use the Event bus or just viewModel to trigger tab switch!
+                    // Let's add a trigger to DownloaderScreen.
+                    onYoutubeSearch()
+                }
+            } else {
+                clipboardManager.getText()?.let { 
+                    onUrlChange(it.text)
+                    viewModel.fetchPreview(it.text, quality, downloadMode, engine)
+                }
+            }
+        }
+        
+        var hasSwiped by remember { mutableStateOf(false) }
+        val dragModifier = Modifier.pointerInput(Unit) {
+            detectVerticalDragGestures(
+                onDragStart = { hasSwiped = false },
+                onDragEnd = { hasSwiped = false },
+                onDragCancel = { hasSwiped = false }
+            ) { change, dragAmount ->
+                if (!hasSwiped && (dragAmount > 20 || dragAmount < -20)) {
+                    isYoutubeSearchMode = !isYoutubeSearchMode
+                    hasSwiped = true
+                }
+            }
+        }
+
+        if (homeSearchStyle == "split") {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(end = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedTextField(
@@ -1048,24 +1089,63 @@ fun MainDownloaderTab(
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
                     singleLine = true,
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
-                        unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
-                        focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
-                        unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent
-                    )
+                    shape = MaterialTheme.shapes.large
                 )
-
+                
+                Spacer(Modifier.width(8.dp))
+                
                 IconButton(
-                    onClick = { 
-                        clipboardManager.getText()?.let { 
-                            onUrlChange(it.text)
-                            viewModel.fetchPreview(it.text, quality, downloadMode, engine)
-                        }
-                    },
-                    modifier = Modifier.size(48.dp).background(MaterialTheme.colorScheme.primaryContainer, androidx.compose.foundation.shape.CircleShape)
+                    onClick = performAction,
+                    modifier = Modifier.size(56.dp).background(MaterialTheme.colorScheme.primaryContainer, androidx.compose.foundation.shape.CircleShape).then(dragModifier)
                 ) {
-                    Icon(Icons.Default.ContentPaste, contentDescription = "Paste URL", tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    actionButtonContent()
+                }
+            }
+        } else {
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(100),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(end = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = url,
+                        onValueChange = { 
+                            onUrlChange(it)
+                            if (it.isEmpty()) viewModel.clearPreview() 
+                        },
+                        placeholder = { Text(stringResource(R.string.search_or_paste_link)) },
+                        modifier = Modifier.weight(1f),
+                        leadingIcon = { Icon(YoutubeOutline, null, modifier = Modifier.size(20.dp)) },
+                        trailingIcon = {
+                            if (url.isNotEmpty()) {
+                                IconButton(onClick = { 
+                                    onUrlChange("")
+                                    viewModel.clearPreview()
+                                }) {
+                                    Icon(Icons.Default.Clear, "Clear URL", modifier = Modifier.size(20.dp))
+                                }
+                            }
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
+                        singleLine = true,
+                        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                            unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                            focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                            unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent
+                        )
+                    )
+
+                    IconButton(
+                        onClick = performAction,
+                        modifier = Modifier.size(48.dp).background(MaterialTheme.colorScheme.primaryContainer, androidx.compose.foundation.shape.CircleShape).then(dragModifier)
+                    ) {
+                        actionButtonContent()
+                    }
                 }
             }
         }
@@ -2044,7 +2124,8 @@ fun SettingsListItem(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = PaddingValues(0.dp), isSearchActive: Boolean = false, searchQuery: String = "", onQueryChange: (String) -> Unit = {}) {
+fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = PaddingValues(0.dp),
+    onYoutubeSearch: () -> Unit = {}, isSearchActive: Boolean = false, searchQuery: String = "", onQueryChange: (String) -> Unit = {}) {
     var currentScreen by remember { mutableStateOf("Main") }
 
     BackHandler(enabled = currentScreen != "Main") {
@@ -3257,7 +3338,8 @@ fun LogsTab(
     history: List<com.material.downloader.model.DownloadLog>, 
     onDelete: (com.material.downloader.model.DownloadLog) -> Unit,
     onItemClick: (com.material.downloader.model.DownloadLog) -> Unit = {},
-    contentPadding: PaddingValues = PaddingValues(0.dp)
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    onYoutubeSearch: () -> Unit = {}
 ) {
     var itemToDelete by remember { mutableStateOf<com.material.downloader.model.DownloadLog?>(null) }
     var selectedLog by remember { mutableStateOf<com.material.downloader.model.DownloadLog?>(null) }
