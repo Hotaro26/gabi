@@ -1018,17 +1018,20 @@ fun MainDownloaderTab(
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        OutlinedTextField(
-            value = url,
-            onValueChange = { 
-                onUrlChange(it)
-                if (it.isEmpty()) viewModel.clearPreview() 
-            },
-            placeholder = { Text(stringResource(R.string.search_or_paste_link)) },
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            leadingIcon = { Icon(YoutubeOutline, null, modifier = Modifier.size(20.dp)) },
-            trailingIcon = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = url,
+                onValueChange = { 
+                    onUrlChange(it)
+                    if (it.isEmpty()) viewModel.clearPreview() 
+                },
+                placeholder = { Text(stringResource(R.string.search_or_paste_link)) },
+                modifier = Modifier.weight(1f),
+                leadingIcon = { Icon(YoutubeOutline, null, modifier = Modifier.size(20.dp)) },
+                trailingIcon = {
                     if (url.isNotEmpty()) {
                         IconButton(onClick = { 
                             onUrlChange("")
@@ -1037,20 +1040,32 @@ fun MainDownloaderTab(
                             Icon(Icons.Default.Clear, "Clear URL", modifier = Modifier.size(20.dp))
                         }
                     }
-                    IconButton(onClick = { 
-                        clipboardManager.getText()?.let { 
-                            onUrlChange(it.text)
-                            viewModel.fetchPreview(it.text, quality, downloadMode, engine)
-                        }
-                    }) {
-                        Icon(Icons.Default.ContentPaste, null, modifier = Modifier.size(20.dp))
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
+                singleLine = true,
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(100),
+                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                    unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                )
+            )
+
+            Spacer(Modifier.width(8.dp))
+
+            IconButton(
+                onClick = { 
+                    clipboardManager.getText()?.let { 
+                        onUrlChange(it.text)
+                        viewModel.fetchPreview(it.text, quality, downloadMode, engine)
                     }
-                }
-            },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
-            singleLine = true,
-            shape = MaterialTheme.shapes.large
-        )
+                },
+                modifier = Modifier.size(56.dp).background(MaterialTheme.colorScheme.primaryContainer, androidx.compose.foundation.shape.CircleShape)
+            ) {
+                Icon(Icons.Default.ContentPaste, contentDescription = "Paste URL", tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            }
+        }
 
         // Metadata Preview Box
         AnimatedVisibility(visible = preview != null) {
