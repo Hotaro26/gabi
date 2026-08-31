@@ -1057,6 +1057,19 @@ fun MainDownloaderTab(
             }
         }
         
+        val onKeyboardGo = {
+            if (isYoutubeSearchMode) {
+                if (url.isNotBlank()) {
+                    viewModel.newPipeQuery.value = url
+                    onYoutubeSearch()
+                }
+            } else {
+                if (url.isNotBlank()) {
+                    viewModel.fetchPreview(url, quality, downloadMode, engine)
+                }
+            }
+        }
+        
         val performAction: () -> Unit = {
             if (isYoutubeSearchMode) {
                 if (url.isNotBlank()) {
@@ -1114,6 +1127,7 @@ fun MainDownloaderTab(
                         }
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = { onKeyboardGo() }),
                     singleLine = true,
                     shape = MaterialTheme.shapes.large
                 )
@@ -1157,6 +1171,7 @@ fun MainDownloaderTab(
                             }
                         },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
+                        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = { onKeyboardGo() }),
                         singleLine = true,
                         colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,

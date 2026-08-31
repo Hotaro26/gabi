@@ -406,6 +406,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
 
     var newPipeQuery = mutableStateOf("")
     var newPipeResults = mutableStateOf<List<org.schabi.newpipe.extractor.stream.StreamInfoItem>>(emptyList())
+    var triggerNewPipeSearch = mutableStateOf(false)
     val voiceSearchEvent = kotlinx.coroutines.flow.MutableSharedFlow<String>(extraBufferCapacity = 1)
 
     // Appearance Settings
