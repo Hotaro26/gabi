@@ -32,16 +32,14 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None):
             'extract_flat': False, # Resolve direct URLs
         }
         
-        # Configure format to prefer single-file formats (merged) since we use Ktor for downloading
         if mode == 'audio':
             ydl_opts['format'] = 'bestaudio/best'
         else:
-            ydl_opts['format'] = 'bestvideo+bestaudio/best'
             if quality != 'max':
-                q_val = quality.replace('p', '') if isinstance(quality, str) else quality
-                ydl_opts['format_sort'] = [f'res:{q_val}', 'ext:mp4:m4a']
+                q_val = str(quality).replace('p', '')
+                ydl_opts['format'] = f'bestvideo[height<={q_val}]+bestaudio/best[height<={q_val}]/best'
             else:
-                ydl_opts['format_sort'] = ['ext:mp4:m4a']
+                ydl_opts['format'] = 'bestvideo+bestaudio/best'
 
         if cookies_path and os.path.exists(cookies_path):
             ydl_opts['cookiefile'] = cookies_path
@@ -78,10 +76,20 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None):
                     if formats:
                         download_url = formats[-1].get('url') # 'best' is usually at the end
 
+                # Extract available qualities
+                qualities = set()
+                if 'formats' in video:
+                    for f in video['formats']:
+                        h = f.get('height')
+                        if h and f.get('vcodec') != 'none':
+                            qualities.add(f"{h}p")
+                sorted_qualities = sorted(list(qualities), key=lambda x: int(x.replace('p', '')))
+
                 if not download_url:
                     return json.dumps({'status': 'error', 'message': 'Could not resolve a direct download URL.'})
 
                 return json.dumps({
+                    'available_qualities': sorted_qualities,
                     'status': 'success',
                     'url': download_url,
                     'audio_url': audio_url,
