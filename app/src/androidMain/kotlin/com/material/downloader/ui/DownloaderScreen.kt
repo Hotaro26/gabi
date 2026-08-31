@@ -67,6 +67,8 @@ import androidx.compose.ui.res.stringResource
 
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
@@ -2030,29 +2032,89 @@ fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = 
         currentScreen = "Main"
     }
     
+    LaunchedEffect(isSearchActive) {
+        if (isSearchActive && currentScreen != "Main") {
+            currentScreen = "Main"
+        }
+    }
+
+    // currentScreen format: "ScreenName" or "ScreenName?target=CardTitle"
+    val screenName = currentScreen.substringBefore("?")
+    val target = if (currentScreen.contains("?target=")) currentScreen.substringAfter("?target=") else null
+
+    AnimatedContent(
+        targetState = screenName,
+        transitionSpec = {
+            if (targetState != "Main") {
+                (slideInHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { it } + fadeIn()).togetherWith(
+                    slideOutHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { -it } + fadeOut()
+                )
+            } else {
+                (slideInHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { -it } + fadeIn()).togetherWith(
+                    slideOutHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { it } + fadeOut()
+                )
+            }.using(SizeTransform(clip = false))
+        },
+        label = "settings_nav"
+    ) { screen ->
+        when (screen) {
+            "Main" -> SettingsMainList(
+                viewModel = viewModel, 
+                onNavigate = { currentScreen = it }, 
+                contentPadding = contentPadding,
+                isSearchActive = isSearchActive,
+                searchQuery = searchQuery,
+                onQueryChange = onQueryChange
+            )
+            "Customisation" -> CustomisationScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding, target)
+            "Downloads" -> DownloadsSettingsScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding, target)
+            "Cookies" -> CookiesSettingsScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding, target)
+            "Developer" -> DeveloperScreen(viewModel = viewModel, onBack = { currentScreen = "Main" }, contentPadding, target)
+            "Support" -> SupportScreen(onBack = { currentScreen = "Main" }, contentPadding, target)
+        }
+    }
+}
+
+@Composable
+fun SettingsMainList(
+    viewModel: DownloaderViewModel, 
+    onNavigate: (String) -> Unit, 
+    contentPadding: PaddingValues,
+    isSearchActive: Boolean = false,
+    searchQuery: String = "",
+    onQueryChange: (String) -> Unit = {}
+) {
     val allSettings = remember {
         listOf(
-            Triple("Customisation", "Themes, App Appearance, Terminal", "Customisation"),
-            Triple("Navigation Bar Blur", "Enable haze effect on floating navigation bar", "Customisation"),
-            Triple("True Glass Navigation", "Make navigation bar fully transparent glass", "Customisation"),
-            Triple("Opaque Navigation Bar", "Make floating navigation solid color", "Customisation"),
-            Triple("Material Expressive Shapes", "Use dynamic shapes for settings icons", "Customisation"),
-            Triple("Theme Mode", "System, Light, Dark", "Customisation"),
-            Triple("Color Scheme", "App Colors", "Customisation"),
-            Triple("Language", "Change app language", "Customisation"),
-            Triple("Downloads", "Download Repository, Extractors", "Downloads"),
-            Triple("Download Repository", "Files will be saved in your selected folder", "Downloads"),
-            Triple("Extractors", "Update internal components", "Downloads"),
-            Triple("Cookies", "Extraction Credentials", "Cookies"),
-            Triple("Import cookies.txt", "For private/age-restricted content", "Cookies"),
-            Triple("Extract from Web Login", "Login to sites to get cookies automatically", "Cookies"),
-            Triple("Developer", "App Info & Updates", "Developer"),
-            Triple("Check for Updates", "Check latest GitHub release", "Developer"),
-            Triple("Support", "Support on Ko-fi, UPI, GitHub", "Support")
+            Triple("Navigation Bar Blur", "Enable haze effect on floating navigation bar", "Customisation?target=Navigation Bar Blur"),
+            Triple("True Glass Navigation", "Make navigation bar fully transparent glass", "Customisation?target=True Glass Navigation"),
+            Triple("Opaque Navigation Bar", "Make floating navigation solid color", "Customisation?target=Opaque Navigation Bar"),
+            Triple("Material Expressive Shapes", "Use dynamic shapes for settings icons", "Customisation?target=Material Expressive Shapes"),
+            Triple("Theme Mode", "System, Light, Dark", "Customisation?target=Theme Mode"),
+            Triple("Color Scheme", "App Colors", "Customisation?target=Color Scheme"),
+            Triple("Language", "Change app language", "Customisation?target=Language"),
+            Triple("Download Repository", "Files will be saved in your selected folder", "Downloads?target=Download Repository"),
+            Triple("Extractors", "Update internal components", "Downloads?target=Extractors"),
+            Triple("Cookies", "Extraction Credentials", "Cookies?target=Cookies"),
+            Triple("Check for Updates", "Check latest GitHub release", "Developer?target=Check for Updates"),
+            Triple("Support", "Support on Ko-fi, UPI, GitHub", "Support?target=Support")
         )
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+            .verticalScroll(rememberScrollState()).padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "Settings",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+        )
+
         androidx.compose.animation.AnimatedVisibility(
             visible = isSearchActive,
             enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
@@ -2061,10 +2123,7 @@ fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = 
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = onQueryChange,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(top = contentPadding.calculateTopPadding() + 16.dp, bottom = 8.dp),
+                modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text("Search settings...") },
                 leadingIcon = { Icon(Icons.Default.Search, "Search") },
                 trailingIcon = {
@@ -2087,68 +2146,26 @@ fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = 
 
         if (isSearchActive && searchQuery.isNotEmpty()) {
             val results = allSettings.filter { it.first.contains(searchQuery, ignoreCase = true) || it.second.contains(searchQuery, ignoreCase = true) }
-            androidx.compose.foundation.lazy.LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = contentPadding.calculateBottomPadding() + 80.dp, top = if(isSearchActive) 0.dp else contentPadding.calculateTopPadding())
-            ) {
-                items(results) { item ->
-                    androidx.compose.material3.ListItem(
-                        headlineContent = { Text(item.first) },
-                        supportingContent = { Text(item.second) },
-                        modifier = Modifier.clickable {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                results.forEach { item ->
+                    Card(
+                        onClick = {
                             onQueryChange("")
-                            currentScreen = item.third
-                        }
-                    )
+                            onNavigate(item.third)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text(item.first) },
+                            supportingContent = { Text(item.second) },
+                            colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = Color.Transparent)
+                        )
+                    }
                 }
             }
         } else {
-            AnimatedContent(
-                targetState = currentScreen,
-                transitionSpec = {
-                    if (targetState != "Main") {
-                        (slideInHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { it } + fadeIn()).togetherWith(
-                            slideOutHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { -it } + fadeOut()
-                        )
-                    } else {
-                        (slideInHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { -it } + fadeIn()).togetherWith(
-                            slideOutHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { it } + fadeOut()
-                        )
-                    }.using(SizeTransform(clip = false))
-                },
-                label = "settings_nav",
-                modifier = Modifier.weight(1f)
-            ) { screen ->
-                val adjustedPadding = if (isSearchActive) PaddingValues(bottom = contentPadding.calculateBottomPadding()) else contentPadding
-                when (screen) {
-                    "Main" -> SettingsMainList(viewModel = viewModel, onNavigate = { currentScreen = it }, contentPadding = adjustedPadding)
-                    "Customisation" -> CustomisationScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding = adjustedPadding)
-                    "Downloads" -> DownloadsSettingsScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding = adjustedPadding)
-                    "Cookies" -> CookiesSettingsScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding = adjustedPadding)
-                    "Developer" -> DeveloperScreen(viewModel = viewModel, onBack = { currentScreen = "Main" }, contentPadding = adjustedPadding)
-                    "Support" -> SupportScreen(onBack = { currentScreen = "Main" }, contentPadding = adjustedPadding)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun SettingsMainList(viewModel: DownloaderViewModel, onNavigate: (String) -> Unit, contentPadding: PaddingValues) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            
-            .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState()).padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text(
-            text = "Settings",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier
-        )
         
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             SegmentCard(
@@ -2231,18 +2248,31 @@ fun SettingsMainList(viewModel: DownloaderViewModel, onNavigate: (String) -> Uni
                 )
             }
         }
+        }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentPadding: PaddingValues) {
+fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentPadding: PaddingValues, target: String? = null) {
+    val scrollState = rememberScrollState()
+    val positions = remember { mutableMapOf<String, Float>() }
+
+    LaunchedEffect(target) {
+        if (target != null) {
+            kotlinx.coroutines.delay(300)
+            val y = positions[target]
+            if (y != null) {
+                scrollState.animateScrollTo(y.toInt())
+            }
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
             
             .padding(horizontal = 24.dp)
-            .verticalScroll(rememberScrollState()).padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
+            .verticalScroll(scrollState).padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier) {
@@ -2262,7 +2292,7 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.navigation_bar_blur), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.navigation_bar_blur), style = MaterialTheme.typography.titleMedium, modifier = Modifier.onGloballyPositioned { positions["Navigation Bar Blur"] = it.parentLayoutCoordinates?.parentLayoutCoordinates?.positionInParent()?.y ?: 0f })
                         Text(stringResource(R.string.enable_haze_effect_on_floating), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(
@@ -2275,7 +2305,7 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
                 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.true_glass_navigation), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.true_glass_navigation), style = MaterialTheme.typography.titleMedium, modifier = Modifier.onGloballyPositioned { positions["True Glass Navigation"] = it.parentLayoutCoordinates?.parentLayoutCoordinates?.positionInParent()?.y ?: 0f })
                         Text(stringResource(R.string.make_navigation_bar_fully_tran), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(
@@ -2288,7 +2318,7 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
                 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.opaque_navigation_bar), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.opaque_navigation_bar), style = MaterialTheme.typography.titleMedium, modifier = Modifier.onGloballyPositioned { positions["Opaque Navigation Bar"] = it.parentLayoutCoordinates?.parentLayoutCoordinates?.positionInParent()?.y ?: 0f })
                         Text(stringResource(R.string.make_floating_navigation_solid), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(
@@ -2306,7 +2336,7 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
             shape = RoundedCornerShape(20.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Language / اللغة / भाषा", style = MaterialTheme.typography.titleMedium)
+                Text("Language / اللغة / भाषा", style = MaterialTheme.typography.titleMedium, modifier = Modifier.onGloballyPositioned { positions["Language"] = it.parentLayoutCoordinates?.parentLayoutCoordinates?.positionInParent()?.y ?: 0f })
                 Column(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     val languages = listOf(
                         "en" to "English",
@@ -2375,7 +2405,7 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.material_expressive_shapes), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.material_expressive_shapes), style = MaterialTheme.typography.titleMedium, modifier = Modifier.onGloballyPositioned { positions["Material Expressive Shapes"] = it.parentLayoutCoordinates?.parentLayoutCoordinates?.positionInParent()?.y ?: 0f })
                         Text(stringResource(R.string.use_dynamic_shapes_for_setting), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(
@@ -2386,7 +2416,7 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
                 
                 Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 12.dp))
 
-                Text(stringResource(R.string.theme_mode), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.theme_mode), style = MaterialTheme.typography.titleMedium, modifier = Modifier.onGloballyPositioned { positions["Theme Mode"] = it.parentLayoutCoordinates?.parentLayoutCoordinates?.positionInParent()?.y ?: 0f })
                 Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                     val options = listOf("System", "Light", "Dark")
                     options.forEachIndexed { index, label ->
@@ -2428,7 +2458,7 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
             shape = RoundedCornerShape(20.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(stringResource(R.string.color_scheme), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.color_scheme), style = MaterialTheme.typography.titleMedium, modifier = Modifier.onGloballyPositioned { positions["Color Scheme"] = it.parentLayoutCoordinates?.parentLayoutCoordinates?.positionInParent()?.y ?: 0f })
                 Column(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     val themes = AppTheme.values().toList()
                     themes.chunked(3).forEach { rowThemes ->
@@ -2529,7 +2559,7 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
 }
 
 @Composable
-fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentPadding: PaddingValues) {
+fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentPadding: PaddingValues, target: String? = null) {
     val context = LocalContext.current
     val folderPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
@@ -2906,7 +2936,7 @@ fun CookieExtractorDialog(initialUrl: String = "https://youtube.com", fileName: 
     }
 }
 @Composable
-fun DeveloperScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentPadding: PaddingValues) {
+fun DeveloperScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentPadding: PaddingValues, target: String? = null) {
     val context = LocalContext.current
     val profileImageRequest = remember(context) {
         coil.request.ImageRequest.Builder(context)
@@ -3046,7 +3076,7 @@ fun DeveloperScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentP
 }
 
 @Composable
-fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
+fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues, target: String? = null) {
     val context = LocalContext.current
     val myUpiId = "9693703723@fam"
     var showKofiDialog by androidx.compose.runtime.remember { mutableStateOf(false) }
@@ -3470,7 +3500,7 @@ fun StatusInfo(state: DownloadState, onOpenFolder: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CookiesSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentPadding: PaddingValues) {
+fun CookiesSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentPadding: PaddingValues, target: String? = null) {
     val context = LocalContext.current
     var showNewCookieSheet by remember { mutableStateOf(false) }
     
