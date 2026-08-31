@@ -63,6 +63,8 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.ui.draw.scale
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -191,8 +193,8 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
     if (showClearLogsDialog) {
         AlertDialog(
             onDismissRequest = { showClearLogsDialog = false },
-            title = { Text("Clear History?") },
-            text = { Text("This will permanently delete all your download logs. The actual files will remain safe.") },
+            title = { Text(stringResource(R.string.clear_history)) },
+            text = { Text(stringResource(R.string.this_will_permanently_delete_a)) },
             confirmButton = {
                 TextButton(
                     onClick = { 
@@ -200,10 +202,10 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                         showClearLogsDialog = false
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { Text("Clear All") }
+                ) { Text(stringResource(R.string.clear_all)) }
             },
             dismissButton = {
-                TextButton(onClick = { showClearLogsDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showClearLogsDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -246,7 +248,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             }
                         ) 
                     },
-                    label = { Text("Home") }
+                    label = { Text(stringResource(R.string.home)) }
                 )
                 NavigationRailItem(
                     selected = selectedTab == 1,
@@ -266,7 +268,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             }
                         ) 
                     },
-                    label = { Text("NewPipe") }
+                    label = { Text(stringResource(R.string.newpipe)) }
                 )
                 NavigationRailItem(
                     selected = selectedTab == 2,
@@ -292,7 +294,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             }
                         ) 
                     },
-                    label = { Text("Logs") }
+                    label = { Text(stringResource(R.string.logs)) }
                 )
                 NavigationRailItem(
                     selected = selectedTab == 3,
@@ -318,7 +320,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             }
                         ) 
                     },
-                    label = { Text("Settings") }
+                    label = { Text(stringResource(R.string.settings)) }
                 )
             }
         }
@@ -379,7 +381,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             val pad0 by animateDpAsState(if (selectedTab == 0) 24.dp else 10.dp, tween(300, easing = FastOutSlowInEasing), label = "")
                             TooltipBox(
                                 positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                                tooltip = { PlainTooltip { Text("Homepage") } },
+                                tooltip = { PlainTooltip { Text(stringResource(R.string.homepage)) } },
                                 state = rememberTooltipState()
                             ) {
                                 Box(
@@ -404,7 +406,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             val pad1 by animateDpAsState(if (selectedTab == 1) 24.dp else 10.dp, tween(300, easing = FastOutSlowInEasing), label = "")
                             TooltipBox(
                                 positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                                tooltip = { PlainTooltip { Text("Media") } },
+                                tooltip = { PlainTooltip { Text(stringResource(R.string.media)) } },
                                 state = rememberTooltipState()
                             ) {
                                 Box(
@@ -429,7 +431,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             val pad2 by animateDpAsState(if (selectedTab == 2) 24.dp else 10.dp, tween(300, easing = FastOutSlowInEasing), label = "")
                             TooltipBox(
                                 positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                                tooltip = { PlainTooltip { Text("History") } },
+                                tooltip = { PlainTooltip { Text(stringResource(R.string.history)) } },
                                 state = rememberTooltipState()
                             ) {
                                 Box(
@@ -455,7 +457,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             val pad3 by animateDpAsState(if (selectedTab == 3) 24.dp else 10.dp, tween(300, easing = FastOutSlowInEasing), label = "")
                             TooltipBox(
                                 positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                                tooltip = { PlainTooltip { Text("Settings") } },
+                                tooltip = { PlainTooltip { Text(stringResource(R.string.settings)) } },
                                 state = rememberTooltipState()
                             ) {
                                 Box(
@@ -486,7 +488,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                                 Spacer(Modifier.width(instantSpacerSize))
                                 TooltipBox(
                                     positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                                    tooltip = { PlainTooltip { Text("Instant Download") } },
+                                    tooltip = { PlainTooltip { Text(stringResource(R.string.instant_download)) } },
                                     state = rememberTooltipState()
                                 ) {
                                     FloatingActionButton(
@@ -524,7 +526,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                                 Spacer(Modifier.width(voiceSpacerSize))
                                 TooltipBox(
                                     positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                                    tooltip = { PlainTooltip { Text("Voice Search") } },
+                                    tooltip = { PlainTooltip { Text(stringResource(R.string.voice_search)) } },
                                     state = rememberTooltipState()
                                 ) {
                                     FloatingActionButton(
@@ -564,7 +566,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                                 Spacer(Modifier.width(binSpacerSize))
                                 TooltipBox(
                                     positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                                    tooltip = { PlainTooltip { Text("Clear History") } },
+                                    tooltip = { PlainTooltip { Text(stringResource(R.string.clear_history_1)) } },
                                     state = rememberTooltipState()
                                 ) {
                                     FloatingActionButton(
@@ -637,11 +639,11 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
         if (showSpeechNotSupportedDialog) {
             AlertDialog(
                 onDismissRequest = { showSpeechNotSupportedDialog = false },
-                title = { Text("Voice Search Not Supported") },
-                text = { Text("Your device does not have a built-in speech recognition service.\n\nTo use this feature, please install the official Google app or another speech-to-text provider from the Play Store.") },
+                title = { Text(stringResource(R.string.voice_search_not_supported)) },
+                text = { Text(stringResource(R.string.your_device_does_not_have_a_bu)) },
                 confirmButton = {
                     TextButton(onClick = { showSpeechNotSupportedDialog = false }) {
-                        Text("OK")
+                        Text(stringResource(R.string.ok))
                     }
                 }
             )
@@ -650,7 +652,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
         if (showSupportedSitesDialog) {
             AlertDialog(
                 onDismissRequest = { showSupportedSitesDialog = false },
-                title = { Text("Supported Sites", style = MaterialTheme.typography.titleLarge) },
+                title = { Text(stringResource(R.string.supported_sites), style = MaterialTheme.typography.titleLarge) },
                 text = {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
@@ -741,12 +743,12 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                 },
                 confirmButton = {
                     TextButton(onClick = { showSupportedSitesDialog = false }) {
-                        Text("Close")
+                        Text(stringResource(R.string.close))
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showTipsDialog = true }) {
-                        Text("Help me")
+                        Text(stringResource(R.string.help_me))
                     }
                 },
                 shape = RoundedCornerShape(28.dp)
@@ -756,10 +758,9 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
         if (showTipsDialog) {
             AlertDialog(
                 onDismissRequest = { showTipsDialog = false },
-                title = { Text("Downloading Tips") },
+                title = { Text(stringResource(R.string.downloading_tips)) },
                 text = {
-                    Text(
-                        "• Use NewPipe for YouTube downloads.\n" +
+                    Text(stringResource(R.string.use_newpipe_for_youtube_downlo) +
                         "• Use yt-dlp as a fallback (audio extraction might take some time, so be patient).\n" +
                         "• For Pinterest and similar short-video/social sites, use Cobalt.\n" +
                         "• For images and galleries, use gallery-dl.",
@@ -768,7 +769,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                 },
                 confirmButton = {
                     TextButton(onClick = { showTipsDialog = false }) {
-                        Text("Got it")
+                        Text(stringResource(R.string.got_it))
                     }
                 },
                 shape = RoundedCornerShape(28.dp)
@@ -828,20 +829,20 @@ fun MainDownloaderTab(
     if (duplicateWarningUrl != null) {
         AlertDialog(
             onDismissRequest = { duplicateWarningUrl = null },
-            title = { Text("Duplicate Download") },
-            text = { Text("You have already downloaded this media. Do you want to download it again?") },
+            title = { Text(stringResource(R.string.duplicate_download)) },
+            text = { Text(stringResource(R.string.you_have_already_downloaded_th)) },
             confirmButton = {
                 TextButton(onClick = {
                     val proceedUrl = duplicateWarningUrl!!
                     duplicateWarningUrl = null
                     viewModel.downloadMedia(proceedUrl, quality, downloadMode, engine)
                 }) {
-                    Text("Download Anyway")
+                    Text(stringResource(R.string.download_anyway))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { duplicateWarningUrl = null }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -853,19 +854,19 @@ fun MainDownloaderTab(
     if (showCancelConfirmationDialog) {
         AlertDialog(
             onDismissRequest = { showCancelConfirmationDialog = false },
-            title = { Text("Cancel Download?") },
-            text = { Text("Are you sure you want to cancel the active download? Any partially downloaded files will be removed.") },
+            title = { Text(stringResource(R.string.cancel_download)) },
+            text = { Text(stringResource(R.string.are_you_sure_you_want_to_cance)) },
             confirmButton = {
                 TextButton(onClick = {
                     showCancelConfirmationDialog = false
                     viewModel.cancelDownload()
                 }) {
-                    Text("Yes, Cancel")
+                    Text(stringResource(R.string.yes_cancel))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showCancelConfirmationDialog = false }) {
-                    Text("No")
+                    Text(stringResource(R.string.no))
                 }
             }
         )
@@ -888,7 +889,7 @@ fun MainDownloaderTab(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text("Downloading...", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.downloading), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 
                 if (preview != null) {
                     AsyncImage(
@@ -932,7 +933,7 @@ fun MainDownloaderTab(
                 ) {
                     Icon(Icons.Default.Close, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Cancel Download")
+                    Text(stringResource(R.string.cancel_download_1))
                 }
             }
         }
@@ -942,18 +943,18 @@ fun MainDownloaderTab(
         AlertDialog(
             onDismissRequest = { viewModel.updateAvailable.value = null },
             title = { Text("Update Available: ${updateInfo.first}") },
-            text = { Text("A new version of Gabi is available on GitHub. Would you like to download and install it?") },
+            text = { Text(stringResource(R.string.a_new_version_of_gabi_is_avail)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.updateAvailable.value = null
                     com.material.downloader.util.AppUpdater(context).downloadAndInstallUpdate(updateInfo.second)
                 }) {
-                    Text("Update Now")
+                    Text(stringResource(R.string.update_now))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.updateAvailable.value = null }) {
-                    Text("Later")
+                    Text(stringResource(R.string.later))
                 }
             }
         )
@@ -969,8 +970,7 @@ fun MainDownloaderTab(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            "Gabi", 
+        Text(stringResource(R.string.gabi), 
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(bottom = 8.dp)
@@ -982,7 +982,7 @@ fun MainDownloaderTab(
                 onUrlChange(it)
                 if (it.isEmpty()) viewModel.clearPreview() 
             },
-            placeholder = { Text("Search or paste link") },
+            placeholder = { Text(stringResource(R.string.search_or_paste_link)) },
             modifier = Modifier.fillMaxWidth(),
             leadingIcon = { Icon(YoutubeOutline, null, modifier = Modifier.size(20.dp)) },
             trailingIcon = {
@@ -1259,7 +1259,7 @@ fun MainDownloaderTab(
                         ) {
                             Icon(Icons.Default.Download, null)
                             Spacer(Modifier.width(8.dp))
-                            Text("Download")
+                            Text(stringResource(R.string.download))
                         }
                     }
                     Spacer(Modifier.height(16.dp))
@@ -1305,7 +1305,7 @@ fun MainDownloaderTab(
                 }
                 DropdownMenu(expanded = engineExpanded, onDismissRequest = { engineExpanded = false }) {
                     DropdownMenuItem(
-                        text = { Text("NewPipe") },
+                        text = { Text(stringResource(R.string.newpipe)) },
                         leadingIcon = { Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp)) },
                         onClick = { 
                             onEngineChange("newpipe")
@@ -1315,7 +1315,7 @@ fun MainDownloaderTab(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("yt-dlp") },
+                        text = { Text(stringResource(R.string.yt_dlp)) },
                         leadingIcon = { Icon(Icons.Default.Movie, null, modifier = Modifier.size(18.dp)) },
                         onClick = { 
                             onEngineChange("yt-dlp")
@@ -1325,7 +1325,7 @@ fun MainDownloaderTab(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("gallery-dl") },
+                        text = { Text(stringResource(R.string.gallery_dl)) },
                         leadingIcon = { Icon(Icons.Default.Image, null, modifier = Modifier.size(18.dp)) },
                         onClick = { 
                             onEngineChange("gallery-dl")
@@ -1335,7 +1335,7 @@ fun MainDownloaderTab(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Cobalt") },
+                        text = { Text(stringResource(R.string.cobalt)) },
                         leadingIcon = { Icon(Icons.Default.CloudDownload, null, modifier = Modifier.size(18.dp)) },
                         onClick = { 
                             onEngineChange("cobalt")
@@ -1481,7 +1481,7 @@ fun MainDownloaderTab(
                 ) {
                     Icon(Icons.Default.Terminal, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Terminal", maxLines = 1)
+                    Text(stringResource(R.string.terminal), maxLines = 1)
                 }
             }
 
@@ -1570,7 +1570,7 @@ fun MainDownloaderTab(
                     } else {
                         Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Download", maxLines = 1)
+                        Text(stringResource(R.string.download), maxLines = 1)
                     }
                 }
             }
@@ -1775,7 +1775,7 @@ fun MainDownloaderTab(
                     },
                     shape = RoundedCornerShape(24.dp)
                 ) {
-                    Text("Download Again")
+                    Text(stringResource(R.string.download_again))
                 }
             },
             dismissButton = {
@@ -1785,7 +1785,7 @@ fun MainDownloaderTab(
                         viewModel.resetDownloadState()
                     }
                 ) {
-                    Text("Close")
+                    Text(stringResource(R.string.close))
                 }
             },
             shape = RoundedCornerShape(28.dp)
@@ -1801,7 +1801,7 @@ fun DownloadProgressBox(progress: Float, onCancel: () -> Unit) {
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Downloading...", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.downloading), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                 IconButton(onClick = onCancel, modifier = Modifier.size(24.dp)) {
                     Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.error)
                 }
@@ -2137,7 +2137,7 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
                 modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
             ) { Icon(Icons.Default.ArrowBack, "Back") }
             Spacer(Modifier.width(16.dp))
-            Text("Customisation", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.customisation), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         }
         
         Card(
@@ -2148,8 +2148,8 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Navigation Bar Blur", style = MaterialTheme.typography.titleMedium)
-                        Text("Enable haze effect on floating navigation bar", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.navigation_bar_blur), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.enable_haze_effect_on_floating), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(
                         checked = viewModel.isNavBarBlurEnabled.value,
@@ -2161,8 +2161,8 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
                 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("True Glass Navigation", style = MaterialTheme.typography.titleMedium)
-                        Text("Make navigation bar fully transparent glass", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.true_glass_navigation), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.make_navigation_bar_fully_tran), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(
                         checked = viewModel.isNavBarTrueGlass.value,
@@ -2174,8 +2174,8 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
                 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Opaque Navigation Bar", style = MaterialTheme.typography.titleMedium)
-                        Text("Make floating navigation solid color", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.opaque_navigation_bar), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.make_floating_navigation_solid), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(
                         checked = viewModel.isNavBarOpaque.value,
@@ -2185,6 +2185,74 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
             }
         }
         
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Language / اللغة / भाषा", style = MaterialTheme.typography.titleMedium)
+                Column(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val languages = listOf(
+                        "en" to "English",
+                        "ar" to "العربية",
+                        "hi" to "हिन्दी",
+                        "ru" to "Русский",
+                        "ja" to "日本語",
+                        "zh" to "中文",
+                        "de" to "Deutsch",
+                        "ne" to "नेपाली",
+                        "bn" to "বাংলা"
+                    )
+                    val currentLocale = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales().get(0)?.language ?: "en"
+                    
+                    languages.chunked(3).forEach { rowLangs ->
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            rowLangs.forEachIndexed { index, lang ->
+                                val isSelected = currentLocale == lang.first || (currentLocale == "en" && lang.first == "en")
+                                val shape = RoundedCornerShape(
+                                    topStart = if (index == 0) 100.dp else 8.dp,
+                                    bottomStart = if (index == 0) 100.dp else 8.dp,
+                                    topEnd = if (index == rowLangs.lastIndex) 100.dp else 8.dp,
+                                    bottomEnd = if (index == rowLangs.lastIndex) 100.dp else 8.dp
+                                )
+                                val colors = if (isSelected) {
+                                    ButtonDefaults.filledTonalButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.secondary,
+                                        contentColor = MaterialTheme.colorScheme.onSecondary
+                                    )
+                                } else {
+                                    ButtonDefaults.filledTonalButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                FilledTonalButton(
+                                    onClick = {
+                                        androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
+                                            androidx.core.os.LocaleListCompat.forLanguageTags(lang.first)
+                                        )
+                                    },
+                                    shape = shape,
+                                    colors = colors,
+                                    modifier = Modifier.weight(1f),
+                                    contentPadding = PaddingValues(horizontal = 4.dp)
+                                ) {
+                                    Text(lang.second, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                }
+                            }
+                            if (rowLangs.size < 3) {
+                                repeat(3 - rowLangs.size) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
@@ -2193,8 +2261,8 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Material Expressive Shapes", style = MaterialTheme.typography.titleMedium)
-                        Text("Use dynamic shapes for settings icons", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.material_expressive_shapes), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.use_dynamic_shapes_for_setting), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(
                         checked = viewModel.isMaterialShapesEnabled.value,
@@ -2204,7 +2272,7 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
                 
                 Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 12.dp))
 
-                Text("Theme Mode", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.theme_mode), style = MaterialTheme.typography.titleMedium)
                 Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                     val options = listOf("System", "Light", "Dark")
                     options.forEachIndexed { index, label ->
@@ -2246,7 +2314,7 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
             shape = RoundedCornerShape(20.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Color Scheme", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.color_scheme), style = MaterialTheme.typography.titleMedium)
                 Column(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     val themes = AppTheme.values().toList()
                     themes.chunked(3).forEach { rowThemes ->
@@ -2299,7 +2367,7 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
             shape = RoundedCornerShape(20.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Terminal Theme", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.terminal_theme), style = MaterialTheme.typography.titleMedium)
                 Column(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     val themes = TerminalTheme.values().toList()
                     themes.chunked(2).forEach { rowThemes ->
@@ -2438,15 +2506,15 @@ fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, 
     if (showEngineChooser) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showEngineChooser = false },
-            title = { Text("Select Target Extractor") },
-            text = { Text("Which extractor do you want to set cookies for?") },
+            title = { Text(stringResource(R.string.select_target_extractor)) },
+            text = { Text(stringResource(R.string.which_extractor_do_you_want_to)) },
             confirmButton = {
                 TextButton(onClick = {
                     showEngineChooser = false
                     targetEngineForCookies = "yt_dlp"
                     if (chooserAction == "import") cookiesPickerLauncher.launch(arrayOf("text/plain"))
                     else showCookieExtractor = true
-                }) { Text("yt-dlp") }
+                }) { Text(stringResource(R.string.yt_dlp)) }
             },
             dismissButton = {
                 TextButton(onClick = {
@@ -2454,7 +2522,7 @@ fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, 
                     targetEngineForCookies = "gallery_dl"
                     if (chooserAction == "import") cookiesPickerLauncher.launch(arrayOf("text/plain"))
                     else showCookieExtractor = true
-                }) { Text("gallery-dl") }
+                }) { Text(stringResource(R.string.gallery_dl)) }
             }
         )
     }
@@ -2473,11 +2541,11 @@ fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, 
                 modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
             ) { Icon(Icons.Default.ArrowBack, "Back") }
             Spacer(Modifier.width(16.dp))
-            Text("Downloads", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.downloads), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         }
         
-        Text("Download Repository", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text("Files will be saved in your selected folder", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.download_repository), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.files_will_be_saved_in_your_se), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         
         OutlinedCard(
             onClick = { folderPickerLauncher.launch(null) },
@@ -2497,15 +2565,15 @@ fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, 
                         fontWeight = FontWeight.Medium
                     )
                     if (viewModel.selectedFolderUri.value == null) {
-                        Text("Default: Movies/Gabi", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.default_movies_gabi), style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
         }
 
         Spacer(Modifier.height(16.dp))
-        Text("Extractors", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text("Update internal components", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.extractors), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.update_internal_components), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         
         OutlinedCard(
             onClick = {
@@ -2552,15 +2620,15 @@ fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, 
                     Icon(Icons.Default.SystemUpdate, null, tint = MaterialTheme.colorScheme.primary)
                 }
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Update yt-dlp & gallery-dl", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Text(stringResource(R.string.update_yt_dlp_gallery_dl), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                     Text("yt-dlp: $ytDlpVersion • gallery-dl: $galleryDlVersion", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
 
         Spacer(Modifier.height(16.dp))
-        Text("Extraction Credentials", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text("Import cookies.txt for private/age-restricted content", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.extraction_credentials), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.import_cookies_txt_for_private), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         
         OutlinedCard(
             onClick = {
@@ -2577,20 +2645,20 @@ fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, 
             ) {
                 Icon(Icons.Default.VpnKey, null, tint = MaterialTheme.colorScheme.primary)
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Import cookies.txt", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Text(stringResource(R.string.import_cookies_txt), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         if (ytCookies) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(modifier = Modifier.size(8.dp).background(Color.Green, CircleShape))
                                 Spacer(Modifier.width(4.dp))
-                                Text("yt-dlp", style = MaterialTheme.typography.bodySmall)
+                                Text(stringResource(R.string.yt_dlp), style = MaterialTheme.typography.bodySmall)
                             }
                         }
                         if (galleryCookies) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(modifier = Modifier.size(8.dp).background(Color.Green, CircleShape))
                                 Spacer(Modifier.width(4.dp))
-                                Text("gallery-dl", style = MaterialTheme.typography.bodySmall)
+                                Text(stringResource(R.string.gallery_dl), style = MaterialTheme.typography.bodySmall)
                             }
                         }
                     }
@@ -2627,8 +2695,8 @@ fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, 
             ) {
                 Icon(Icons.Default.Web, null, tint = MaterialTheme.colorScheme.primary)
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Extract from Web Login", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                    Text("Login to sites to get cookies automatically", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.extract_from_web_login), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Text(stringResource(R.string.login_to_sites_to_get_cookies), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -2717,7 +2785,7 @@ fun CookieExtractorDialog(initialUrl: String = "https://youtube.com", fileName: 
                     },
                     modifier = Modifier.fillMaxWidth().padding(16.dp)
                 ) {
-                    Text("Extract & Save Cookies")
+                    Text(stringResource(R.string.extract_save_cookies))
                 }
             }
         }
@@ -2750,7 +2818,7 @@ fun DeveloperScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentP
                 modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
             ) { Icon(Icons.Default.ArrowBack, "Back") }
             Spacer(Modifier.width(16.dp))
-            Text("Developer", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.developer), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         }
         
         Card(
@@ -2774,8 +2842,8 @@ fun DeveloperScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentP
                         )
                     }
                     Column {
-                        Text("Hotaro", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                        Text("Building crisp, fast, and secure software.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.hotaro), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.building_crisp_fast_and_secure), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 
@@ -2787,7 +2855,7 @@ fun DeveloperScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentP
                     ) {
                         Icon(androidx.compose.ui.res.painterResource(id = com.material.downloader.R.drawable.ic_github), null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("GitHub")
+                        Text(stringResource(R.string.github))
                     }
                     OutlinedButton(
                         onClick = { Toast.makeText(context, "Discord: oi.hotaro", Toast.LENGTH_LONG).show() },
@@ -2796,14 +2864,14 @@ fun DeveloperScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentP
                     ) {
                         Icon(androidx.compose.ui.res.painterResource(id = com.material.downloader.R.drawable.ic_discord), null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Discord")
+                        Text(stringResource(R.string.discord))
                     }
                 }
             }
         }
         
         Spacer(Modifier.height(8.dp))
-        Text("App Info & Updates", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp))
+        Text(stringResource(R.string.app_info_updates), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp))
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
@@ -2814,7 +2882,7 @@ fun DeveloperScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentP
                     Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary)
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Gabi v${com.material.downloader.BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-                        Text("Powered by yt-dlp, gallery-dl & Chaquopy", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.powered_by_yt_dlp_gallery_dl_c), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
 
@@ -2826,8 +2894,8 @@ fun DeveloperScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentP
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Auto Check Updates", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-                        Text("Notify on launch when new release is out", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.auto_check_updates), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                        Text(stringResource(R.string.notify_on_launch_when_new_rele), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(
                         checked = viewModel.autoCheckUpdates.value,
@@ -2841,10 +2909,10 @@ fun DeveloperScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentP
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Check for Updates", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                        Text(stringResource(R.string.check_for_updates), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                         viewModel.updateCheckMessage.value?.let { msg ->
                             Text(msg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                        } ?: Text("Check latest GitHub release", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        } ?: Text(stringResource(R.string.check_latest_github_release), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Button(
                         onClick = { viewModel.checkForUpdates(manual = true) },
@@ -2854,7 +2922,7 @@ fun DeveloperScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentP
                         if (viewModel.isCheckingUpdates.value) {
                             CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
                         } else {
-                            Text("Check")
+                            Text(stringResource(R.string.check))
                         }
                     }
                 }
@@ -2872,7 +2940,7 @@ fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
     if (showKofiDialog) {
         AlertDialog(
             onDismissRequest = { showKofiDialog = false },
-            title = { Text("Support on Ko-fi", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
+            title = { Text(stringResource(R.string.support_on_ko_fi), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
             text = {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -2898,13 +2966,13 @@ fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
                         ) {
                             Icon(Icons.Default.Link, contentDescription = null, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("ko-fi.com/oi.hotaro", fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.ko_fi_com_oi_hotaro), fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showKofiDialog = false }) { Text("Close") }
+                TextButton(onClick = { showKofiDialog = false }) { Text(stringResource(R.string.close)) }
             },
             containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(24.dp)
@@ -2925,7 +2993,7 @@ fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
                 modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
             ) { Icon(Icons.Default.ArrowBack, "Back") }
             Spacer(Modifier.width(16.dp))
-            Text("Support", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.support), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         }
         
         Surface(
@@ -2937,11 +3005,10 @@ fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Favorite, null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(12.dp))
-                    Text("Support Gabi Development", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.support_gabi_development), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.height(8.dp))
-                Text(
-                    "Help keep Gabi alive and fast. Your support via UPI helps maintain the project.",
+                Text(stringResource(R.string.help_keep_gabi_alive_and_fast),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -2971,7 +3038,7 @@ fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
                     ) {
                         Icon(Icons.Default.AttachMoney, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("UPI")
+                        Text(stringResource(R.string.upi))
                     }
                     Button(
                         onClick = { showKofiDialog = true },
@@ -2981,7 +3048,7 @@ fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
                     ) {
                         Icon(Icons.Default.LocalCafe, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Ko-fi")
+                        Text(stringResource(R.string.ko_fi))
                     }
                 }
             }
@@ -3002,8 +3069,8 @@ fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
             ) {
                 Icon(Icons.Default.Star, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
                 Column {
-                    Text("Star the Project", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text("Support on GitHub", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.star_the_project), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.support_on_github), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -3036,16 +3103,16 @@ fun LogsTab(
     if (itemToDelete != null) {
         AlertDialog(
             onDismissRequest = { itemToDelete = null },
-            title = { Text("Clear History") },
-            text = { Text("Are you sure you want to remove this item from your history?") },
+            title = { Text(stringResource(R.string.clear_history_1)) },
+            text = { Text(stringResource(R.string.are_you_sure_you_want_to_remov)) },
             confirmButton = {
                 TextButton(onClick = {
                     itemToDelete?.let { onDelete(it) }
                     itemToDelete = null
-                }) { Text("Remove", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.remove), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { itemToDelete = null }) { Text("Cancel") }
+                TextButton(onClick = { itemToDelete = null }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -3056,10 +3123,10 @@ fun LogsTab(
             .padding(horizontal = 16.dp)
             .padding(top = 16.dp + contentPadding.calculateTopPadding())
     ) {
-        Text("Recent Downloads", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 16.dp))
+        Text(stringResource(R.string.recent_downloads), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 16.dp))
         if (history.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No history yet", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                Text(stringResource(R.string.no_history_yet), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
             }
         } else {
             LazyColumn(
@@ -3227,7 +3294,7 @@ fun LogsTab(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(Icons.Default.Link, contentDescription = "Link", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("Copy Original URL", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.copy_original_url), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 
@@ -3236,7 +3303,7 @@ fun LogsTab(
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
                 ) {
-                    Text("Close")
+                    Text(stringResource(R.string.close))
                 }
                 Spacer(Modifier.height(16.dp))
             }
@@ -3280,7 +3347,7 @@ fun StatusInfo(state: DownloadState, onOpenFolder: () -> Unit) {
                 if (state is DownloadState.Error) {
                     Text(state.message, style = MaterialTheme.typography.bodySmall, color = color, maxLines = 1)
                 } else if (state is DownloadState.Success) {
-                    Text("Check your selected folder", style = MaterialTheme.typography.bodySmall, color = color)
+                    Text(stringResource(R.string.check_your_selected_folder), style = MaterialTheme.typography.bodySmall, color = color)
                 }
             }
         }
@@ -3312,7 +3379,7 @@ fun CookiesSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, co
                 }
             },
             confirmButton = {
-                TextButton(onClick = { cookieContentToShow = null }) { Text("Close") }
+                TextButton(onClick = { cookieContentToShow = null }) { Text(stringResource(R.string.close)) }
             }
         )
     }
@@ -3365,13 +3432,13 @@ fun CookiesSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, co
                     modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                 ) { Icon(Icons.Default.ArrowBack, "Back") }
                 Spacer(Modifier.width(16.dp))
-                Text("Cookies", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.cookies), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             }
         }
         
         item {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                Text("Use cookies", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.use_cookies), style = MaterialTheme.typography.titleMedium)
                 Switch(
                     checked = viewModel.useCookies.value,
                     onCheckedChange = { viewModel.toggleUseCookies(it) }
@@ -3386,13 +3453,13 @@ fun CookiesSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, co
             ) {
                 Icon(Icons.Default.Add, "Add")
                 Spacer(Modifier.width(8.dp))
-                Text("New cookie")
+                Text(stringResource(R.string.new_cookie))
             }
         }
         
         if (cookieSessions.isNotEmpty()) {
             item {
-                Text("Saved Cookies (Drag to reorder priority)", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
+                Text(stringResource(R.string.saved_cookies_drag_to_reorder), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
             }
             
             items(cookieSessions, key = { it.id }) { session ->
@@ -3420,8 +3487,7 @@ fun CookiesSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, co
                 Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Info, contentDescription = "Info", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.width(12.dp))
-                    Text(
-                        "Cookies allow the extractors to access sites that require you to be logged in (like age-restricted videos or private galleries). Top cookies have higher priority.",
+                    Text(stringResource(R.string.cookies_allow_the_extractors_t),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -3453,7 +3519,7 @@ fun CookiesSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, co
                 OutlinedTextField(
                     value = tempUrl,
                     onValueChange = { tempUrl = it },
-                    label = { Text("URL") },
+                    label = { Text(stringResource(R.string.url)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
@@ -3470,7 +3536,7 @@ fun CookiesSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, co
                         },
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Target Extractor") },
+                        label = { Text(stringResource(R.string.target_extractor)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = tagExpanded) },
                         modifier = Modifier.menuAnchor().fillMaxWidth()
                     )
@@ -3478,8 +3544,8 @@ fun CookiesSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, co
                         expanded = tagExpanded,
                         onDismissRequest = { tagExpanded = false }
                     ) {
-                        DropdownMenuItem(text = { Text("yt-dlp") }, onClick = { selectedTag = "yt_dlp"; tagExpanded = false })
-                        DropdownMenuItem(text = { Text("gallery-dl") }, onClick = { selectedTag = "gallery_dl"; tagExpanded = false })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.yt_dlp)) }, onClick = { selectedTag = "yt_dlp"; tagExpanded = false })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.gallery_dl)) }, onClick = { selectedTag = "gallery_dl"; tagExpanded = false })
                     }
                 }
                 
@@ -3495,7 +3561,7 @@ fun CookiesSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, co
                 ) {
                     Icon(Icons.Default.Cookie, "Cookie")
                     Spacer(Modifier.width(8.dp))
-                    Text("Get cookies")
+                    Text(stringResource(R.string.get_cookies))
                 }
             }
         }

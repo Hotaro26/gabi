@@ -12,6 +12,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
+import com.material.downloader.R
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -104,7 +106,7 @@ fun NewPipeTab(
                     modifier = Modifier.size(72.dp).padding(bottom = 16.dp),
                     tint = MaterialTheme.colorScheme.primary
                 )
-                Text("YouTube Search", style = MaterialTheme.typography.headlineMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                Text(stringResource(R.string.youtube_search), style = MaterialTheme.typography.headlineMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
@@ -128,7 +130,7 @@ fun NewPipeTab(
                 value = query,
                 onValueChange = { query = it },
                 modifier = Modifier.weight(1f),
-                placeholder = { Text("Search YouTube...") },
+                placeholder = { Text(stringResource(R.string.search_youtube)) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { performSearch() }),
                 trailingIcon = {
@@ -223,7 +225,7 @@ fun NewPipeTab(
                     ) {
                         Icon(Icons.Default.PlayArrow, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Watch")
+                        Text(stringResource(R.string.watch))
                     }
                     Button(
                         onClick = { 
@@ -235,7 +237,7 @@ fun NewPipeTab(
                     ) {
                         Icon(Icons.Default.Download, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Download")
+                        Text(stringResource(R.string.download))
                     }
                 }
                 Spacer(Modifier.height(32.dp))

@@ -15,6 +15,8 @@ import androidx.compose.material.icons.filled.Headset
 import androidx.compose.material.icons.filled.HeadsetOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
+import com.material.downloader.R
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -123,7 +125,7 @@ fun PlayerScreen(
         topBar = {
             if (!hideUi) {
                 TopAppBar(
-                    title = { Text("Playing") },
+                    title = { Text(stringResource(R.string.playing)) },
                     navigationIcon = {
                         IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
                     }
