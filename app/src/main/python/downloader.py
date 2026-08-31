@@ -22,8 +22,17 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None):
             'no_warnings': False,
             'nocheckcertificate': True,
             'socket_timeout': 60,
-            'extract_flat': False, # Resolve direct URLs
+            'extract_flat': False,
         }
+        
+        # If user_agent is provided (from WebView cookies), we must use it to match the cookie origin
+        # Otherwise, we let yt-dlp use its default mobile clients to bypass PoW blocks.
+        if user_agent:
+            ydl_opts['http_headers'] = {
+                'User-Agent': user_agent,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-us,en;q=0.5',
+            }
         
         if mode == 'audio':
             ydl_opts['format'] = 'bestaudio/best'

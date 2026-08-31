@@ -579,7 +579,8 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                 logToConsole("Executing $engine extractor in Python...")
                 val engineKey = if (engine == "gallery-dl") "gallery_dl" else "yt_dlp"
                 val cookiesPath = if (useCookies.value) prefs.getString("${engineKey}_cookies_path", null) else null
-                val res = extractor.extract(url, quality, mode, engine, cookiesPath)
+                val webViewUa = if (useCookies.value) android.webkit.WebSettings.getDefaultUserAgent(getApplication()) else null
+                val res = extractor.extract(url, quality, mode, engine, cookiesPath, webViewUa)
                 if (res.status == "success") {
                     if (res.is_gallery == true) {
                         logToConsole("Python extractor found gallery with ${res.urls?.size ?: 0} items")
