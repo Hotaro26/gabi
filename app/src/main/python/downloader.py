@@ -8,13 +8,13 @@ import threading
 # Thread lock to prevent concurrent extraction crashes (generator already executing)
 extraction_lock = threading.Lock()
 
-def extract_info(url, quality='720', mode='auto', engine='yt-dlp', cookies_path=None):
+def extract_info(url, quality='720', mode='auto', engine='yt-dlp', cookies_path=None, user_agent=None):
     if engine == 'gallery-dl':
         return extract_gallery(url, cookies_path)
     else:
-        return extract_video(url, quality, mode, cookies_path)
+        return extract_video(url, quality, mode, cookies_path, user_agent)
 
-def extract_video(url, quality='720', mode='auto', cookies_path=None):
+def extract_video(url, quality='720', mode='auto', cookies_path=None, user_agent=None):
     with extraction_lock:
         # Robust configuration for direct stream extraction
         ydl_opts = {
