@@ -1018,52 +1018,55 @@ fun MainDownloaderTab(
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+        Surface(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(100),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ) {
-            OutlinedTextField(
-                value = url,
-                onValueChange = { 
-                    onUrlChange(it)
-                    if (it.isEmpty()) viewModel.clearPreview() 
-                },
-                placeholder = { Text(stringResource(R.string.search_or_paste_link)) },
-                modifier = Modifier.weight(1f),
-                leadingIcon = { Icon(YoutubeOutline, null, modifier = Modifier.size(20.dp)) },
-                trailingIcon = {
-                    if (url.isNotEmpty()) {
-                        IconButton(onClick = { 
-                            onUrlChange("")
-                            viewModel.clearPreview()
-                        }) {
-                            Icon(Icons.Default.Clear, "Clear URL", modifier = Modifier.size(20.dp))
-                        }
-                    }
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
-                singleLine = true,
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(100),
-                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
-                    unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                )
-            )
-
-            Spacer(Modifier.width(8.dp))
-
-            IconButton(
-                onClick = { 
-                    clipboardManager.getText()?.let { 
-                        onUrlChange(it.text)
-                        viewModel.fetchPreview(it.text, quality, downloadMode, engine)
-                    }
-                },
-                modifier = Modifier.size(56.dp).background(MaterialTheme.colorScheme.primaryContainer, androidx.compose.foundation.shape.CircleShape)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(end = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.ContentPaste, contentDescription = "Paste URL", tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { 
+                        onUrlChange(it)
+                        if (it.isEmpty()) viewModel.clearPreview() 
+                    },
+                    placeholder = { Text(stringResource(R.string.search_or_paste_link)) },
+                    modifier = Modifier.weight(1f),
+                    leadingIcon = { Icon(YoutubeOutline, null, modifier = Modifier.size(20.dp)) },
+                    trailingIcon = {
+                        if (url.isNotEmpty()) {
+                            IconButton(onClick = { 
+                                onUrlChange("")
+                                viewModel.clearPreview()
+                            }) {
+                                Icon(Icons.Default.Clear, "Clear URL", modifier = Modifier.size(20.dp))
+                            }
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
+                    singleLine = true,
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                        unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                        focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                        unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent
+                    )
+                )
+
+                IconButton(
+                    onClick = { 
+                        clipboardManager.getText()?.let { 
+                            onUrlChange(it.text)
+                            viewModel.fetchPreview(it.text, quality, downloadMode, engine)
+                        }
+                    },
+                    modifier = Modifier.size(48.dp).background(MaterialTheme.colorScheme.primaryContainer, androidx.compose.foundation.shape.CircleShape)
+                ) {
+                    Icon(Icons.Default.ContentPaste, contentDescription = "Paste URL", tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                }
             }
         }
 
