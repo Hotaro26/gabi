@@ -37,11 +37,25 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None, user_agent
         if mode == 'audio':
             ydl_opts['format'] = 'bestaudio/best'
         else:
+            # We MUST strictly enforce compatible codecs for Android MediaMuxer!
+            # MP4 Muxer strictly requires AVC (H.264) + AAC (M4A).
+            # WEBM Muxer strictly requires VP9/VP8 + Opus/Vorbis (WEBM).
+            # Any mixing (like VP9 + M4A) results in MKV and crashes Android MediaMuxer.
             if quality != 'max':
                 q_val = str(quality).replace('p', '')
-                ydl_opts['format'] = f'bestvideo[height<={q_val}]+bestaudio/best[height<={q_val}]/best'
+                ydl_opts['format'] = (
+                    f'bestvideo[vcodec^=avc][height={q_val}]+bestaudio[ext=m4a]/'
+                    f'bestvideo[vcodec^=vp9][height={q_val}]+bestaudio[ext=webm]/'
+                    f'bestvideo[vcodec^=avc][height<={q_val}]+bestaudio[ext=m4a]/'
+                    f'bestvideo[vcodec^=vp9][height<={q_val}]+bestaudio[ext=webm]/'
+                    f'best[height<={q_val}]'
+                )
             else:
-                ydl_opts['format'] = 'bestvideo+bestaudio/best'
+                ydl_opts['format'] = (
+                    'bestvideo[vcodec^=avc]+bestaudio[ext=m4a]/'
+                    'bestvideo[vcodec^=vp9]+bestaudio[ext=webm]/'
+                    'best'
+                )
 
         if cookies_path and os.path.exists(cookies_path):
             ydl_opts['cookiefile'] = cookies_path
