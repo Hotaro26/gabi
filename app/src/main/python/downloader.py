@@ -23,6 +23,7 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None, user_agent
             'nocheckcertificate': True,
             'socket_timeout': 60,
             'extract_flat': False,
+            'extractor_args': {'youtube': ['player_client=android,web']}
         }
         
         # If user_agent is provided (from WebView cookies), we must use it to match the cookie origin
@@ -262,7 +263,8 @@ def download_video(url, output_path, cookies_path=None):
         ydl_opts = {
             'outtmpl': output_path,
             'quiet': True,
-            'no_warnings': True
+            'no_warnings': True,
+            'extractor_args': {'youtube': ['player_client=android,web']}
         }
         if cookies_path:
             ydl_opts['cookiefile'] = cookies_path
