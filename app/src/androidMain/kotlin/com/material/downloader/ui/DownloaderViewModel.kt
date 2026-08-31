@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 
 import com.material.downloader.api.PythonExtractor
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -326,7 +326,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
         logToConsole("Auto version check ${if (enabled) "enabled" else "disabled"}")
     }
 
-    private val client = HttpClient(CIO) {
+    private val client = HttpClient(io.ktor.client.engine.android.Android) {
         install(HttpTimeout) {
             requestTimeoutMillis = 600_000
             connectTimeoutMillis = 30_000
