@@ -797,7 +797,8 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                                 url = downloadUrl,
                                 fileName = fileName,
                                 relativePath = targetPath,
-                                customFolderUri = selectedFolderUri.value
+                                customFolderUri = selectedFolderUri.value,
+                                httpHeaders = result.http_headers
                             ).collect { state ->
                                 if (state is DownloadState.Downloading) {
                                     val fileProgress = state.progress
@@ -858,7 +859,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                             } else {
                                 logToConsole("Downloading $trackName track via Ktor: $trackUrl")
                                 var success = false
-                                downloader.downloadFileToPath(trackUrl, destFile).collect { state ->
+                                downloader.downloadFileToPath(trackUrl, destFile, result.http_headers).collect { state ->
                                     if (state is DownloadState.Downloading) {
                                         val progress = progressOffset + (state.progress * progressScale)
                                         _uiState.value = DownloadState.Downloading(progress, state.downloadedBytes, state.totalBytes, state.speedBps)
@@ -984,7 +985,8 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                                 url = downloadUrl, 
                                 fileName = fileName, 
                                 relativePath = targetPath,
-                                customFolderUri = selectedFolderUri.value
+                                customFolderUri = selectedFolderUri.value,
+                                httpHeaders = result.http_headers
                             ).collect { state ->
                                 _uiState.value = state
                                 if (state is DownloadState.Downloading) {

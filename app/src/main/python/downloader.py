@@ -21,13 +21,6 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None):
             'quiet': False, 
             'no_warnings': False,
             'nocheckcertificate': True,
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-us,en;q=0.5',
-                'Referer': 'https://www.google.com/',
-            },
             'socket_timeout': 60,
             'extract_flat': False, # Resolve direct URLs
         }
@@ -88,8 +81,17 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None):
                 if not download_url:
                     return json.dumps({'status': 'error', 'message': 'Could not resolve a direct download URL.'})
 
+                # Find http_headers for the chosen URL
+                target_headers = video.get('http_headers', {})
+                if 'formats' in video:
+                    for fmt in video['formats']:
+                        if fmt.get('url') == download_url and fmt.get('http_headers'):
+                            target_headers = fmt.get('http_headers')
+                            break
+
                 return json.dumps({
                     'available_qualities': sorted_qualities,
+                    'http_headers': target_headers,
                     'status': 'success',
                     'url': download_url,
                     'audio_url': audio_url,

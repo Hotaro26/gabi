@@ -24,16 +24,22 @@ class FileDownloader(private val context: Context, private val client: HttpClien
         fileName: String, 
         relativePath: String = "Movies/ExpressiveDownloader",
         customFolderUri: String? = null,
-        onUriCreated: ((Uri) -> Unit)? = null
+        onUriCreated: ((Uri) -> Unit)? = null,
+        httpHeaders: Map<String, String>? = null
     ): Flow<DownloadState> = flow {
         emit(DownloadState.Downloading(0f))
         
         try {
             client.prepareGet(url) {
-                header(io.ktor.http.HttpHeaders.UserAgent, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
-                header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-                header("Accept-Language", "en-us,en;q=0.5")
-                header("Referer", "https://www.google.com/")
+                httpHeaders?.forEach { (key, value) ->
+                    header(key, value)
+                }
+                if (httpHeaders == null || !httpHeaders.containsKey(io.ktor.http.HttpHeaders.UserAgent)) {
+                    header(io.ktor.http.HttpHeaders.UserAgent, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+                    header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                    header("Accept-Language", "en-us,en;q=0.5")
+                    header("Referer", "https://www.google.com/")
+                }
             }.execute { response ->
                 if (response.status.value !in 200..299) {
                     throw Exception("Server returned status ${response.status.value}: ${response.status.description}")
@@ -82,15 +88,21 @@ class FileDownloader(private val context: Context, private val client: HttpClien
 
     suspend fun downloadFileToPath(
         url: String, 
-        destFile: java.io.File
+        destFile: java.io.File,
+        httpHeaders: Map<String, String>? = null
     ): Flow<DownloadState> = flow {
         emit(DownloadState.Downloading(0f))
         try {
             client.prepareGet(url) {
-                header(io.ktor.http.HttpHeaders.UserAgent, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
-                header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-                header("Accept-Language", "en-us,en;q=0.5")
-                header("Referer", "https://www.google.com/")
+                httpHeaders?.forEach { (key, value) ->
+                    header(key, value)
+                }
+                if (httpHeaders == null || !httpHeaders.containsKey(io.ktor.http.HttpHeaders.UserAgent)) {
+                    header(io.ktor.http.HttpHeaders.UserAgent, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+                    header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                    header("Accept-Language", "en-us,en;q=0.5")
+                    header("Referer", "https://www.google.com/")
+                }
             }.execute { response ->
                 if (response.status.value !in 200..299) {
                     throw Exception("Server returned status ${response.status.value}: ${response.status.description}")

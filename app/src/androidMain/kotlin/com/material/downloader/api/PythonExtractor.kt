@@ -61,5 +61,6 @@ data class ExtractionResult(
     val message: String? = null,
     val audio_url: String? = null,
     val max_resolution: String? = null,
-    val available_qualities: List<String>? = null
+    val available_qualities: List<String>? = null,
+    val http_headers: Map<String, String>? = null
 )
