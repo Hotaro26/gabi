@@ -130,13 +130,33 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
     val externalUrl by viewModel.externalUrl.collectAsState()
     val clipboardManager = LocalClipboardManager.current
     
-    // Interaction states for expressive motion
     val instantInteractionSource = remember { MutableInteractionSource() }
     val isInstantPressed by instantInteractionSource.collectIsPressedAsState()
     val instantScale by animateFloatAsState(
         targetValue = if (isInstantPressed) 1.08f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
         label = "instant_scale"
+    )
+    
+    var showSpeechNotSupportedDialog by remember { mutableStateOf(false) }
+    val speechRecognizerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val data = result.data
+            val matches = data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
+            if (!matches.isNullOrEmpty()) {
+                viewModel.voiceSearchEvent.tryEmit(matches[0])
+            }
+        }
+    }
+
+    val voiceInteractionSource = remember { MutableInteractionSource() }
+    val isVoicePressed by voiceInteractionSource.collectIsPressedAsState()
+    val voiceScale by animateFloatAsState(
+        targetValue = if (isVoicePressed) 1.08f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "voice_scale"
     )
 
     val clearLogsInteractionSource = remember { MutableInteractionSource() }
@@ -495,6 +515,46 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             }
                         }
                         
+                        val isVoiceVisible = selectedTab == 1
+                        val voiceFabSize by animateDpAsState(if (isVoiceVisible) 52.dp else 0.dp, androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy, stiffness = androidx.compose.animation.core.Spring.StiffnessLow))
+                        val voiceSpacerSize by animateDpAsState(if (isVoiceVisible) 10.dp else 0.dp, androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy, stiffness = androidx.compose.animation.core.Spring.StiffnessLow))
+                        
+                        if (voiceFabSize > 0.dp) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Spacer(Modifier.width(voiceSpacerSize))
+                                TooltipBox(
+                                    positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                                    tooltip = { PlainTooltip { Text("Voice Search") } },
+                                    state = rememberTooltipState()
+                                ) {
+                                    FloatingActionButton(
+                                        onClick = {
+                                            val intent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                            }
+                                            try {
+                                                speechRecognizerLauncher.launch(intent)
+                                            } catch (e: android.content.ActivityNotFoundException) {
+                                                showSpeechNotSupportedDialog = true
+                                            }
+                                        },
+                                        modifier = Modifier
+                                            .size(voiceFabSize)
+                                            .graphicsLayer {
+                                                scaleX = voiceScale
+                                                scaleY = voiceScale
+                                            },
+                                        interactionSource = voiceInteractionSource,
+                                        shape = CircleShape,
+                                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                                    ) {
+                                        Icon(Icons.Default.Mic, contentDescription = "Voice Search")
+                                    }
+                                }
+                            }
+                        }
+                        
                         val isBinVisible = selectedTab == 2 && history.isNotEmpty()
                         val binFabSize by animateDpAsState(if (isBinVisible) 52.dp else 0.dp, androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy, stiffness = androidx.compose.animation.core.Spring.StiffnessLow))
                         val binSpacerSize by animateDpAsState(if (isBinVisible) 10.dp else 0.dp, androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy, stiffness = androidx.compose.animation.core.Spring.StiffnessLow))
@@ -572,6 +632,19 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                     }
                 }
             }
+        }
+
+        if (showSpeechNotSupportedDialog) {
+            AlertDialog(
+                onDismissRequest = { showSpeechNotSupportedDialog = false },
+                title = { Text("Voice Search Not Supported") },
+                text = { Text("Your device does not have a built-in speech recognition service.\n\nTo use this feature, please install the official Google app or another speech-to-text provider from the Play Store.") },
+                confirmButton = {
+                    TextButton(onClick = { showSpeechNotSupportedDialog = false }) {
+                        Text("OK")
+                    }
+                }
+            )
         }
 
         if (showSupportedSitesDialog) {

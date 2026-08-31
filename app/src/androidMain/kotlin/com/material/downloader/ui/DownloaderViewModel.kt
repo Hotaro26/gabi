@@ -361,6 +361,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
 
     var newPipeQuery = mutableStateOf("")
     var newPipeResults = mutableStateOf<List<org.schabi.newpipe.extractor.stream.StreamInfoItem>>(emptyList())
+    val voiceSearchEvent = kotlinx.coroutines.flow.MutableSharedFlow<String>(extraBufferCapacity = 1)
 
     // Appearance Settings
     var themeMode = mutableIntStateOf(prefs.getInt("theme_mode", 0))

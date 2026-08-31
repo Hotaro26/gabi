@@ -28,6 +28,11 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
+import android.content.Intent
+import android.speech.RecognizerIntent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.filled.Mic
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,12 +48,6 @@ fun NewPipeTab(
     val coroutineScope = rememberCoroutineScope()
     var selectedItem by remember { mutableStateOf<StreamInfoItem?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    LaunchedEffect(query) {
-        if (query.isBlank()) {
-            results = emptyList()
-        }
-    }
 
     val performSearch = {
         if (query.isNotBlank()) {
@@ -72,6 +71,21 @@ fun NewPipeTab(
         }
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.voiceSearchEvent.collect { queryText ->
+            query = queryText
+            performSearch()
+        }
+    }
+
+    LaunchedEffect(query) {
+        if (query.isBlank()) {
+            results = emptyList()
+        }
+    }
+
+
+
     Column(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.Top,
@@ -94,6 +108,8 @@ fun NewPipeTab(
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
+
+
 
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 8.dp),
