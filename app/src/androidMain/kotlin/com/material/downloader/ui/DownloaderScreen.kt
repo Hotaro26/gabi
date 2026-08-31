@@ -141,6 +141,15 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
     )
     
     var showSpeechNotSupportedDialog by remember { mutableStateOf(false) }
+    var isSettingsSearchActive by remember { mutableStateOf(false) }
+    var settingsSearchQuery by remember { mutableStateOf("") }
+    val searchInteractionSource = remember { MutableInteractionSource() }
+    val isSearchPressed by searchInteractionSource.collectIsPressedAsState()
+    val searchScale by animateFloatAsState(
+        targetValue = if (isSearchPressed) 1.08f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "search_scale"
+    )
     val speechRecognizerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -587,6 +596,36 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                                 }
                             }
                         }
+                        val isSearchVisible = selectedTab == 3
+                        val searchFabSize by animateDpAsState(if (isSearchVisible) 52.dp else 0.dp, androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy, stiffness = androidx.compose.animation.core.Spring.StiffnessLow))
+                        val searchSpacerSize by animateDpAsState(if (isSearchVisible) 10.dp else 0.dp, androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy, stiffness = androidx.compose.animation.core.Spring.StiffnessLow))
+
+                        if (searchFabSize > 0.dp) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Spacer(Modifier.width(searchSpacerSize))
+                                TooltipBox(
+                                    positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                                    tooltip = { PlainTooltip { Text("Search Settings") } },
+                                    state = rememberTooltipState()
+                                ) {
+                                    FloatingActionButton(
+                                        onClick = { isSettingsSearchActive = !isSettingsSearchActive; if(!isSettingsSearchActive) settingsSearchQuery = "" },
+                                        modifier = Modifier
+                                            .size(searchFabSize)
+                                            .graphicsLayer {
+                                                scaleX = searchScale
+                                                scaleY = searchScale
+                                            },
+                                        interactionSource = searchInteractionSource,
+                                        shape = CircleShape,
+                                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                    ) {
+                                        Icon(if (isSettingsSearchActive) Icons.Default.Close else Icons.Default.Search, contentDescription = "Search Settings")
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -630,7 +669,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             onDelete = viewModel::deleteLog,
                             contentPadding = padding
                         )
-                        3 -> SettingsTab(viewModel, contentPadding = padding)
+                        3 -> SettingsTab(viewModel, contentPadding = padding, isSearchActive = isSettingsSearchActive, searchQuery = settingsSearchQuery, onQueryChange = { settingsSearchQuery = it })
                     }
                 }
             }
@@ -1984,37 +2023,112 @@ fun SettingsListItem(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = PaddingValues(0.dp)) {
+fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = PaddingValues(0.dp), isSearchActive: Boolean = false, searchQuery: String = "", onQueryChange: (String) -> Unit = {}) {
     var currentScreen by remember { mutableStateOf("Main") }
 
     BackHandler(enabled = currentScreen != "Main") {
         currentScreen = "Main"
     }
     
-    AnimatedContent(
-        targetState = currentScreen,
-        transitionSpec = {
-            if (targetState != "Main") {
-                // Slide in from right, exit to left
-                (slideInHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { it } + fadeIn()).togetherWith(
-                    slideOutHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { -it } + fadeOut()
-                )
-            } else {
-                // Slide in from left, exit to right
-                (slideInHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { -it } + fadeIn()).togetherWith(
-                    slideOutHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { it } + fadeOut()
-                )
-            }.using(SizeTransform(clip = false))
-        },
-        label = "settings_nav"
-    ) { screen ->
-        when (screen) {
-            "Main" -> SettingsMainList(viewModel = viewModel, onNavigate = { currentScreen = it }, contentPadding = contentPadding)
-            "Customisation" -> CustomisationScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
-            "Downloads" -> DownloadsSettingsScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
-            "Cookies" -> CookiesSettingsScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
-            "Developer" -> DeveloperScreen(viewModel = viewModel, onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
-            "Support" -> SupportScreen(onBack = { currentScreen = "Main" }, contentPadding = contentPadding)
+    val allSettings = remember {
+        listOf(
+            Triple("Customisation", "Themes, App Appearance, Terminal", "Customisation"),
+            Triple("Navigation Bar Blur", "Enable haze effect on floating navigation bar", "Customisation"),
+            Triple("True Glass Navigation", "Make navigation bar fully transparent glass", "Customisation"),
+            Triple("Opaque Navigation Bar", "Make floating navigation solid color", "Customisation"),
+            Triple("Material Expressive Shapes", "Use dynamic shapes for settings icons", "Customisation"),
+            Triple("Theme Mode", "System, Light, Dark", "Customisation"),
+            Triple("Color Scheme", "App Colors", "Customisation"),
+            Triple("Language", "Change app language", "Customisation"),
+            Triple("Downloads", "Download Repository, Extractors", "Downloads"),
+            Triple("Download Repository", "Files will be saved in your selected folder", "Downloads"),
+            Triple("Extractors", "Update internal components", "Downloads"),
+            Triple("Cookies", "Extraction Credentials", "Cookies"),
+            Triple("Import cookies.txt", "For private/age-restricted content", "Cookies"),
+            Triple("Extract from Web Login", "Login to sites to get cookies automatically", "Cookies"),
+            Triple("Developer", "App Info & Updates", "Developer"),
+            Triple("Check for Updates", "Check latest GitHub release", "Developer"),
+            Triple("Support", "Support on Ko-fi, UPI, GitHub", "Support")
+        )
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        androidx.compose.animation.AnimatedVisibility(
+            visible = isSearchActive,
+            enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
+        ) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onQueryChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(top = contentPadding.calculateTopPadding() + 16.dp, bottom = 8.dp),
+                placeholder = { Text("Search settings...") },
+                leadingIcon = { Icon(Icons.Default.Search, "Search") },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { onQueryChange("") }) {
+                            Icon(Icons.Default.Clear, "Clear")
+                        }
+                    }
+                },
+                shape = RoundedCornerShape(100),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+                ),
+                singleLine = true
+            )
+        }
+
+        if (isSearchActive && searchQuery.isNotEmpty()) {
+            val results = allSettings.filter { it.first.contains(searchQuery, ignoreCase = true) || it.second.contains(searchQuery, ignoreCase = true) }
+            androidx.compose.foundation.lazy.LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = contentPadding.calculateBottomPadding() + 80.dp, top = if(isSearchActive) 0.dp else contentPadding.calculateTopPadding())
+            ) {
+                items(results) { item ->
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text(item.first) },
+                        supportingContent = { Text(item.second) },
+                        modifier = Modifier.clickable {
+                            onQueryChange("")
+                            currentScreen = item.third
+                        }
+                    )
+                }
+            }
+        } else {
+            AnimatedContent(
+                targetState = currentScreen,
+                transitionSpec = {
+                    if (targetState != "Main") {
+                        (slideInHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { it } + fadeIn()).togetherWith(
+                            slideOutHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { -it } + fadeOut()
+                        )
+                    } else {
+                        (slideInHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { -it } + fadeIn()).togetherWith(
+                            slideOutHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { it } + fadeOut()
+                        )
+                    }.using(SizeTransform(clip = false))
+                },
+                label = "settings_nav",
+                modifier = Modifier.weight(1f)
+            ) { screen ->
+                val adjustedPadding = if (isSearchActive) PaddingValues(bottom = contentPadding.calculateBottomPadding()) else contentPadding
+                when (screen) {
+                    "Main" -> SettingsMainList(viewModel = viewModel, onNavigate = { currentScreen = it }, contentPadding = adjustedPadding)
+                    "Customisation" -> CustomisationScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding = adjustedPadding)
+                    "Downloads" -> DownloadsSettingsScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding = adjustedPadding)
+                    "Cookies" -> CookiesSettingsScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding = adjustedPadding)
+                    "Developer" -> DeveloperScreen(viewModel = viewModel, onBack = { currentScreen = "Main" }, contentPadding = adjustedPadding)
+                    "Support" -> SupportScreen(onBack = { currentScreen = "Main" }, contentPadding = adjustedPadding)
+                }
+            }
         }
     }
 }
