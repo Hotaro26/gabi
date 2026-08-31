@@ -46,56 +46,13 @@ fun NewPipeTab(
 ) {
     var query by viewModel.newPipeQuery
     var results by viewModel.newPipeResults
-    var isLoading by remember { mutableStateOf(false) }
+    var isLoading by viewModel.isNewPipeLoading
     val coroutineScope = rememberCoroutineScope()
     var selectedItem by remember { mutableStateOf<StreamInfoItem?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    LaunchedEffect(viewModel.triggerNewPipeSearch.value) {
-        if (viewModel.triggerNewPipeSearch.value) {
-            if (query.isNotBlank()) {
-                isLoading = true
-                coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                    try {
-                        val searchExtractor = org.schabi.newpipe.extractor.ServiceList.YouTube.getSearchExtractor(query)
-                        searchExtractor.fetchPage()
-                        val items = searchExtractor.initialPage.items.filterIsInstance<org.schabi.newpipe.extractor.stream.StreamInfoItem>()
-                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                            results = items
-                            isLoading = false
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                            isLoading = false
-                        }
-                    }
-                }
-            }
-            viewModel.triggerNewPipeSearch.value = false
-        }
-    }
-    
     val performSearch = {
-        if (query.isNotBlank()) {
-            isLoading = true
-            coroutineScope.launch(Dispatchers.IO) {
-                try {
-                    val searchExtractor = ServiceList.YouTube.getSearchExtractor(query)
-                    searchExtractor.fetchPage()
-                    val items = searchExtractor.initialPage.items.filterIsInstance<StreamInfoItem>()
-                    withContext(Dispatchers.Main) {
-                        results = items
-                        isLoading = false
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    withContext(Dispatchers.Main) {
-                        isLoading = false
-                    }
-                }
-            }
-        }
+        viewModel.performNewPipeSearch(query)
     }
 
     LaunchedEffect(Unit) {

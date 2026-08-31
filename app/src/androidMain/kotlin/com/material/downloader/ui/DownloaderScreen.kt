@@ -654,7 +654,11 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             onModeChange = { downloadMode = it },
                             engine = engine,
                             onEngineChange = { engine = it },
-                            contentPadding = padding
+                            contentPadding = padding,
+                            onYoutubeSearch = {
+                                selectedTab = 1
+                                viewModel.performNewPipeSearch(viewModel.newPipeQuery.value)
+                            }
                         )
                         1 -> NewPipeTab(
                             viewModel = viewModel,

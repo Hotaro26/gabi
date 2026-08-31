@@ -407,6 +407,30 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     var newPipeQuery = mutableStateOf("")
     var newPipeResults = mutableStateOf<List<org.schabi.newpipe.extractor.stream.StreamInfoItem>>(emptyList())
     var triggerNewPipeSearch = mutableStateOf(false)
+
+    var isNewPipeLoading = mutableStateOf(false)
+    fun performNewPipeSearch(query: String) {
+        if (query.isNotBlank()) {
+            isNewPipeLoading.value = true
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    val searchExtractor = org.schabi.newpipe.extractor.ServiceList.YouTube.getSearchExtractor(query)
+                    searchExtractor.fetchPage()
+                    val items = searchExtractor.initialPage.items.filterIsInstance<org.schabi.newpipe.extractor.stream.StreamInfoItem>()
+                    withContext(Dispatchers.Main) {
+                        newPipeResults.value = items
+                        isNewPipeLoading.value = false
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    withContext(Dispatchers.Main) {
+                        isNewPipeLoading.value = false
+                    }
+                }
+            }
+        }
+    }
+
     val voiceSearchEvent = kotlinx.coroutines.flow.MutableSharedFlow<String>(extraBufferCapacity = 1)
 
     // Appearance Settings
