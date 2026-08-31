@@ -332,9 +332,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
             connectTimeoutMillis = 30_000
             socketTimeoutMillis = 30_000
         }
-        install(DefaultRequest) {
-            header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
-        }
+
     }
 
     private val downloader = FileDownloader(application, client)
