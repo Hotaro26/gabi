@@ -114,7 +114,7 @@ fun NewPipeTab(
 
 
         Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 8.dp, start = 16.dp, end = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             AnimatedVisibility(visible = results.isNotEmpty() || isLoading) {
@@ -133,19 +133,34 @@ fun NewPipeTab(
                 placeholder = { Text(stringResource(R.string.search_youtube)) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { performSearch() }),
+                leadingIcon = {
+                    Icon(Icons.Default.PlayArrow, contentDescription = null)
+                },
                 trailingIcon = {
                     if (query.isNotEmpty()) {
                         IconButton(onClick = { query = ""; results = emptyList() }) {
                             Icon(Icons.Default.Close, contentDescription = "Clear")
                         }
-                    } else {
-                        IconButton(onClick = performSearch) {
-                            Icon(Icons.Default.Search, contentDescription = "Search")
-                        }
                     }
                 },
-                shape = MaterialTheme.shapes.large
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(100),
+                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                    unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ),
+                singleLine = true
             )
+            
+            Spacer(Modifier.width(8.dp))
+            
+            IconButton(
+                onClick = performSearch,
+                modifier = Modifier.size(56.dp).background(MaterialTheme.colorScheme.primaryContainer, androidx.compose.foundation.shape.CircleShape)
+            ) {
+                Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            }
         }
         
         if (isLoading) {

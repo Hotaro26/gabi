@@ -568,7 +568,8 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             }
                         }
                         
-                        val isBinVisible = selectedTab == 2 && history.isNotEmpty()
+                        val isBinVisible = selectedTab == 2
+                        val context = androidx.compose.ui.platform.LocalContext.current
                         val binFabSize by animateDpAsState(if (isBinVisible) 52.dp else 0.dp, androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy, stiffness = androidx.compose.animation.core.Spring.StiffnessLow))
                         val binSpacerSize by animateDpAsState(if (isBinVisible) 10.dp else 0.dp, androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy, stiffness = androidx.compose.animation.core.Spring.StiffnessLow))
 
@@ -581,7 +582,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                                     state = rememberTooltipState()
                                 ) {
                                     FloatingActionButton(
-                                        onClick = { showClearLogsDialog = true },
+                                        onClick = { if (history.isEmpty()) android.widget.Toast.makeText(context, "No history", android.widget.Toast.LENGTH_SHORT).show() else showClearLogsDialog = true },
                                         modifier = Modifier
                                             .size(binFabSize)
                                             .graphicsLayer {
@@ -3084,7 +3085,7 @@ fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues, target: Str
     if (showKofiDialog) {
         AlertDialog(
             onDismissRequest = { showKofiDialog = false },
-            title = { Text(stringResource(R.string.support_on_ko_fi), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
+            title = { Text("Support via Coffee", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
             text = {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -3188,11 +3189,11 @@ fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues, target: Str
                         onClick = { showKofiDialog = true },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color(0xFF00B9FE))
+                        colors = ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color(0xFFFFB6C1))
                     ) {
                         Icon(Icons.Default.LocalCafe, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.ko_fi))
+                        Text("Coffee")
                     }
                 }
             }
