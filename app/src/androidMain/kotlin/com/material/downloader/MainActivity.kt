@@ -29,9 +29,18 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.delay
+
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        val splashScreen = installSplashScreen()
+        var keepSplash = true
+        lifecycleScope.launch {
+            delay(1000L) // Wait 1 second for animation to finish
+            keepSplash = false
+        }
+        splashScreen.setKeepOnScreenCondition { keepSplash }
         super.onCreate(savedInstanceState)
         
         CoroutineScope(Dispatchers.IO).launch {
