@@ -29,7 +29,19 @@ def parse_custom_headers(custom_headers_json):
     except Exception:
         return {}
 
+def is_playlist_url(url):
+    if not url:
+        return False
+    u = url.strip().lower()
+    return ('list=' in u or 
+            '/playlist' in u or 
+            '/sets/' in u or 
+            '/album/' in u or 
+            '/albums/' in u)
+
 def extract_info(url, quality='720', mode='auto', engine='yt-dlp', cookies_path=None, user_agent=None, custom_headers_json=None):
+    if is_playlist_url(url):
+        return extract_playlist(url, cookies_path, user_agent, custom_headers_json)
     if engine == 'gallery-dl':
         return extract_gallery(url, cookies_path, custom_headers_json)
     else:
@@ -45,6 +57,7 @@ def extract_playlist(url, cookies_path=None, user_agent=None, custom_headers_jso
             'extract_flat': 'in_playlist',
             'playlistend': 150,
             'skip_download': True,
+            'ignoreerrors': True,
             'extractor_args': {'youtube': ['player_client=android,web,tv_embedded,ios']}
         }
 
@@ -66,22 +79,37 @@ def extract_playlist(url, cookies_path=None, user_agent=None, custom_headers_jso
                 if not info:
                     return json.dumps({'status': 'error', 'message': 'No playlist information found'})
 
-                entries = info.get('entries') or []
+                raw_entries = info.get('entries')
+                entries = []
+                if raw_entries is not None:
+                    try:
+                        entries = [e for e in raw_entries if e]
+                    except Exception:
+                        entries = []
+                
                 items = []
                 for idx, entry in enumerate(entries):
                     if not entry:
                         continue
-                    entry_id = entry.get('id') or str(idx + 1)
+                    entry_id = str(entry.get('id') or (idx + 1))
                     entry_url = entry.get('url') or entry.get('webpage_url')
-                    if not entry_url:
-                        if 'youtube' in url or 'youtu.be' in url:
+                    # Flat extraction often returns video ID as entry_url or partial path
+                    if not entry_url or not str(entry_url).startswith('http'):
+                        if 'youtube' in url or 'youtu.be' in url or len(entry_id) == 11:
                             entry_url = f"https://www.youtube.com/watch?v={entry_id}"
+                        elif entry_url and not str(entry_url).startswith('http'):
+                            entry_url = f"https://www.youtube.com/watch?v={entry_url}"
                         else:
-                            entry_url = url
+                            entry_url = f"https://www.youtube.com/watch?v={entry_id}"
 
                     thumb = entry.get('thumbnail')
                     if not thumb and entry.get('thumbnails'):
-                        thumb = entry['thumbnails'][0].get('url')
+                        try:
+                            thumb = entry['thumbnails'][0].get('url')
+                        except Exception:
+                            thumb = None
+                    if not thumb and ('youtube' in url or 'youtu.be' in url or len(entry_id) == 11):
+                        thumb = f"https://i.ytimg.com/vi/{entry_id}/hqdefault.jpg"
 
                     duration_sec = entry.get('duration')
                     duration_str = None
@@ -95,7 +123,7 @@ def extract_playlist(url, cookies_path=None, user_agent=None, custom_headers_jso
 
                     items.append({
                         'id': entry_id,
-                        'url': entry_url,
+                        'url': str(entry_url),
                         'title': entry.get('title') or f"Track {idx + 1}",
                         'author': entry.get('uploader') or entry.get('channel') or info.get('uploader') or 'Unknown',
                         'thumbnail': thumb,
@@ -172,27 +200,42 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None, user_agent
                 if not info:
                     return json.dumps({'status': 'error', 'message': 'Could not extract metadata.'})
                 
-                # Check if this URL is actually a full playlist
+                # Safely resolve entries if info is a playlist or contains multiple tracks
+                raw_entries = info.get('entries')
+                entries = []
+                if raw_entries is not None:
+                    try:
+                        entries = [e for e in raw_entries if e]
+                    except Exception:
+                        entries = []
+
                 is_full_playlist = info.get('_type') == 'playlist' or (
-                    'entries' in info and len(info['entries']) > 1 and ('list=' in url or '/playlist' in url or '/sets/' in url)
+                    len(entries) > 1 and is_playlist_url(url)
                 )
 
                 if is_full_playlist:
-                    entries = info.get('entries') or []
                     items = []
                     for idx, entry in enumerate(entries):
                         if not entry:
                             continue
-                        e_id = entry.get('id') or str(idx + 1)
+                        e_id = str(entry.get('id') or (idx + 1))
                         e_url = entry.get('url') or entry.get('webpage_url')
-                        if not e_url:
-                            if 'youtube' in url or 'youtu.be' in url:
+                        if not e_url or not str(e_url).startswith('http'):
+                            if 'youtube' in url or 'youtu.be' in url or len(e_id) == 11:
                                 e_url = f"https://www.youtube.com/watch?v={e_id}"
+                            elif e_url and not str(e_url).startswith('http'):
+                                e_url = f"https://www.youtube.com/watch?v={e_url}"
                             else:
-                                e_url = url
+                                e_url = f"https://www.youtube.com/watch?v={e_id}"
                         thumb = entry.get('thumbnail')
                         if not thumb and entry.get('thumbnails'):
-                            thumb = entry['thumbnails'][0].get('url')
+                            try:
+                                thumb = entry['thumbnails'][0].get('url')
+                            except Exception:
+                                thumb = None
+                        if not thumb and ('youtube' in url or 'youtu.be' in url or len(e_id) == 11):
+                            thumb = f"https://i.ytimg.com/vi/{e_id}/hqdefault.jpg"
+
                         duration_sec = entry.get('duration')
                         duration_str = None
                         if duration_sec is not None:
@@ -204,7 +247,7 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None, user_agent
                                 duration_str = str(duration_sec)
                         items.append({
                             'id': e_id,
-                            'url': e_url,
+                            'url': str(e_url),
                             'title': entry.get('title') or f"Track {idx + 1}",
                             'author': entry.get('uploader') or entry.get('channel') or info.get('uploader') or 'Unknown',
                             'thumbnail': thumb,
@@ -225,7 +268,7 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None, user_agent
                     })
 
                 # Single video or entry
-                video = info['entries'][0] if 'entries' in info and len(info['entries']) > 0 else info
+                video = entries[0] if entries else info
                 
                 # Find the best direct URL
                 download_url = video.get('url')

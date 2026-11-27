@@ -1,6 +1,7 @@
 package com.material.downloader.ui
 
 import android.app.Application
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -10,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import com.material.downloader.api.CobaltRepository
 import com.material.downloader.util.DownloadState
 import com.material.downloader.util.FileDownloader
+import com.material.downloader.util.GabiLogger
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -302,8 +304,20 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
         return kotlinx.serialization.json.Json.encodeToString(_customHeaders.value.filter { it.isEnabled })
     }
 
+    fun isPlaylistUrl(url: String): Boolean {
+        val lower = url.trim().lowercase()
+        return lower.contains("list=") || 
+               lower.contains("/playlist") || 
+               lower.contains("/sets/") || 
+               lower.contains("/album/") || 
+               lower.contains("/albums/")
+    }
+
     fun getDynamicEngine(url: String): String {
-        val lowerUrl = url.lowercase()
+        val lowerUrl = url.trim().lowercase()
+        if (isPlaylistUrl(lowerUrl)) {
+            return "yt-dlp"
+        }
         return when {
             lowerUrl.contains("pinterest") || 
             lowerUrl.contains("pin.it") ||
@@ -356,6 +370,19 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     var updateDownloadProgress = mutableStateOf(-1f)
     var isCheckingUpdates = mutableStateOf(false)
     var updateCheckMessage = mutableStateOf<String?>(null)
+
+    data class ExtractorUpdateInfo(
+        val hasUpdate: Boolean,
+        val ytdlpCurrent: String,
+        val ytdlpLatest: String?,
+        val gallerydlCurrent: String,
+        val gallerydlLatest: String?
+    )
+
+    var extractorUpdateAvailable = mutableStateOf<ExtractorUpdateInfo?>(null)
+    var showExtractorUpdateDialog = mutableStateOf(false)
+    var isCheckingExtractorUpdates = mutableStateOf(false)
+    var isUpdatingExtractors = mutableStateOf(false)
 
     fun downloadUpdate(context: android.content.Context, url: String) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -491,6 +518,114 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
 
         if (autoCheckUpdates.value) {
             checkForUpdates(manual = false)
+            checkExtractorUpdates(manual = false)
+        }
+    }
+
+    fun checkExtractorUpdates(manual: Boolean = false) {
+        viewModelScope.launch {
+            isCheckingExtractorUpdates.value = true
+            try {
+                val (hasYtUpdate, hasGalUpdate, info) = withContext(Dispatchers.IO) {
+                    val versions = extractor.getVersions()
+                    val curYt = versions["yt_dlp"] ?: ""
+                    val curGal = versions["gallery_dl"] ?: ""
+
+                    var latestYt: String? = null
+                    var latestGal: String? = null
+
+                    try {
+                        val ytResp: HttpResponse = client.get("https://pypi.org/pypi/yt-dlp/json")
+                        if (ytResp.status.value in 200..299) {
+                            val body = ytResp.bodyAsText()
+                            val match = "\"version\"\\s*:\\s*\"([^\"]+)\"".toRegex().find(body)
+                            latestYt = match?.groupValues?.getOrNull(1)
+                        }
+                    } catch (e: Exception) {
+                        GabiLogger.e("DownloaderViewModel", "yt-dlp pypi check failed: ${e.message}")
+                    }
+
+                    try {
+                        val galResp: HttpResponse = client.get("https://pypi.org/pypi/gallery-dl/json")
+                        if (galResp.status.value in 200..299) {
+                            val body = galResp.bodyAsText()
+                            val match = "\"version\"\\s*:\\s*\"([^\"]+)\"".toRegex().find(body)
+                            latestGal = match?.groupValues?.getOrNull(1)
+                        }
+                    } catch (e: Exception) {
+                        GabiLogger.e("DownloaderViewModel", "gallery-dl pypi check failed: ${e.message}")
+                    }
+
+                    val hasYt = isNewerVersion(latestYt, curYt)
+                    val hasGal = isNewerVersion(latestGal, curGal)
+
+                    val resInfo = if (hasYt || hasGal) {
+                        ExtractorUpdateInfo(
+                            hasUpdate = true,
+                            ytdlpCurrent = curYt,
+                            ytdlpLatest = latestYt,
+                            gallerydlCurrent = curGal,
+                            gallerydlLatest = latestGal
+                        )
+                    } else null
+
+                    Triple(hasYt, hasGal, resInfo)
+                }
+
+                if (info != null) {
+                    extractorUpdateAvailable.value = info
+                    showExtractorUpdateDialog.value = true
+                    logToConsole("Engine update available: yt-dlp (${info.ytdlpCurrent} -> ${info.ytdlpLatest}), gallery-dl (${info.gallerydlCurrent} -> ${info.gallerydlLatest})")
+                } else if (manual) {
+                    logToConsole("Engines are up to date")
+                }
+            } catch (e: Exception) {
+                GabiLogger.e("DownloaderViewModel", "checkExtractorUpdates error: ${e.message}", e)
+            } finally {
+                isCheckingExtractorUpdates.value = false
+            }
+        }
+    }
+
+    private fun isNewerVersion(latest: String?, current: String?): Boolean {
+        if (latest.isNullOrBlank() || current.isNullOrBlank()) return false
+        if (latest == current) return false
+        val cleanL = latest.trim().removePrefix("v").substringBefore("-")
+        val cleanC = current.trim().removePrefix("v").substringBefore("-")
+        if (cleanL == cleanC) return false
+        val lParts = cleanL.split('.').map { it.toIntOrNull() ?: 0 }
+        val cParts = cleanC.split('.').map { it.toIntOrNull() ?: 0 }
+        val maxLen = maxOf(lParts.size, cParts.size)
+        for (i in 0 until maxLen) {
+            val l = lParts.getOrNull(i) ?: 0
+            val c = cParts.getOrNull(i) ?: 0
+            if (l > c) return true
+            if (l < c) return false
+        }
+        return false
+    }
+
+    fun updateExtractors(context: Context, onComplete: (Boolean, String) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            isUpdatingExtractors.value = true
+            try {
+                val targetPath = java.io.File(context.filesDir, "python_packages").absolutePath
+                val result = extractor.updateExtractors(targetPath)
+                val success = result["status"] == "success"
+                withContext(Dispatchers.Main) {
+                    isUpdatingExtractors.value = false
+                    if (success) {
+                        extractorUpdateAvailable.value = null
+                        showExtractorUpdateDialog.value = false
+                    }
+                    onComplete(success, result["message"] ?: "")
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    isUpdatingExtractors.value = false
+                    onComplete(false, e.message ?: "Failed to update")
+                }
+            }
         }
     }
 
@@ -696,6 +831,21 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
 
     private suspend fun performExtraction(url: String, quality: String, mode: String, engine: String): ExtractionResult {
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            if (isPlaylistUrl(url)) {
+                logToConsole("Playlist URL detected. Querying Python playlist extractor...")
+                val engineKey = "yt_dlp"
+                val cookiesPath = if (useCookies.value) prefs.getString("${engineKey}_cookies_path", null) else null
+                val webViewUa = if (useCookies.value) android.webkit.WebSettings.getDefaultUserAgent(getApplication()) else null
+                val customHeadersJson = getCustomHeadersJson()
+                val res = extractor.extractPlaylist(url, cookiesPath, webViewUa, customHeadersJson)
+                if (res.status == "success") {
+                    logToConsole("Playlist extraction success: ${res.playlist_items?.size ?: 0} tracks found")
+                } else {
+                    logToConsole("Playlist extraction failed: ${res.message}")
+                }
+                return@withContext res
+            }
+
             if (engine == "cobalt") {
                 val cobaltMode = if (mode == "video") "auto" else mode
                 logToConsole("Calling Cobalt API...")
@@ -843,7 +993,9 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
             logToConsole("----------------------------------------")
             try {
                 var result: com.material.downloader.api.ExtractionResult? = null
-                val enginesToTry = if (engine == "dynamic") {
+                val enginesToTry = if (isPlaylistUrl(url)) {
+                    listOf("yt-dlp")
+                } else if (engine == "dynamic") {
                     val firstEngine = getDynamicEngine(url)
                     val allEngines = listOf("cobalt", "yt-dlp", "gallery-dl", "newpipe")
                     listOf(firstEngine) + allEngines.filter { it != firstEngine }
@@ -1186,6 +1338,11 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun downloadMedia(url: String, quality: String, mode: String = "auto", engine: String = "dynamic") {
+        if (isPlaylistUrl(url)) {
+            logToConsole("Fetching playlist tracks before download...")
+            fetchPreview(url, quality, mode, engine)
+            return
+        }
         val title = _previewMetadata.value?.title ?: "Download"
         val thumb = _previewMetadata.value?.thumbnail
         val item = QueueItem(

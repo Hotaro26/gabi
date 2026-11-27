@@ -1100,6 +1100,26 @@ fun MainDownloaderTab(
 
     if (showDownloadingDetailsSheet) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val coroutineScope = rememberCoroutineScope()
+        val sheetBackProgress = remember { Animatable(0f) }
+
+        PredictiveBackHandler(enabled = true) { progress: Flow<BackEventCompat> ->
+            try {
+                progress.collect { backEvent ->
+                    sheetBackProgress.snapTo(backEvent.progress)
+                }
+                sheetBackProgress.animateTo(1f, tween(150))
+                coroutineScope.launch {
+                    sheetState.hide()
+                    showDownloadingDetailsSheet = false
+                }
+            } catch (e: CancellationException) {
+                sheetBackProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+            } finally {
+                sheetBackProgress.snapTo(0f)
+            }
+        }
+        val sp = sheetBackProgress.value
         ModalBottomSheet(
             onDismissRequest = { showDownloadingDetailsSheet = false },
             sheetState = sheetState,
@@ -1110,6 +1130,12 @@ fun MainDownloaderTab(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .graphicsLayer {
+                        scaleX = 1f - (sp * 0.08f)
+                        scaleY = 1f - (sp * 0.08f)
+                        alpha = 1f - (sp * 0.3f)
+                        translationY = sp * 100f
+                    }
                     .navigationBarsPadding()
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -1210,6 +1236,67 @@ fun MainDownloaderTab(
                 }
             }
         )
+    }
+
+    if (viewModel.showExtractorUpdateDialog.value) {
+        val extInfo = viewModel.extractorUpdateAvailable.value
+        if (extInfo != null && extInfo.hasUpdate) {
+            val isUpdating = viewModel.isUpdatingExtractors.value
+            AlertDialog(
+                onDismissRequest = { if (!isUpdating) viewModel.showExtractorUpdateDialog.value = false },
+                icon = { Icon(Icons.Rounded.SystemUpdate, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                title = { Text("Extractor Updates Available") },
+                text = {
+                    Column {
+                        Text("New versions of extraction engines were detected:")
+                        Spacer(Modifier.height(8.dp))
+                        if (extInfo.ytdlpLatest != null && extInfo.ytdlpLatest != extInfo.ytdlpCurrent) {
+                            Text("• yt-dlp: ${extInfo.ytdlpCurrent} → ${extInfo.ytdlpLatest}", fontWeight = FontWeight.Medium)
+                        }
+                        if (extInfo.gallerydlLatest != null && extInfo.gallerydlLatest != extInfo.gallerydlCurrent) {
+                            Text("• gallery-dl: ${extInfo.gallerydlCurrent} → ${extInfo.gallerydlLatest}", fontWeight = FontWeight.Medium)
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = if (isUpdating) "Updating python packages in background..." else "Updating ensures continuous download support on all sites.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (isUpdating) {
+                            Spacer(Modifier.height(12.dp))
+                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            if (!isUpdating) {
+                                viewModel.updateExtractors(context) { success, msg ->
+                                    if (success) {
+                                        android.widget.Toast.makeText(context, "Extractors updated! Please restart app.", android.widget.Toast.LENGTH_LONG).show()
+                                    } else {
+                                        android.widget.Toast.makeText(context, "Update failed: $msg", android.widget.Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            }
+                        },
+                        enabled = !isUpdating
+                    ) {
+                        Text(if (isUpdating) "Updating..." else "Update Now")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { viewModel.showExtractorUpdateDialog.value = false },
+                        enabled = !isUpdating
+                    ) {
+                        Text("Later")
+                    }
+                },
+                shape = RoundedCornerShape(28.dp)
+            )
+        }
     }
 
     Column(
@@ -1485,6 +1572,26 @@ fun MainDownloaderTab(
 
         if (showPreviewSheet && preview != null) {
             val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            val coroutineScope = rememberCoroutineScope()
+            val sheetBackProgress = remember { Animatable(0f) }
+
+            PredictiveBackHandler(enabled = true) { progress: Flow<BackEventCompat> ->
+                try {
+                    progress.collect { backEvent ->
+                        sheetBackProgress.snapTo(backEvent.progress)
+                    }
+                    sheetBackProgress.animateTo(1f, tween(150))
+                    coroutineScope.launch {
+                        sheetState.hide()
+                        showPreviewSheet = false
+                    }
+                } catch (e: CancellationException) {
+                    sheetBackProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+                } finally {
+                    sheetBackProgress.snapTo(0f)
+                }
+            }
+            val sp = sheetBackProgress.value
             val meta = preview
             val isImageOrGallery = meta.is_gallery == true || meta.ext in listOf("jpg", "jpeg", "png", "webp", "gif") || engine == "gallery-dl"
 
@@ -1496,7 +1603,16 @@ fun MainDownloaderTab(
                 windowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
             ) {
                 Column(
-                    modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .graphicsLayer {
+                            scaleX = 1f - (sp * 0.08f)
+                            scaleY = 1f - (sp * 0.08f)
+                            alpha = 1f - (sp * 0.3f)
+                            translationY = sp * 100f
+                        }
+                        .navigationBarsPadding()
+                        .padding(horizontal = 24.dp, vertical = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -2030,20 +2146,25 @@ fun MainDownloaderTab(
     }
 
     val isLogsVisible = showFullscreenLogs || isPredictiveLogsActive || animatedLogsProgress.value > 0f
-    if (isLogsVisible) {
+    AnimatedVisibility(
+        visible = isLogsVisible,
+        enter = fadeIn(animationSpec = tween(220)) + scaleIn(initialScale = 0.94f, animationSpec = tween(220)),
+        exit = fadeOut(animationSpec = tween(180)) + scaleOut(targetScale = 0.94f, animationSpec = tween(180)),
+        modifier = Modifier
+            .fillMaxSize()
+            .zIndex(100f)
+    ) {
         val p = animatedLogsProgress.value
-        val logsOffsetX = screenWidthPx * p
-        val logsScale = 1f - (p * 0.05f)
-        val logsCorners = (p * 28).dp
-        val logsAlpha = 1f - (p * 0.15f)
+        val logsScale = 1f - (p * 0.08f)
+        val logsCorners = (p * 24).dp
+        val logsAlpha = 1f - (p * 0.35f)
         val currentTerminalTheme = viewModel.terminalTheme.value
 
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .zIndex(100f)
                 .graphicsLayer {
-                    translationX = logsOffsetX
+                    translationX = 0f
                     scaleX = logsScale
                     scaleY = logsScale
                     alpha = logsAlpha
@@ -2070,11 +2191,7 @@ fun MainDownloaderTab(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(onClick = { 
-                            coroutineScope.launch {
-                                animatedLogsProgress.animateTo(1f, tween(durationMillis = 180))
-                                showFullscreenLogs = false
-                                animatedLogsProgress.snapTo(0f)
-                            }
+                            showFullscreenLogs = false
                         }) {
                             Icon(
                                 imageVector = Icons.Default.ArrowBack,
@@ -3224,38 +3341,31 @@ fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, 
         Text(stringResource(R.string.extractors), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text(stringResource(R.string.update_internal_components), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         
+        val extUpdateInfo = viewModel.extractorUpdateAvailable.value
+        val hasExtUpdate = extUpdateInfo?.hasUpdate == true
+
         OutlinedCard(
             onClick = {
-                if (isUpdatingExtractors) return@OutlinedCard
+                if (isUpdatingExtractors || viewModel.isUpdatingExtractors.value) return@OutlinedCard
                 isUpdatingExtractors = true
                 android.widget.Toast.makeText(context, "Updating extractors... Please wait", android.widget.Toast.LENGTH_LONG).show()
-                val targetPath = java.io.File(context.filesDir, "python_packages").absolutePath
-                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-                    try {
-                        val result = com.material.downloader.api.PythonExtractor().updateExtractors(targetPath)
-                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                            android.util.Log.e("ExtractorUpdate", "Result: $result")
-                            if (result["status"] == "success") {
-                                android.widget.Toast.makeText(context, "Extractors updated successfully! Please restart the app.", android.widget.Toast.LENGTH_LONG).show()
-                                val versions = com.material.downloader.api.PythonExtractor().getVersions()
-                                if (versions["status"] == "success") {
-                                    ytDlpVersion = versions["yt_dlp"] ?: ytDlpVersion
-                                    galleryDlVersion = versions["gallery_dl"] ?: galleryDlVersion
-                                }
-                            } else {
-                                android.widget.Toast.makeText(context, "Update failed: ${result["message"]}", android.widget.Toast.LENGTH_LONG).show()
-                            }
-                            isUpdatingExtractors = false
+                viewModel.updateExtractors(context) { success, msg ->
+                    if (success) {
+                        android.widget.Toast.makeText(context, "Extractors updated! Please restart app.", android.widget.Toast.LENGTH_LONG).show()
+                        val versions = com.material.downloader.api.PythonExtractor().getVersions()
+                        if (versions["status"] == "success") {
+                            ytDlpVersion = versions["yt_dlp"] ?: ytDlpVersion
+                            galleryDlVersion = versions["gallery_dl"] ?: galleryDlVersion
                         }
-                    } catch(e: Exception) {
-                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                            android.widget.Toast.makeText(context, "Error updating: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
-                            isUpdatingExtractors = false
-                        }
+                    } else {
+                        android.widget.Toast.makeText(context, "Update failed: $msg", android.widget.Toast.LENGTH_LONG).show()
                     }
+                    isUpdatingExtractors = false
                 }
             },
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            colors = if (hasExtUpdate) CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)) else CardDefaults.outlinedCardColors(),
+            border = if (hasExtUpdate) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else CardDefaults.outlinedCardBorder(),
             shape = RoundedCornerShape(16.dp)
         ) {
             Row(
@@ -3263,14 +3373,62 @@ fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, 
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                if (isUpdatingExtractors) {
+                if (isUpdatingExtractors || viewModel.isUpdatingExtractors.value) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                 } else {
-                    Icon(Icons.Default.SystemUpdate, null, tint = MaterialTheme.colorScheme.primary)
+                    Icon(
+                        Icons.Default.SystemUpdate, 
+                        null, 
+                        tint = if (hasExtUpdate) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.update_yt_dlp_gallery_dl), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(stringResource(R.string.update_yt_dlp_gallery_dl), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                        if (hasExtUpdate) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.primary
+                            ) {
+                                Text(
+                                    text = "Update Available",
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
                     Text("yt-dlp: $ytDlpVersion • gallery-dl: $galleryDlVersion", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (hasExtUpdate) {
+                        Text(
+                            text = "Latest: yt-dlp ${extUpdateInfo?.ytdlpLatest ?: ytDlpVersion} • gallery-dl ${extUpdateInfo?.gallerydlLatest ?: galleryDlVersion}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+                if (hasExtUpdate && !isUpdatingExtractors && !viewModel.isUpdatingExtractors.value) {
+                    FilledTonalButton(
+                        onClick = {
+                            isUpdatingExtractors = true
+                            viewModel.updateExtractors(context) { success, msg ->
+                                isUpdatingExtractors = false
+                                if (success) {
+                                    android.widget.Toast.makeText(context, "Extractors updated! Please restart app.", android.widget.Toast.LENGTH_LONG).show()
+                                } else {
+                                    android.widget.Toast.makeText(context, "Update failed: $msg", android.widget.Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        },
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Text("Update", style = MaterialTheme.typography.labelMedium)
+                    }
                 }
             }
         }
@@ -3867,6 +4025,26 @@ fun LogsTab(
     if (selectedLog != null && selectedLog?.path != null) {
         val log = selectedLog!!
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val coroutineScope = rememberCoroutineScope()
+        val sheetBackProgress = remember { Animatable(0f) }
+
+        PredictiveBackHandler(enabled = true) { progress: Flow<BackEventCompat> ->
+            try {
+                progress.collect { backEvent ->
+                    sheetBackProgress.snapTo(backEvent.progress)
+                }
+                sheetBackProgress.animateTo(1f, tween(150))
+                coroutineScope.launch {
+                    sheetState.hide()
+                    selectedLog = null
+                }
+            } catch (e: CancellationException) {
+                sheetBackProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+            } finally {
+                sheetBackProgress.snapTo(0f)
+            }
+        }
+        val sp = sheetBackProgress.value
         val ext = log.path?.substringAfterLast('.', "") ?: ""
         val isGallery = ext.equals("jpg", true) || ext.equals("png", true) || ext.equals("jpeg", true) || ext.equals("webp", true) || ext.equals("gif", true) || (log.title.contains("Gallery", true) && !ext.equals("mp4", true))
 
@@ -3878,7 +4056,16 @@ fun LogsTab(
             windowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        scaleX = 1f - (sp * 0.08f)
+                        scaleY = 1f - (sp * 0.08f)
+                        alpha = 1f - (sp * 0.3f)
+                        translationY = sp * 100f
+                    }
+                    .navigationBarsPadding()
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -4148,6 +4335,26 @@ fun CookiesSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, co
 
     if (showNewCookieSheet) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val coroutineScope = rememberCoroutineScope()
+        val sheetBackProgress = remember { Animatable(0f) }
+
+        PredictiveBackHandler(enabled = true) { progress: Flow<BackEventCompat> ->
+            try {
+                progress.collect { backEvent ->
+                    sheetBackProgress.snapTo(backEvent.progress)
+                }
+                sheetBackProgress.animateTo(1f, tween(150))
+                coroutineScope.launch {
+                    sheetState.hide()
+                    showNewCookieSheet = false
+                }
+            } catch (e: CancellationException) {
+                sheetBackProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+            } finally {
+                sheetBackProgress.snapTo(0f)
+            }
+        }
+        val sp = sheetBackProgress.value
         var tempUrl by remember { mutableStateOf("https://") }
         var selectedTag by remember { mutableStateOf<String?>(null) }
         var tagExpanded by remember { mutableStateOf(false) }
@@ -4162,6 +4369,12 @@ fun CookiesSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, co
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .graphicsLayer {
+                        scaleX = 1f - (sp * 0.08f)
+                        scaleY = 1f - (sp * 0.08f)
+                        alpha = 1f - (sp * 0.3f)
+                        translationY = sp * 100f
+                    }
                     .navigationBarsPadding()
                     .padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)

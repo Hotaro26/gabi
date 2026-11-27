@@ -30,6 +30,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.graphicsLayer
 import android.content.Intent
 import android.speech.RecognizerIntent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -190,6 +191,27 @@ fun NewPipeTab(
 
     if (selectedItem != null) {
         val item = selectedItem!!
+        val coroutineScope = rememberCoroutineScope()
+        val sheetBackProgress = remember { androidx.compose.animation.core.Animatable(0f) }
+
+        androidx.activity.compose.PredictiveBackHandler(enabled = true) { progress: kotlinx.coroutines.flow.Flow<androidx.activity.BackEventCompat> ->
+            try {
+                progress.collect { backEvent ->
+                    sheetBackProgress.snapTo(backEvent.progress)
+                }
+                sheetBackProgress.animateTo(1f, androidx.compose.animation.core.tween(150))
+                coroutineScope.launch {
+                    sheetState.hide()
+                    selectedItem = null
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                sheetBackProgress.animateTo(0f, androidx.compose.animation.core.spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow))
+            } finally {
+                sheetBackProgress.snapTo(0f)
+            }
+        }
+        val sp = sheetBackProgress.value
+
         ModalBottomSheet(
             onDismissRequest = { selectedItem = null },
             sheetState = sheetState,
@@ -197,7 +219,16 @@ fun NewPipeTab(
             windowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp).navigationBarsPadding(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        scaleX = 1f - (sp * 0.08f)
+                        scaleY = 1f - (sp * 0.08f)
+                        alpha = 1f - (sp * 0.3f)
+                        translationY = sp * 100f
+                    }
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
+                    .navigationBarsPadding(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {

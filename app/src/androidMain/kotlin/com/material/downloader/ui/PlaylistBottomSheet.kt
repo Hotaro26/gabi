@@ -1,5 +1,11 @@
 package com.material.downloader.ui
 
+import androidx.activity.BackEventCompat
+import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -14,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -22,6 +29,9 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.material.downloader.model.PlaylistInfo
 import com.material.downloader.model.PlaylistItem
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,6 +43,26 @@ fun PlaylistBottomSheet(
     onDownloadSelected: (quality: String, mode: String, engine: String) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val coroutineScope = rememberCoroutineScope()
+    val animatedProgress = remember { Animatable(0f) }
+
+    PredictiveBackHandler(enabled = true) { progress: Flow<BackEventCompat> ->
+        try {
+            progress.collect { backEvent ->
+                animatedProgress.snapTo(backEvent.progress)
+            }
+            animatedProgress.animateTo(1f, tween(durationMillis = 150))
+            coroutineScope.launch {
+                sheetState.hide()
+                onDismiss()
+            }
+        } catch (e: CancellationException) {
+            animatedProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+        } finally {
+            animatedProgress.snapTo(0f)
+        }
+    }
+
     var selectedMode by remember { mutableStateOf("auto") } // "auto" (video) or "audio"
     var selectedQuality by remember { mutableStateOf("720") }
     var selectedEngine by remember { mutableStateOf("yt-dlp") }
@@ -40,6 +70,7 @@ fun PlaylistBottomSheet(
     val selectedCount = playlistInfo.items.count { it.isSelected }
     val allSelected = selectedCount == playlistInfo.items.size && playlistInfo.items.isNotEmpty()
 
+    val p = animatedProgress.value
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -51,6 +82,12 @@ fun PlaylistBottomSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.88f)
+                .graphicsLayer {
+                    scaleX = 1f - (p * 0.08f)
+                    scaleY = 1f - (p * 0.08f)
+                    alpha = 1f - (p * 0.3f)
+                    translationY = p * 120f
+                }
                 .padding(horizontal = 20.dp)
         ) {
             // Header Info

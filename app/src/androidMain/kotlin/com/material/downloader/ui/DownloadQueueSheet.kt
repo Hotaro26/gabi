@@ -1,7 +1,13 @@
 package com.material.downloader.ui
 
+import androidx.activity.BackEventCompat
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,6 +21,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -23,6 +30,9 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.material.downloader.model.QueueItem
 import com.material.downloader.model.QueueItemStatus
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,10 +48,39 @@ fun DownloadQueueSheet(
     onClearCompleted: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-    val activeCount = queueItems.count { it.status == QueueItemStatus.DOWNLOADING }
-    val queuedCount = queueItems.count { it.status == QueueItemStatus.QUEUED }
-    val completedCount = queueItems.count { it.status == QueueItemStatus.COMPLETED }
+    val coroutineScope = rememberCoroutineScope()
+    val animatedProgress = remember { Animatable(0f) }
 
+    PredictiveBackHandler(enabled = true) { progress: Flow<BackEventCompat> ->
+        try {
+            progress.collect { backEvent ->
+                animatedProgress.snapTo(backEvent.progress)
+            }
+            animatedProgress.animateTo(1f, tween(durationMillis = 150))
+            coroutineScope.launch {
+                sheetState.hide()
+                onDismiss()
+            }
+        } catch (e: CancellationException) {
+            animatedProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+        } finally {
+            animatedProgress.snapTo(0f)
+        }
+    }
+
+    val orderedQueueItems = remember(queueItems) {
+        queueItems.sortedBy { item ->
+            when (item.status) {
+                QueueItemStatus.DOWNLOADING -> 0
+                QueueItemStatus.QUEUED -> 1
+                QueueItemStatus.PAUSED -> 2
+                QueueItemStatus.ERROR -> 3
+                QueueItemStatus.COMPLETED -> 4
+            }
+        }
+    }
+
+    val p = animatedProgress.value
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -53,9 +92,15 @@ fun DownloadQueueSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.88f)
+                .graphicsLayer {
+                    scaleX = 1f - (p * 0.08f)
+                    scaleY = 1f - (p * 0.08f)
+                    alpha = 1f - (p * 0.3f)
+                    translationY = p * 120f
+                }
                 .padding(horizontal = 20.dp)
         ) {
-            // Header
+            // Header: Clean title without numbers
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -69,24 +114,17 @@ fun DownloadQueueSheet(
                         modifier = Modifier.size(28.dp)
                     )
                     Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Text(
-                            text = "Download Queue",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "$activeCount active • $queuedCount waiting • $completedCount finished",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text(
+                        text = "Download Queue",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (completedCount > 0 || queueItems.any { it.status == QueueItemStatus.ERROR }) {
+                    if (queueItems.any { it.status == QueueItemStatus.COMPLETED || it.status == QueueItemStatus.ERROR }) {
                         IconButton(onClick = onClearCompleted) {
-                            Icon(Icons.Rounded.DeleteSweep, contentDescription = "Clear Completed")
+                            Icon(Icons.Rounded.DeleteSweep, contentDescription = "Clear Finished")
                         }
                     }
                     IconButton(onClick = onDismiss) {
@@ -95,41 +133,10 @@ fun DownloadQueueSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Concurrency selector row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                        RoundedCornerShape(14.dp)
-                    )
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Parallel slots",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf(1, 2, 3, 4).forEach { count ->
-                        FilterChip(
-                            selected = maxConcurrency == count,
-                            onClick = { onConcurrencyChange(count) },
-                            label = { Text("$count") },
-                            modifier = Modifier.height(32.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Queue List or Empty State
-            if (queueItems.isEmpty()) {
+            if (orderedQueueItems.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -159,7 +166,7 @@ fun DownloadQueueSheet(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Paste a link or select a playlist to queue items",
+                            text = "Downloads will appear here in order",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -172,7 +179,7 @@ fun DownloadQueueSheet(
                         .fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(queueItems, key = { it.id }) { item ->
+                    items(orderedQueueItems, key = { it.id }) { item ->
                         QueueItemCard(
                             item = item,
                             onPause = { onPause(item.id) },
@@ -303,7 +310,7 @@ private fun QueueItemCard(
                                 Icon(Icons.Rounded.Pause, contentDescription = "Pause", tint = MaterialTheme.colorScheme.primary)
                             }
                             IconButton(onClick = onCancel) {
-                                Icon(Icons.Rounded.Close, contentDescription = "Cancel")
+                                Icon(Icons.Rounded.Stop, contentDescription = "Stop", tint = MaterialTheme.colorScheme.error)
                             }
                         }
                         QueueItemStatus.PAUSED -> {
@@ -311,12 +318,12 @@ private fun QueueItemCard(
                                 Icon(Icons.Rounded.PlayArrow, contentDescription = "Resume", tint = MaterialTheme.colorScheme.primary)
                             }
                             IconButton(onClick = onCancel) {
-                                Icon(Icons.Rounded.Close, contentDescription = "Cancel")
+                                Icon(Icons.Rounded.Stop, contentDescription = "Stop", tint = MaterialTheme.colorScheme.error)
                             }
                         }
                         QueueItemStatus.QUEUED -> {
                             IconButton(onClick = onCancel) {
-                                Icon(Icons.Rounded.Close, contentDescription = "Remove")
+                                Icon(Icons.Rounded.Stop, contentDescription = "Stop", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                         QueueItemStatus.ERROR -> {
