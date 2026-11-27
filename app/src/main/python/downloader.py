@@ -178,15 +178,23 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None, user_agent
             q_val = str(quality).replace('p', '').strip()
             if q_val.isdigit():
                 ydl_opts['format'] = (
-                    f'bestvideo[vcodec^=avc][height={q_val}]+bestaudio[ext=m4a]/'
-                    f'bestvideo[vcodec^=vp9][height={q_val}]+bestaudio[ext=webm]/'
+                    f'bestvideo[vcodec^=avc][protocol^=http][height={q_val}]+bestaudio[ext=m4a][protocol^=http]/'
+                    f'bestvideo[vcodec^=vp9][protocol^=http][height={q_val}]+bestaudio[ext=webm][protocol^=http]/'
+                    f'bestvideo[vcodec^=avc][protocol^=http][height<={q_val}]+bestaudio[ext=m4a][protocol^=http]/'
+                    f'bestvideo[vcodec^=vp9][protocol^=http][height<={q_val}]+bestaudio[ext=webm][protocol^=http]/'
+                    f'best[ext=mp4][protocol^=http][height<={q_val}]/'
+                    f'best[protocol^=http][height<={q_val}]/'
+                    f'best[ext=mp4][protocol^=http]/'
+                    f'best[protocol^=http]/'
                     f'bestvideo[vcodec^=avc][height<={q_val}]+bestaudio[ext=m4a]/'
-                    f'bestvideo[vcodec^=vp9][height<={q_val}]+bestaudio[ext=webm]/'
-                    f'best[height<={q_val}]/'
-                    f'bestvideo+bestaudio/best'
+                    f'best[height<={q_val}]/bestvideo+bestaudio/best'
                 )
             else:
                 ydl_opts['format'] = (
+                    'bestvideo[vcodec^=avc][protocol^=http]+bestaudio[ext=m4a][protocol^=http]/'
+                    'bestvideo[vcodec^=vp9][protocol^=http]+bestaudio[ext=webm][protocol^=http]/'
+                    'best[ext=mp4][protocol^=http]/'
+                    'best[protocol^=http]/'
                     'bestvideo[vcodec^=avc]+bestaudio[ext=m4a]/'
                     'bestvideo[vcodec^=vp9]+bestaudio[ext=webm]/'
                     'bestvideo+bestaudio/best'
@@ -291,10 +299,25 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None, user_agent
                     audio_url = None
 
                 if not download_url and 'formats' in video:
-                    # Fallback to the best resolved format URL
+                    # Fallback to the best resolved direct HTTP format URL (avoid m3u8 if possible)
                     formats = [f for f in video['formats'] if f.get('url')]
-                    if formats:
-                        download_url = formats[-1].get('url') # 'best' is usually at the end
+                    direct_formats = [f for f in formats if 'm3u8' not in str(f.get('protocol', '')).lower() and '.m3u8' not in str(f.get('url', '')).lower()]
+                    pool = direct_formats if direct_formats else formats
+                    if pool:
+                        download_url = pool[-1].get('url') # 'best' is usually at the end
+
+                # If requested_formats picked an m3u8 playlist, prefer a direct HTTP progressive format if available
+                if download_url and ('.m3u8' in str(download_url).lower() or (audio_url and '.m3u8' in str(audio_url).lower())) and 'formats' in video:
+                    direct_prog = [
+                        f for f in video['formats']
+                        if f.get('url') and f.get('vcodec') != 'none' and f.get('acodec') != 'none'
+                        and 'm3u8' not in str(f.get('protocol', '')).lower()
+                        and '.m3u8' not in str(f.get('url', '')).lower()
+                    ]
+                    if direct_prog:
+                        best_direct = sorted(direct_prog, key=lambda x: x.get('height') or 0)[-1]
+                        download_url = best_direct.get('url')
+                        audio_url = None
 
                 # Extract available qualities
                 qualities = set()
