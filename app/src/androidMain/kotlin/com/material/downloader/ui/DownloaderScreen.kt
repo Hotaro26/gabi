@@ -58,6 +58,7 @@ import androidx.compose.ui.res.painterResource
 import com.material.downloader.R
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import org.burnoutcrew.reorderable.*
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.ui.draw.scale
@@ -134,6 +135,12 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
     var selectedHelpTab by remember { mutableStateOf("yt-dlp") }
     val externalUrl by viewModel.externalUrl.collectAsState()
     val clipboardManager = LocalClipboardManager.current
+
+    val playlistInfo by viewModel.playlistInfo.collectAsState()
+    val queueItems by viewModel.queueItems.collectAsState()
+    val customHeaders by viewModel.customHeaders.collectAsState()
+    var showQueueSheet by remember { mutableStateOf(false) }
+    var showHeadersDialog by remember { mutableStateOf(false) }
     
     val instantInteractionSource = remember { MutableInteractionSource() }
     val isInstantPressed by instantInteractionSource.collectIsPressedAsState()
@@ -528,6 +535,58 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                                 }
                             }
                         }
+
+                        // Queue FAB
+                        val hasActiveQueue = queueItems.isNotEmpty()
+                        val queueFabSize by animateDpAsState(
+                            if (selectedTab == 0 || hasActiveQueue) 52.dp else 0.dp,
+                            androidx.compose.animation.core.spring(
+                                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                                stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+                            ),
+                            label = "queue_fab_size"
+                        )
+                        val queueSpacerSize by animateDpAsState(
+                            if (selectedTab == 0 || hasActiveQueue) 10.dp else 0.dp,
+                            androidx.compose.animation.core.spring(
+                                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                                stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+                            ),
+                            label = "queue_spacer_size"
+                        )
+
+                        if (queueFabSize > 0.dp) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Spacer(Modifier.width(queueSpacerSize))
+                                TooltipBox(
+                                    positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                                    tooltip = { PlainTooltip { Text("Download Queue") } },
+                                    state = rememberTooltipState()
+                                ) {
+                                    val activeCount = queueItems.count {
+                                        it.status == com.material.downloader.model.QueueItemStatus.DOWNLOADING ||
+                                        it.status == com.material.downloader.model.QueueItemStatus.QUEUED
+                                    }
+                                    BadgedBox(
+                                        badge = {
+                                            if (activeCount > 0) {
+                                                Badge { Text("$activeCount") }
+                                            }
+                                        }
+                                    ) {
+                                        FloatingActionButton(
+                                            onClick = { showQueueSheet = true },
+                                            modifier = Modifier.size(queueFabSize),
+                                            shape = CircleShape,
+                                            containerColor = if (activeCount > 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                            contentColor = if (activeCount > 0) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                        ) {
+                                            Icon(Icons.Rounded.QueueMusic, contentDescription = "Download Queue")
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         
                         val isVoiceVisible = selectedTab == 1
                         val voiceFabSize by animateDpAsState(if (isVoiceVisible) 52.dp else 0.dp, androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy, stiffness = androidx.compose.animation.core.Spring.StiffnessLow))
@@ -820,6 +879,46 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                     }
                 },
                 shape = RoundedCornerShape(28.dp)
+            )
+        }
+
+        // Playlist Bottom Sheet
+        playlistInfo?.let { pl ->
+            PlaylistBottomSheet(
+                playlistInfo = pl,
+                onDismiss = { viewModel.dismissPlaylist() },
+                onToggleItem = { viewModel.togglePlaylistItem(it) },
+                onSelectAll = { viewModel.selectAllPlaylistItems(it) },
+                onDownloadSelected = { q, m, eng ->
+                    viewModel.enqueueSelectedPlaylist(q, m, eng)
+                }
+            )
+        }
+
+        // Download Queue Bottom Sheet
+        if (showQueueSheet) {
+            DownloadQueueSheet(
+                queueItems = queueItems,
+                maxConcurrency = viewModel.maxParallelDownloads.intValue,
+                onConcurrencyChange = { viewModel.updateMaxParallelDownloads(it) },
+                onDismiss = { showQueueSheet = false },
+                onPause = { viewModel.pauseQueueItem(it) },
+                onResume = { viewModel.resumeQueueItem(it) },
+                onCancel = { viewModel.cancelQueueItem(it) },
+                onRetry = { viewModel.retryQueueItem(it) },
+                onClearCompleted = { viewModel.clearCompletedQueue() }
+            )
+        }
+
+        // Custom Headers Dialog
+        if (showHeadersDialog) {
+            CustomHeadersDialog(
+                customHeaders = customHeaders,
+                onDismiss = { showHeadersDialog = false },
+                onAddHeader = { k, v -> viewModel.addCustomHeader(k, v) },
+                onRemoveHeader = { viewModel.removeCustomHeader(it) },
+                onToggleHeader = { viewModel.toggleCustomHeader(it) },
+                onApplyPreset = { viewModel.applyHeaderPreset(it) }
             )
         }
     }
@@ -2172,6 +2271,7 @@ fun SettingsListItem(
 fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = PaddingValues(0.dp),
     onYoutubeSearch: () -> Unit = {}, isSearchActive: Boolean = false, searchQuery: String = "", onQueryChange: (String) -> Unit = {}) {
     var currentScreen by remember { mutableStateOf("Main") }
+    val customHeaders by viewModel.customHeaders.collectAsState()
 
     BackHandler(enabled = currentScreen != "Main") {
         currentScreen = "Main"
@@ -2214,6 +2314,16 @@ fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = 
             "Customisation" -> CustomisationScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding, target)
             "Downloads" -> DownloadsSettingsScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding, target)
             "Cookies" -> CookiesSettingsScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding, target)
+            "CustomHeaders" -> {
+                CustomHeadersDialog(
+                    customHeaders = customHeaders,
+                    onDismiss = { currentScreen = "Main" },
+                    onAddHeader = { k, v -> viewModel.addCustomHeader(k, v) },
+                    onRemoveHeader = { viewModel.removeCustomHeader(it) },
+                    onToggleHeader = { viewModel.toggleCustomHeader(it) },
+                    onApplyPreset = { viewModel.applyHeaderPreset(it) }
+                )
+            }
             "Developer" -> DeveloperScreen(viewModel = viewModel, onBack = { currentScreen = "Main" }, contentPadding, target)
             "Support" -> SupportScreen(onBack = { currentScreen = "Main" }, contentPadding, target)
         }
@@ -2357,6 +2467,22 @@ fun SettingsMainList(
                     iconColor = Color(0xFFD4A373), // Cookie color
                     title = "Cookies",
                     subtitle = "Manage authentication cookies",
+                    useMaterialShapes = viewModel.isMaterialShapesEnabled.value
+                )
+            }
+
+            SegmentCard(
+                onClick = { onNavigate("CustomHeaders") },
+                defaultTopStart = 4.dp,
+                defaultTopEnd = 4.dp,
+                defaultBottomStart = 4.dp,
+                defaultBottomEnd = 4.dp
+            ) {
+                SettingsListItem(
+                    icon = Icons.Rounded.Http,
+                    iconColor = Color(0xFF4285F4),
+                    title = "Network Headers",
+                    subtitle = "User-Agent and custom HTTP headers",
                     useMaterialShapes = viewModel.isMaterialShapesEnabled.value
                 )
             }

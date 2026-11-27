@@ -8,32 +8,138 @@ import threading
 # Thread lock to prevent concurrent extraction crashes (generator already executing)
 extraction_lock = threading.Lock()
 
-def extract_info(url, quality='720', mode='auto', engine='yt-dlp', cookies_path=None, user_agent=None):
-    if engine == 'gallery-dl':
-        return extract_gallery(url, cookies_path)
-    else:
-        return extract_video(url, quality, mode, cookies_path, user_agent)
+def parse_custom_headers(custom_headers_json):
+    if not custom_headers_json:
+        return {}
+    try:
+        if isinstance(custom_headers_json, dict):
+            return custom_headers_json
+        headers_data = json.loads(custom_headers_json)
+        result = {}
+        if isinstance(headers_data, list):
+            for item in headers_data:
+                if isinstance(item, dict) and item.get('isEnabled', True):
+                    k = item.get('key')
+                    v = item.get('value')
+                    if k and v:
+                        result[k.strip()] = v.strip()
+        elif isinstance(headers_data, dict):
+            result = headers_data
+        return result
+    except Exception:
+        return {}
 
-def extract_video(url, quality='720', mode='auto', cookies_path=None, user_agent=None):
+def extract_info(url, quality='720', mode='auto', engine='yt-dlp', cookies_path=None, user_agent=None, custom_headers_json=None):
+    if engine == 'gallery-dl':
+        return extract_gallery(url, cookies_path, custom_headers_json)
+    else:
+        return extract_video(url, quality, mode, cookies_path, user_agent, custom_headers_json)
+
+def extract_playlist(url, cookies_path=None, user_agent=None, custom_headers_json=None):
+    with extraction_lock:
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'nocheckcertificate': True,
+            'socket_timeout': 30,
+            'extract_flat': 'in_playlist',
+            'playlistend': 150,
+            'skip_download': True,
+            'extractor_args': {'youtube': ['player_client=android,web,tv_embedded,ios']}
+        }
+
+        headers = {
+            'User-Agent': user_agent or 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-us,en;q=0.5',
+        }
+        custom = parse_custom_headers(custom_headers_json)
+        headers.update(custom)
+        ydl_opts['http_headers'] = headers
+
+        if cookies_path and os.path.exists(cookies_path):
+            ydl_opts['cookiefile'] = cookies_path
+
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url.strip(), download=False)
+                if not info:
+                    return json.dumps({'status': 'error', 'message': 'No playlist information found'})
+
+                entries = info.get('entries') or []
+                items = []
+                for idx, entry in enumerate(entries):
+                    if not entry:
+                        continue
+                    entry_id = entry.get('id') or str(idx + 1)
+                    entry_url = entry.get('url') or entry.get('webpage_url')
+                    if not entry_url:
+                        if 'youtube' in url or 'youtu.be' in url:
+                            entry_url = f"https://www.youtube.com/watch?v={entry_id}"
+                        else:
+                            entry_url = url
+
+                    thumb = entry.get('thumbnail')
+                    if not thumb and entry.get('thumbnails'):
+                        thumb = entry['thumbnails'][0].get('url')
+
+                    duration_sec = entry.get('duration')
+                    duration_str = None
+                    if duration_sec is not None:
+                        try:
+                            m, s = divmod(int(duration_sec), 60)
+                            h, m = divmod(m, 60)
+                            duration_str = f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+                        except Exception:
+                            duration_str = str(duration_sec)
+
+                    items.append({
+                        'id': entry_id,
+                        'url': entry_url,
+                        'title': entry.get('title') or f"Track {idx + 1}",
+                        'author': entry.get('uploader') or entry.get('channel') or info.get('uploader') or 'Unknown',
+                        'thumbnail': thumb,
+                        'duration': duration_str,
+                        'isSelected': True
+                    })
+
+                playlist_title = info.get('title') or 'Playlist'
+                return json.dumps({
+                    'status': 'success',
+                    'is_playlist': True,
+                    'playlist_id': info.get('id') or 'playlist',
+                    'playlist_title': playlist_title,
+                    'playlist_items': items,
+                    'title': playlist_title,
+                    'author': info.get('uploader') or info.get('channel') or 'Various Artists',
+                    'thumbnail': items[0].get('thumbnail') if items else None
+                })
+        except Exception as e:
+            return json.dumps({'status': 'error', 'message': f"Playlist extraction failed: {str(e)}"})
+
+def extract_video(url, quality='720', mode='auto', cookies_path=None, user_agent=None, custom_headers_json=None):
     with extraction_lock:
         # Robust configuration for direct stream extraction
         ydl_opts = {
             'quiet': False, 
             'no_warnings': False,
             'nocheckcertificate': True,
-            'socket_timeout': 60,
+            'socket_timeout': 45,
             'extract_flat': False,
-            'extractor_args': {'youtube': ['player_client=android,web']}
+            'retries': 3,
+            'extractor_args': {
+                'youtube': ['player_client=android,web,tv_embedded,ios']
+            }
         }
         
-        # If user_agent is provided (from WebView cookies), we must use it to match the cookie origin
-        # Otherwise, we let yt-dlp use its default mobile clients to bypass PoW blocks.
-        if user_agent:
-            ydl_opts['http_headers'] = {
-                'User-Agent': user_agent,
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-us,en;q=0.5',
-            }
+        default_headers = {
+            'User-Agent': user_agent or 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-us,en;q=0.5',
+        }
+        custom = parse_custom_headers(custom_headers_json)
+        default_headers.update(custom)
+        ydl_opts['http_headers'] = default_headers
         
         if mode == 'audio':
             ydl_opts['format'] = 'bestaudio/best'
@@ -41,7 +147,6 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None, user_agent
             # We MUST strictly enforce compatible codecs for Android MediaMuxer!
             # MP4 Muxer strictly requires AVC (H.264) + AAC (M4A).
             # WEBM Muxer strictly requires VP9/VP8 + Opus/Vorbis (WEBM).
-            # Any mixing (like VP9 + M4A) results in MKV and crashes Android MediaMuxer.
             if quality != 'max':
                 q_val = str(quality).replace('p', '')
                 ydl_opts['format'] = (
@@ -64,8 +169,62 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None, user_agent
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             try:
                 info = ydl.extract_info(url.strip(), download=False)
+                if not info:
+                    return json.dumps({'status': 'error', 'message': 'Could not extract metadata.'})
                 
-                # Handle playlists or multi-video entries
+                # Check if this URL is actually a full playlist
+                is_full_playlist = info.get('_type') == 'playlist' or (
+                    'entries' in info and len(info['entries']) > 1 and ('list=' in url or '/playlist' in url or '/sets/' in url)
+                )
+
+                if is_full_playlist:
+                    entries = info.get('entries') or []
+                    items = []
+                    for idx, entry in enumerate(entries):
+                        if not entry:
+                            continue
+                        e_id = entry.get('id') or str(idx + 1)
+                        e_url = entry.get('url') or entry.get('webpage_url')
+                        if not e_url:
+                            if 'youtube' in url or 'youtu.be' in url:
+                                e_url = f"https://www.youtube.com/watch?v={e_id}"
+                            else:
+                                e_url = url
+                        thumb = entry.get('thumbnail')
+                        if not thumb and entry.get('thumbnails'):
+                            thumb = entry['thumbnails'][0].get('url')
+                        duration_sec = entry.get('duration')
+                        duration_str = None
+                        if duration_sec is not None:
+                            try:
+                                m, s = divmod(int(duration_sec), 60)
+                                h, m = divmod(m, 60)
+                                duration_str = f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+                            except Exception:
+                                duration_str = str(duration_sec)
+                        items.append({
+                            'id': e_id,
+                            'url': e_url,
+                            'title': entry.get('title') or f"Track {idx + 1}",
+                            'author': entry.get('uploader') or entry.get('channel') or info.get('uploader') or 'Unknown',
+                            'thumbnail': thumb,
+                            'duration': duration_str,
+                            'isSelected': True
+                        })
+
+                    pl_title = info.get('title') or 'Playlist'
+                    return json.dumps({
+                        'status': 'success',
+                        'is_playlist': True,
+                        'playlist_id': info.get('id') or 'playlist',
+                        'playlist_title': pl_title,
+                        'playlist_items': items,
+                        'title': pl_title,
+                        'author': info.get('uploader') or info.get('channel') or 'Various Artists',
+                        'thumbnail': items[0].get('thumbnail') if items else None
+                    })
+
+                # Single video or entry
                 video = info['entries'][0] if 'entries' in info and len(info['entries']) > 0 else info
                 
                 # Find the best direct URL
@@ -100,7 +259,7 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None, user_agent
                         h = f.get('height')
                         if h and f.get('vcodec') != 'none':
                             qualities.add(f"{h}p")
-                sorted_qualities = sorted(list(qualities), key=lambda x: int(x.replace('p', '')))
+                sorted_qualities = sorted(list(qualities), key=lambda x: int(x.replace('p', ''))) if qualities else []
 
                 if not download_url:
                     return json.dumps({'status': 'error', 'message': 'Could not resolve a direct download URL.'})
@@ -123,12 +282,13 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None, user_agent
                     'author': video.get('uploader') or video.get('channel') or 'Unknown',
                     'thumbnail': video.get('thumbnail'),
                     'size': video.get('filesize_approx') or video.get('filesize') or 0,
-                    'ext': 'mp3' if mode == 'audio' else video.get('ext', 'mp4')
+                    'ext': 'mp3' if mode == 'audio' else video.get('ext', 'mp4'),
+                    'is_playlist': False
                 })
             except Exception as e:
                 return json.dumps({'status': 'error', 'message': f"yt-dlp error: {str(e)}"})
 
-def extract_gallery(url, cookies_path=None):
+def extract_gallery(url, cookies_path=None, custom_headers_json=None):
     with extraction_lock:
         try:
             from gallery_dl import job
@@ -138,16 +298,17 @@ def extract_gallery(url, cookies_path=None):
             if cookies_path and os.path.exists(cookies_path):
                 gallery_dl.config.set(("extractor",), "cookies", cookies_path)
             
+            custom_headers = parse_custom_headers(custom_headers_json)
+            if custom_headers:
+                gallery_dl.config.set(("extractor",), "headers", custom_headers)
+
             # Enable URL resolution (resolve=True) to follow redirects/short URLs
             j = job.DataJob(url, resolve=True)
             j.run()
             
             if j.data_urls:
-                # Filter out any non-direct URLs that might still be in the list
                 direct_urls = [u for u in j.data_urls if not any(domain in u for domain in ["pinterest.com", "pin.it"])]
-                
                 if not direct_urls:
-                    # If all resolved URLs are still page links, fall back to the first available URL
                     direct_urls = j.data_urls
                 
                 first_meta = j.data_meta[0] if j.data_meta else {}
@@ -160,7 +321,8 @@ def extract_gallery(url, cookies_path=None):
                     'thumbnail': direct_urls[0],
                     'size': 0,
                     'ext': first_meta.get('extension') or 'jpg',
-                    'is_gallery': True
+                    'is_gallery': True,
+                    'is_playlist': False
                 })
             else:
                 return json.dumps({'status': 'error', 'message': 'No images found in gallery'})
@@ -214,7 +376,6 @@ def update_extractors(target_path):
     import io
     import sys
     try:
-        # Check if Chaquopy pip internal is available
         try:
             from pip._internal.cli.main import main as pip_main
         except ImportError:
@@ -227,14 +388,12 @@ def update_extractors(target_path):
         if not pip_main:
             return json.dumps({'status': 'error', 'message': 'Pip is not available in this environment'})
 
-        # Monkey patch pip user_agent to prevent AssetPath crash in Chaquopy
         try:
             import pip._internal.network.session
             pip._internal.network.session.user_agent = lambda *args, **kwargs: "pip/chaquopy"
         except Exception:
             pass
 
-        # Capture output
         old_stdout = sys.stdout
         old_stderr = sys.stderr
         new_out = io.StringIO()
@@ -257,17 +416,21 @@ def update_extractors(target_path):
     except Exception as e:
         return json.dumps({'status': 'error', 'message': str(e)})
 
-def download_video(url, output_path, cookies_path=None):
+def download_video(url, output_path, cookies_path=None, custom_headers_json=None):
     try:
         import yt_dlp
         ydl_opts = {
             'outtmpl': output_path,
             'quiet': True,
             'no_warnings': True,
-            'extractor_args': {'youtube': ['player_client=android,web']}
+            'extractor_args': {'youtube': ['player_client=android,web,tv_embedded,ios']}
         }
         if cookies_path:
             ydl_opts['cookiefile'] = cookies_path
+        
+        custom_headers = parse_custom_headers(custom_headers_json)
+        if custom_headers:
+            ydl_opts['http_headers'] = custom_headers
             
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
