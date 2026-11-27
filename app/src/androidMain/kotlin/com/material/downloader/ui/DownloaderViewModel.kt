@@ -1157,6 +1157,112 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
         audioExtractor.release()
     }
 
+    private suspend fun executeYtdlpDirectDownload(
+        item: QueueItem,
+        notificationId: Int,
+        onProgress: (progress: Float, speedBps: Long, downloadedBytes: Long, totalBytes: Long) -> Unit
+    ): Result<String> = withContext(Dispatchers.IO) {
+        val cacheDir = getApplication<Application>().cacheDir
+        val tempDir = java.io.File(cacheDir, "ytdlp_job_${item.id.hashCode()}_${System.currentTimeMillis()}")
+        tempDir.mkdirs()
+
+        try {
+            val cookiesPath = if (useCookies.value) prefs.getString("yt_dlp_cookies_path", null) else null
+            val webViewUa = if (useCookies.value) android.webkit.WebSettings.getDefaultUserAgent(getApplication()) else null
+            val customHeadersJson = getCustomHeadersJson()
+            val jobContext = kotlin.coroutines.coroutineContext
+
+            logToConsole("[yt-dlp] Executing native download pipeline...")
+            val dlRes = extractor.downloadMediaYtdlp(
+                url = item.url,
+                outputDir = tempDir.absolutePath,
+                quality = item.quality,
+                mode = item.mode,
+                cookiesPath = cookiesPath,
+                userAgent = webViewUa,
+                customHeadersJson = customHeadersJson,
+                callback = object : com.material.downloader.api.PythonExtractor.YtdlpProgressCallback {
+                    override fun onProgress(progress: Float, speedBps: Long, downloadedBytes: Long, totalBytes: Long) {
+                        onProgress(progress, speedBps, downloadedBytes, totalBytes)
+                        notificationHelper.showProgressNotification(notificationId, item.title, (progress * 100).toInt())
+                    }
+
+                    override fun isCancelled(): Boolean {
+                        return jobContext[kotlinx.coroutines.Job]?.isActive == false
+                    }
+                }
+            )
+
+            if (dlRes.status != "success") {
+                return@withContext Result.failure(Exception(dlRes.message ?: "yt-dlp download failed"))
+            }
+
+            val title = dlRes.title?.takeIf { it.isNotBlank() } ?: item.title
+            val author = dlRes.author?.takeIf { it.isNotBlank() } ?: item.author
+            val ext = dlRes.ext?.takeIf { it.isNotBlank() } ?: (if (item.mode == "audio") "m4a" else "mp4")
+            val sanitizedTitle = title.replace(Regex("[^a-zA-Z0-9._-]"), "_").trim('_').ifEmpty { "gabi_media" }.take(64)
+            val fileName = "${sanitizedTitle}_${System.currentTimeMillis()}.$ext"
+            val targetPath = when {
+                item.mode == "audio" && downloadPath.value.startsWith("Download") -> "Music/Gabi"
+                else -> downloadPath.value
+            }
+
+            val finalSourceFile: java.io.File = if (!dlRes.video_path.isNullOrBlank() && !dlRes.audio_path.isNullOrBlank()) {
+                val vidFile = java.io.File(dlRes.video_path)
+                val audFile = java.io.File(dlRes.audio_path)
+                val muxedFile = java.io.File(tempDir, "muxed.$ext")
+                notificationHelper.showProgressNotification(notificationId, "$title (Muxing...)", 99)
+                onProgress(0.99f, 0L, 0L, 0L)
+                muxVideoAudio(vidFile, audFile, muxedFile)
+                muxedFile
+            } else if (!dlRes.file_path.isNullOrBlank()) {
+                java.io.File(dlRes.file_path)
+            } else {
+                return@withContext Result.failure(Exception("No output file produced by yt-dlp"))
+            }
+
+            if (!finalSourceFile.exists() || finalSourceFile.length() == 0L) {
+                return@withContext Result.failure(Exception("Downloaded file is empty"))
+            }
+
+            val targetUri = if (selectedFolderUri.value != null) {
+                downloader.createSafUri(Uri.parse(selectedFolderUri.value), fileName)
+            } else {
+                downloader.createMediaStoreUri(fileName, targetPath)
+            } ?: return@withContext Result.failure(Exception("Could not create destination file"))
+
+            getApplication<Application>().contentResolver.openOutputStream(targetUri)?.use { outStream ->
+                finalSourceFile.inputStream().use { inStream ->
+                    inStream.copyTo(outStream)
+                }
+            } ?: return@withContext Result.failure(Exception("Could not open output stream"))
+
+            downloader.finalizeFile(targetUri, fileName)
+            val cachedThumb = saveThumbnailToCache(item.thumbnail ?: dlRes.thumbnail, targetUri.toString())
+            logDao.insertLog(
+                DownloadLog(
+                    title = title,
+                    url = item.url,
+                    status = "Success",
+                    path = targetUri.toString(),
+                    thumbnailPath = cachedThumb,
+                    author = author
+                )
+            )
+            notificationHelper.showProgressNotification(notificationId, title, 100)
+            onProgress(1f, 0L, 0L, 0L)
+            logToConsole("[SUCCESS] Saved via yt-dlp: $fileName")
+            Result.success(targetUri.toString())
+        } catch (e: Exception) {
+            logToConsole("[yt-dlp] Direct download failed: ${e.message}")
+            Result.failure(e)
+        } finally {
+            try {
+                tempDir.deleteRecursively()
+            } catch (_: Exception) {}
+        }
+    }
+
     suspend fun executeSingleQueueItem(
         item: QueueItem,
         onProgress: (progress: Float, speedBps: Long, downloadedBytes: Long, totalBytes: Long) -> Unit
@@ -1169,6 +1275,22 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
 
         logToConsole("Starting queue task: ${item.title}")
         onProgress(0f, 0L, 0L, 0L)
+
+        // ytdlnis-style direct yt-dlp execution when yt-dlp is chosen explicitly or is the primary dynamic engine
+        val primaryEngine = if (engine == "dynamic") getDynamicEngine(url) else engine
+        if (primaryEngine == "yt-dlp") {
+            val ytdlpDirect = executeYtdlpDirectDownload(item, notificationId, onProgress)
+            if (ytdlpDirect.isSuccess) {
+                return@withContext ytdlpDirect
+            }
+            if (engine == "yt-dlp") {
+                val err = ytdlpDirect.exceptionOrNull()?.message ?: "yt-dlp download failed"
+                notificationHelper.cancelNotification(notificationId)
+                val cachedThumb = saveThumbnailToCache(item.thumbnail, null)
+                logDao.insertLog(DownloadLog(title = "Failed: ${item.title}", url = url, status = "Error: $err", thumbnailPath = cachedThumb, author = item.author))
+                return@withContext Result.failure(Exception(err))
+            }
+        }
 
         try {
             var result: com.material.downloader.api.ExtractionResult? = null
@@ -1389,6 +1511,14 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                 }
             }
         } catch (e: Exception) {
+            // If primary non-yt-dlp engine failed during download/muxing, fall back to ytdlnis-style native yt-dlp download
+            if (engine != "gallery-dl") {
+                logToConsole("Primary download failed (${e.message}), falling back to native yt-dlp...")
+                val fallbackRes = executeYtdlpDirectDownload(item, notificationId, onProgress)
+                if (fallbackRes.isSuccess) {
+                    return@withContext fallbackRes
+                }
+            }
             val errorMsg = e.message ?: "Download failed"
             notificationHelper.cancelNotification(notificationId)
             val cachedThumb = saveThumbnailToCache(item.thumbnail, null)

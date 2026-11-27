@@ -553,3 +553,162 @@ def download_video(url, output_path, cookies_path=None, custom_headers_json=None
         return json.dumps({'status': 'success', 'path': output_path})
     except Exception as e:
         return json.dumps({'status': 'error', 'message': str(e)})
+
+def download_media_ytdlp(url, output_dir, quality='720', mode='auto', cookies_path=None, user_agent=None, custom_headers_json=None, progress_callback=None):
+    """
+    ytdlnis-style download execution directly via yt-dlp into output_dir,
+    avoiding external HTTP client 403s and raw m3u8 playlist issues.
+    Returns JSON with status, file_path (or video_path + audio_path if muxing needed), title, author, ext, thumbnail.
+    """
+    import glob
+    try:
+        os.makedirs(output_dir, exist_ok=True)
+
+        headers = {
+            'User-Agent': user_agent or 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-us,en;q=0.5',
+        }
+        custom = parse_custom_headers(custom_headers_json)
+        headers.update(custom)
+
+        def make_hook(stage_offset=0.0, stage_weight=1.0):
+            def _hook(d):
+                if progress_callback is not None:
+                    try:
+                        if progress_callback.isCancelled():
+                            raise yt_dlp.utils.DownloadCancelled("Download cancelled by user")
+                    except yt_dlp.utils.DownloadCancelled:
+                        raise
+                    except Exception:
+                        pass
+                    if d.get('status') == 'downloading':
+                        total = d.get('total_bytes') or d.get('total_bytes_estimate') or 0
+                        downloaded = d.get('downloaded_bytes') or 0
+                        speed = d.get('speed') or 0
+                        frac = (float(downloaded) / float(total)) if total > 0 else 0.0
+                        overall = min(1.0, max(0.0, stage_offset + frac * stage_weight))
+                        try:
+                            progress_callback.onProgress(float(overall), int(speed), int(downloaded), int(total))
+                        except Exception:
+                            pass
+            return _hook
+
+        base_opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'nocheckcertificate': True,
+            'socket_timeout': 45,
+            'retries': 3,
+            'fragment_retries': 5,
+            'hls_prefer_native': True,
+            'noplaylist': True,
+            'http_headers': headers,
+        }
+        if cookies_path and os.path.exists(cookies_path):
+            base_opts['cookiefile'] = cookies_path
+
+        # Step 1: Extract info to inspect available formats
+        info_opts = dict(base_opts)
+        q_val = str(quality).replace('p', '').strip()
+        if mode == 'audio':
+            info_opts['format'] = 'bestaudio[ext=m4a]/bestaudio/best'
+        else:
+            if q_val.isdigit():
+                info_opts['format'] = (
+                    f'best[ext=mp4][height<={q_val}][vcodec!=none][acodec!=none]/'
+                    f'bestvideo[vcodec^=avc][height<={q_val}]+bestaudio[ext=m4a]/'
+                    f'bestvideo[vcodec^=vp9][height<={q_val}]+bestaudio[ext=webm]/'
+                    f'best[height<={q_val}][vcodec!=none][acodec!=none]/'
+                    f'best[ext=mp4]/bestvideo+bestaudio/best'
+                )
+            else:
+                info_opts['format'] = (
+                    'best[ext=mp4][vcodec!=none][acodec!=none]/'
+                    'bestvideo[vcodec^=avc]+bestaudio[ext=m4a]/'
+                    'bestvideo[vcodec^=vp9]+bestaudio[ext=webm]/'
+                    'best[vcodec!=none][acodec!=none]/'
+                    'bestvideo+bestaudio/best'
+                )
+
+        with yt_dlp.YoutubeDL(info_opts) as ydl:
+            info = ydl.extract_info(url.strip(), download=False)
+            if not info:
+                return json.dumps({'status': 'error', 'message': 'Could not extract video info'})
+
+        video = info['entries'][0] if info.get('entries') else info
+        raw_title = video.get('title')
+        if not raw_title or str(raw_title).strip() == '' or raw_title == 'video':
+            desc = video.get('description')
+            raw_title = str(desc).strip().split('\n')[0][:80] if desc and str(desc).strip() else (video.get('id') or 'Media')
+        raw_author = video.get('uploader') or video.get('uploader_id') or video.get('channel') or video.get('creator') or 'Unknown'
+        raw_thumb = video.get('thumbnail')
+        if not raw_thumb and video.get('thumbnails'):
+            try:
+                raw_thumb = video['thumbnails'][-1].get('url') or video['thumbnails'][0].get('url')
+            except Exception:
+                raw_thumb = None
+
+        req_formats = video.get('requested_formats')
+        # Check if split video + audio streams are selected (no ffmpeg in Chaquopy, so download separately for MediaMuxer)
+        if mode != 'audio' and req_formats and len(req_formats) >= 2:
+            vid_fmt = next((f for f in req_formats if f.get('vcodec') != 'none'), None)
+            aud_fmt = next((f for f in req_formats if f.get('acodec') != 'none' and f.get('vcodec') == 'none'), None)
+            if vid_fmt and aud_fmt and vid_fmt.get('format_id') and aud_fmt.get('format_id'):
+                vid_ext = vid_fmt.get('ext') or 'mp4'
+                aud_ext = aud_fmt.get('ext') or 'm4a'
+                vid_out = os.path.join(output_dir, f'video.{vid_ext}')
+                aud_out = os.path.join(output_dir, f'audio.{aud_ext}')
+
+                v_opts = dict(base_opts)
+                v_opts['format'] = str(vid_fmt['format_id'])
+                v_opts['outtmpl'] = vid_out
+                v_opts['progress_hooks'] = [make_hook(0.0, 0.5)]
+                with yt_dlp.YoutubeDL(v_opts) as ydl:
+                    ydl.download([url.strip()])
+
+                a_opts = dict(base_opts)
+                a_opts['format'] = str(aud_fmt['format_id'])
+                a_opts['outtmpl'] = aud_out
+                a_opts['progress_hooks'] = [make_hook(0.5, 0.48)]
+                with yt_dlp.YoutubeDL(a_opts) as ydl:
+                    ydl.download([url.strip()])
+
+                if os.path.exists(vid_out) and os.path.exists(aud_out):
+                    return json.dumps({
+                        'status': 'success',
+                        'video_path': vid_out,
+                        'audio_path': aud_out,
+                        'title': str(raw_title),
+                        'author': str(raw_author),
+                        'thumbnail': raw_thumb,
+                        'ext': vid_ext
+                    })
+
+        # Single file download (progressive MP4/WEBM, HLS assembled by yt-dlp, or audio-only)
+        single_out_tmpl = os.path.join(output_dir, 'media.%(ext)s')
+        s_opts = dict(info_opts)
+        if mode != 'audio' and req_formats and len(req_formats) >= 2:
+            s_opts['format'] = 'best[ext=mp4][vcodec!=none][acodec!=none]/best[vcodec!=none][acodec!=none]/best'
+        s_opts['outtmpl'] = single_out_tmpl
+        s_opts['progress_hooks'] = [make_hook(0.0, 1.0)]
+
+        with yt_dlp.YoutubeDL(s_opts) as ydl:
+            ydl.download([url.strip()])
+
+        files = [f for f in glob.glob(os.path.join(output_dir, 'media.*')) if not f.endswith('.part') and not f.endswith('.ytdl')]
+        if not files:
+            return json.dumps({'status': 'error', 'message': 'yt-dlp finished without producing an output file'})
+
+        downloaded_file = files[0]
+        final_ext = os.path.splitext(downloaded_file)[1].lstrip('.') or ('m4a' if mode == 'audio' else 'mp4')
+        return json.dumps({
+            'status': 'success',
+            'file_path': downloaded_file,
+            'title': str(raw_title),
+            'author': str(raw_author),
+            'thumbnail': raw_thumb,
+            'ext': final_ext
+        })
+    except Exception as e:
+        return json.dumps({'status': 'error', 'message': str(e)})

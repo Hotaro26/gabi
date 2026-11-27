@@ -57,6 +57,41 @@ class PythonExtractor {
         }
     }
 
+    interface YtdlpProgressCallback {
+        fun onProgress(progress: Float, speedBps: Long, downloadedBytes: Long, totalBytes: Long)
+        fun isCancelled(): Boolean
+    }
+
+    fun downloadMediaYtdlp(
+        url: String,
+        outputDir: String,
+        quality: String = "720",
+        mode: String = "auto",
+        cookiesPath: String? = null,
+        userAgent: String? = null,
+        customHeadersJson: String? = null,
+        callback: YtdlpProgressCallback? = null
+    ): YtdlpDownloadResult {
+        return try {
+            GabiLogger.d("PythonExtractor", "Starting ytdlnis-style download: url=$url, quality=$quality, mode=$mode")
+            val resultJson = module.callAttr(
+                "download_media_ytdlp",
+                url,
+                outputDir,
+                quality,
+                mode,
+                cookiesPath,
+                userAgent,
+                customHeadersJson,
+                callback
+            ).toString()
+            json.decodeFromString<YtdlpDownloadResult>(resultJson)
+        } catch (e: Exception) {
+            GabiLogger.e("PythonExtractor", "downloadMediaYtdlp failed: ${e.message}", e)
+            YtdlpDownloadResult(status = "error", message = e.message ?: "yt-dlp execution failed")
+        }
+    }
+
     fun getVersions(): Map<String, String> {
         return try {
             val resultJson = module.callAttr("get_versions").toString()
@@ -76,6 +111,19 @@ class PythonExtractor {
         }
     }
 }
+
+@Serializable
+data class YtdlpDownloadResult(
+    val status: String,
+    val file_path: String? = null,
+    val video_path: String? = null,
+    val audio_path: String? = null,
+    val title: String? = null,
+    val author: String? = null,
+    val thumbnail: String? = null,
+    val ext: String? = null,
+    val message: String? = null
+)
 
 @Serializable
 data class ExtractionResult(
