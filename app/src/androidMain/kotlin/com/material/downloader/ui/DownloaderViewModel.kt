@@ -887,7 +887,10 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                     val urlObj = service.getStreamExtractor(url)
                     urlObj.fetchPage()
                     
-                    val videoOnlyStreams = urlObj.videoOnlyStreams.filter { it.isUrl && !it.content.isNullOrBlank() }
+                    val videoOnlyStreams = urlObj.videoOnlyStreams.filter {
+                        it.isUrl && !it.content.isNullOrBlank() &&
+                        (it.codec?.contains("av01", ignoreCase = true) != true)
+                    }
                     val progressiveStreams = urlObj.videoStreams.filter { it.isUrl && !it.content.isNullOrBlank() }
                     val validAudioStreams = urlObj.audioStreams.filter { it.isUrl && !it.content.isNullOrBlank() }
                     val qualityClean = quality.replace("p", "").trim()
@@ -898,11 +901,15 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                     val selectedVideo = if (mode == "audio") {
                         null
                     } else {
+                        // Prefer mp4 (H.264) streams first for maximum Android MediaMuxer compatibility
+                        val mp4VideoOnly = videoOnlyStreams.filter { it.getFormat()?.suffix.equals("mp4", ignoreCase = true) }
+                        val poolVideoOnly = if (mp4VideoOnly.isNotEmpty()) mp4VideoOnly else videoOnlyStreams
+
                         val matchedVideoOnly = if (isBestQuality) {
-                            videoOnlyStreams.maxByOrNull { it.resolution.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0 }
+                            poolVideoOnly.maxByOrNull { it.resolution.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0 }
                         } else {
-                            videoOnlyStreams.find { it.resolution.contains(qualityClean) }
-                                ?: videoOnlyStreams.maxByOrNull { it.resolution.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0 }
+                            poolVideoOnly.find { it.resolution.contains(qualityClean) }
+                                ?: poolVideoOnly.maxByOrNull { it.resolution.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0 }
                         }
                         
                         val matchedProgressive = if (isBestQuality) {
@@ -922,13 +929,20 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                         }
                     }
 
-                    val m4aAudioStreams = validAudioStreams.filter { it.getFormat()?.suffix == "m4a" }
-                    val englishAudio = m4aAudioStreams.filter { it.audioLocale?.language == "en" }
-                    val defaultAudio = m4aAudioStreams.filter { it.audioLocale == null }
+                    val targetVideoExt = selectedVideo?.getFormat()?.suffix?.lowercase() ?: "mp4"
+                    val compatibleAudioStreams = if (mode != "audio" && targetVideoExt == "webm") {
+                        val webmAudio = validAudioStreams.filter { it.getFormat()?.suffix.equals("webm", ignoreCase = true) }
+                        if (webmAudio.isNotEmpty()) webmAudio else validAudioStreams
+                    } else {
+                        val m4aAudio = validAudioStreams.filter { it.getFormat()?.suffix.equals("m4a", ignoreCase = true) }
+                        if (m4aAudio.isNotEmpty()) m4aAudio else validAudioStreams
+                    }
+                    val englishAudio = compatibleAudioStreams.filter { it.audioLocale?.language == "en" }
+                    val defaultAudio = compatibleAudioStreams.filter { it.audioLocale == null }
                     
                     val bestAudio = englishAudio.maxByOrNull { it.averageBitrate }
                         ?: defaultAudio.maxByOrNull { it.averageBitrate }
-                        ?: m4aAudioStreams.maxByOrNull { it.averageBitrate }
+                        ?: compatibleAudioStreams.maxByOrNull { it.averageBitrate }
                         ?: validAudioStreams.maxByOrNull { it.averageBitrate }
 
                     val isMuxingRequired = selectedVideo != null && videoOnlyStreams.contains(selectedVideo)
@@ -1241,11 +1255,11 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                 val downloadUrl = urlsToDownload.first()
                 val extension = result.ext ?: (if (isGallery) "jpg" else (if (mode == "audio") "mp3" else "mp4"))
                 val title = result.title ?: item.title
-                val sanitizedTitle = title.replace(Regex("[^a-zA-Z0-9]"), "_")
+                val sanitizedTitle = title.replace(Regex("[^a-zA-Z0-9._-]"), "_").trim('_').ifEmpty { "gabi_media" }.take(64)
                 val fileName = "${sanitizedTitle}_${System.currentTimeMillis()}.$extension"
                 val targetPath = when {
-                    isGallery && downloadPath.value == "Download/Gabi" -> "Pictures/Gabi"
-                    mode == "audio" && downloadPath.value == "Download/Gabi" -> "Music/Gabi"
+                    isGallery && downloadPath.value.startsWith("Download") -> "Pictures/Gabi"
+                    mode == "audio" && downloadPath.value.startsWith("Download") -> "Music/Gabi"
                     else -> downloadPath.value
                 }
                 val audioUrl = result.audio_url
@@ -1253,11 +1267,13 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                 if (audioUrl != null) {
                     val cacheDir = getApplication<Application>().cacheDir
                     val tempVideoFile = java.io.File(cacheDir, "temp_vid_${notificationId}_${System.currentTimeMillis()}.$extension")
-                    val tempAudioFile = java.io.File(cacheDir, "temp_aud_${notificationId}_${System.currentTimeMillis()}.m4a")
+                    val audioExt = if (extension.equals("webm", ignoreCase = true)) "webm" else "m4a"
+                    val tempAudioFile = java.io.File(cacheDir, "temp_aud_${notificationId}_${System.currentTimeMillis()}.$audioExt")
                     val tempMuxedFile = java.io.File(cacheDir, "temp_mux_${notificationId}_${System.currentTimeMillis()}.$extension")
 
                     try {
                         var videoSuccess = false
+                        var videoError: String? = null
                         downloader.downloadFileToPath(downloadUrl, tempVideoFile, mergedHeaders).collect { state ->
                             if (state is DownloadState.Downloading) {
                                 val p = state.progress * 0.5f
@@ -1265,10 +1281,12 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                                 notificationHelper.showProgressNotification(notificationId, "$title (Video)", (p * 100).toInt())
                             }
                             if (state is DownloadState.Success) videoSuccess = true
+                            if (state is DownloadState.Error) videoError = state.message
                         }
-                        if (!videoSuccess) throw Exception("Failed to download video stream")
+                        if (!videoSuccess) throw Exception(videoError ?: "Failed to download video stream")
 
                         var audioSuccess = false
+                        var audioError: String? = null
                         downloader.downloadFileToPath(audioUrl, tempAudioFile, mergedHeaders).collect { state ->
                             if (state is DownloadState.Downloading) {
                                 val p = 0.5f + (state.progress * 0.5f)
@@ -1276,8 +1294,9 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                                 notificationHelper.showProgressNotification(notificationId, "$title (Audio)", (p * 100).toInt())
                             }
                             if (state is DownloadState.Success) audioSuccess = true
+                            if (state is DownloadState.Error) audioError = state.message
                         }
-                        if (!audioSuccess) throw Exception("Failed to download audio stream")
+                        if (!audioSuccess) throw Exception(audioError ?: "Failed to download audio stream")
 
                         notificationHelper.showProgressNotification(notificationId, "$title (Muxing...)", 99)
                         onProgress(0.99f, 0L, 0L, 0L)

@@ -1,54 +1,45 @@
 package com.material.downloader.ui
 
-import androidx.activity.BackEventCompat
-import androidx.activity.compose.PredictiveBackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import com.material.downloader.model.QueueItem
 import com.material.downloader.model.QueueItemStatus
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DownloadQueueSheet(
+fun DownloadQueueScreen(
     queueItems: List<QueueItem>,
     maxConcurrency: Int,
     onConcurrencyChange: (Int) -> Unit,
-    onDismiss: () -> Unit,
+    onBack: () -> Unit,
     onPause: (String) -> Unit,
     onResume: (String) -> Unit,
     onCancel: (String) -> Unit,
     onRetry: (String) -> Unit,
     onClearCompleted: () -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-
     val orderedQueueItems = remember(queueItems) {
         queueItems.sortedBy { item ->
             when (item.status) {
@@ -61,99 +52,82 @@ fun DownloadQueueSheet(
         }
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 8.dp,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    val listState = rememberLazyListState()
+    val isScrolled by remember {
+        derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 10 }
+    }
+    val elevation by animateDpAsState(if (isScrolled) 4.dp else 0.dp, label = "queue_elevation")
+    val surfaceColor by animateColorAsState(
+        if (isScrolled) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.background,
+        label = "queue_surface_color"
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        val animatedProgress = remember { Animatable(0f) }
-
-        PredictiveBackHandler(enabled = true) { progress: Flow<BackEventCompat> ->
-            try {
-                progress.collect { backEvent ->
-                    animatedProgress.snapTo(backEvent.progress)
-                }
-                animatedProgress.animateTo(1f, tween(durationMillis = 150))
-                sheetState.hide()
-                onDismiss()
-            } catch (e: CancellationException) {
-                animatedProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
-            } finally {
-                animatedProgress.snapTo(0f)
-            }
-        }
-
-        val p = animatedProgress.value
-        Column(
+        // Pinned Top Bar with back arrow (no numbers at top)
+        Surface(
+            tonalElevation = elevation,
+            shadowElevation = elevation,
+            color = surfaceColor,
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.88f)
-                .graphicsLayer {
-                    scaleX = 1f - (p * 0.08f)
-                    scaleY = 1f - (p * 0.08f)
-                    alpha = 1f - (p * 0.3f)
-                    translationY = p * 120f
-                }
-                .padding(horizontal = 20.dp)
+                .zIndex(1f)
         ) {
-            // Header: Clean title without numbers
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 24.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        modifier = Modifier.size(40.dp)
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Rounded.QueueMusic,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
                     Text(
                         text = "Download Queue",
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold
                     )
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (queueItems.any { it.status == QueueItemStatus.COMPLETED || it.status == QueueItemStatus.ERROR }) {
-                        FilledTonalIconButton(
-                            onClick = onClearCompleted,
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(Icons.Rounded.DeleteSweep, contentDescription = "Clear Finished", modifier = Modifier.size(18.dp))
-                        }
-                    }
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Rounded.Close, contentDescription = "Close")
+                if (queueItems.any { it.status == QueueItemStatus.COMPLETED || it.status == QueueItemStatus.ERROR }) {
+                    FilledTonalIconButton(
+                        onClick = onClearCompleted,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(Icons.Rounded.DeleteSweep, contentDescription = "Clear Finished", modifier = Modifier.size(20.dp))
                     }
                 }
             }
+        }
 
-            Spacer(modifier = Modifier.height(14.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 20.dp)
+                .navigationBarsPadding()
+        ) {
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Parallel Downloads Control Bar
             Surface(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(18.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -162,7 +136,7 @@ fun DownloadQueueSheet(
                             imageVector = Icons.Rounded.Bolt,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                         Text(
                             text = "Parallel Downloads",
@@ -178,7 +152,7 @@ fun DownloadQueueSheet(
                                 shape = CircleShape,
                                 color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
                                 contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.size(34.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Text(
@@ -207,18 +181,18 @@ fun DownloadQueueSheet(
                         Surface(
                             shape = CircleShape,
                             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                            modifier = Modifier.size(72.dp)
+                            modifier = Modifier.size(80.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = Icons.Rounded.DownloadDone,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(36.dp)
+                                    modifier = Modifier.size(40.dp)
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "No Downloads in Queue",
                             style = MaterialTheme.typography.titleMedium,
@@ -234,9 +208,11 @@ fun DownloadQueueSheet(
                 }
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
+                    contentPadding = PaddingValues(bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(orderedQueueItems, key = { it.id }) { item ->
@@ -250,8 +226,6 @@ fun DownloadQueueSheet(
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

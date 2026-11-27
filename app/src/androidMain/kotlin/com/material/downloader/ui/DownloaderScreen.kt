@@ -145,7 +145,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
     val playlistInfo by viewModel.playlistInfo.collectAsState()
     val queueItems by viewModel.queueItems.collectAsState()
     val customHeaders by viewModel.customHeaders.collectAsState()
-    var showQueueSheet by remember { mutableStateOf(false) }
+    var showQueueScreen by remember { mutableStateOf(false) }
     var showHeadersDialog by remember { mutableStateOf(false) }
     
     val instantInteractionSource = remember { MutableInteractionSource() }
@@ -259,6 +259,25 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
         } finally {
             isPredictivePlayerActive = false
             animatedPlayerProgress.snapTo(0f)
+        }
+    }
+
+    val animatedQueueProgress = remember { Animatable(0f) }
+    var isPredictiveQueueActive by remember { mutableStateOf(false) }
+
+    PredictiveBackHandler(enabled = showQueueScreen && playingUrl == null) { progress: Flow<BackEventCompat> ->
+        isPredictiveQueueActive = true
+        try {
+            progress.collect { backEvent ->
+                animatedQueueProgress.snapTo(backEvent.progress)
+            }
+            animatedQueueProgress.animateTo(1f, tween(durationMillis = 180))
+            showQueueScreen = false
+        } catch (e: CancellationException) {
+            animatedQueueProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+        } finally {
+            isPredictiveQueueActive = false
+            animatedQueueProgress.snapTo(0f)
         }
     }
 
@@ -386,7 +405,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
             bottomBar = {
                 val isSubScreenOpen = (selectedTab == 3 && currentSettingsScreen != "Main")
                 AnimatedVisibility(
-                    visible = !isExpanded && !isSubScreenOpen && playingUrl == null,
+                    visible = !isExpanded && !isSubScreenOpen && playingUrl == null && !showQueueScreen,
                     enter = fadeIn(tween(200)) + slideInVertically(tween(250)) { it },
                     exit = fadeOut(tween(150)) + slideOutVertically(tween(200)) { it }
                 ) {
@@ -598,7 +617,13 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                                         }
                                     ) {
                                         FloatingActionButton(
-                                            onClick = { showQueueSheet = true },
+                                            onClick = {
+                                                coroutineScope.launch {
+                                                    animatedQueueProgress.snapTo(1f)
+                                                    showQueueScreen = true
+                                                    animatedQueueProgress.animateTo(0f, tween(durationMillis = 220))
+                                                }
+                                            },
                                             modifier = Modifier.size(queueFabSize),
                                             shape = CircleShape,
                                             containerColor = if (activeCount > 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
@@ -927,19 +952,48 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
             )
         }
 
-        // Download Queue Bottom Sheet
-        if (showQueueSheet) {
-            DownloadQueueSheet(
-                queueItems = queueItems,
-                maxConcurrency = viewModel.maxParallelDownloads.intValue,
-                onConcurrencyChange = { viewModel.updateMaxParallelDownloads(it) },
-                onDismiss = { showQueueSheet = false },
-                onPause = { viewModel.pauseQueueItem(it) },
-                onResume = { viewModel.resumeQueueItem(it) },
-                onCancel = { viewModel.cancelQueueItem(it) },
-                onRetry = { viewModel.retryQueueItem(it) },
-                onClearCompleted = { viewModel.clearCompletedQueue() }
-            )
+        // Download Queue Full-Screen Window with predictive slide transition
+        val isQueueVisible = showQueueScreen || isPredictiveQueueActive || animatedQueueProgress.value > 0f
+        if (isQueueVisible && showQueueScreen) {
+            val qp = animatedQueueProgress.value
+            val queueOffsetX = screenWidthPx * qp
+            val queueScale = 1f - (qp * 0.05f)
+            val queueCorners = (qp * 28).dp
+            val queueAlpha = 1f - (qp * 0.15f)
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zIndex(150f)
+                    .graphicsLayer {
+                        translationX = queueOffsetX
+                        scaleX = queueScale
+                        scaleY = queueScale
+                        alpha = queueAlpha
+                        clip = qp > 0f
+                        shape = RoundedCornerShape(queueCorners)
+                        shadowElevation = if (qp > 0f) 24.dp.toPx() else 0f
+                    }
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                DownloadQueueScreen(
+                    queueItems = queueItems,
+                    maxConcurrency = viewModel.maxParallelDownloads.intValue,
+                    onConcurrencyChange = { viewModel.updateMaxParallelDownloads(it) },
+                    onBack = {
+                        coroutineScope.launch {
+                            animatedQueueProgress.animateTo(1f, tween(durationMillis = 180))
+                            showQueueScreen = false
+                            animatedQueueProgress.snapTo(0f)
+                        }
+                    },
+                    onPause = { viewModel.pauseQueueItem(it) },
+                    onResume = { viewModel.resumeQueueItem(it) },
+                    onCancel = { viewModel.cancelQueueItem(it) },
+                    onRetry = { viewModel.retryQueueItem(it) },
+                    onClearCompleted = { viewModel.clearCompletedQueue() }
+                )
+            }
         }
 
         // Custom Headers Dialog

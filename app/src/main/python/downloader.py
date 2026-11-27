@@ -376,18 +376,37 @@ def extract_gallery(url, cookies_path=None, custom_headers_json=None):
                 direct_urls = [u for u in j.data_urls if not any(domain in u for domain in ["pinterest.com", "pin.it"])]
                 if not direct_urls:
                     direct_urls = j.data_urls
-                
+
+                # Filter out HLS m3u8 playlists if direct mp4 exists, or fall back to yt-dlp for m3u8-only video pins
+                non_m3u8 = [u for u in direct_urls if '.m3u8' not in u.lower().split('?')[0]]
+                if not non_m3u8 and any('.m3u8' in u.lower() for u in direct_urls):
+                    return json.dumps({'status': 'error', 'message': 'HLS stream detected; falling back to video extractor'})
+                if non_m3u8:
+                    direct_urls = non_m3u8
+
                 first_meta = j.data_meta[0] if j.data_meta else {}
-                
+                first_path = direct_urls[0].lower().split('?')[0]
+                detected_ext = first_meta.get('extension')
+                if not detected_ext:
+                    for candidate_ext in ('mp4', 'webm', 'mov', 'gif', 'png', 'webp', 'jpg', 'jpeg'):
+                        if first_path.endswith('.' + candidate_ext):
+                            detected_ext = candidate_ext
+                            break
+                if not detected_ext:
+                    detected_ext = 'jpg'
+
+                is_video_file = detected_ext in ('mp4', 'webm', 'mov') and len(direct_urls) == 1
+
                 return json.dumps({
                     'status': 'success',
-                    'urls': direct_urls,
-                    'title': first_meta.get('title') or 'Gallery Image',
-                    'author': first_meta.get('author') or 'Unknown',
-                    'thumbnail': direct_urls[0],
+                    'urls': direct_urls if not is_video_file else None,
+                    'url': direct_urls[0] if is_video_file else None,
+                    'title': first_meta.get('title') or ('Pinterest Video' if is_video_file else 'Gallery Image'),
+                    'author': first_meta.get('author') or first_meta.get('uploader') or 'Unknown',
+                    'thumbnail': direct_urls[0] if not is_video_file else first_meta.get('thumbnail'),
                     'size': 0,
-                    'ext': first_meta.get('extension') or 'jpg',
-                    'is_gallery': True,
+                    'ext': detected_ext,
+                    'is_gallery': not is_video_file,
                     'is_playlist': False
                 })
             else:

@@ -31,14 +31,17 @@ class FileDownloader(private val context: Context, private val client: HttpClien
         
         try {
             client.prepareGet(url) {
+                val blockedHeaders = setOf("host", "content-length", "connection", "accept-encoding", "transfer-encoding")
                 httpHeaders?.forEach { (key, value) ->
-                    header(key, value)
+                    if (key.isNotBlank() && value.isNotBlank() && !blockedHeaders.contains(key.lowercase())) {
+                        header(key, value)
+                    }
                 }
-                if (httpHeaders == null || !httpHeaders.containsKey(io.ktor.http.HttpHeaders.UserAgent)) {
+                val hasUa = httpHeaders?.keys?.any { it.equals("User-Agent", ignoreCase = true) } == true
+                if (!hasUa) {
                     header(io.ktor.http.HttpHeaders.UserAgent, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
-                    header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-                    header("Accept-Language", "en-us,en;q=0.5")
-                    header("Referer", "https://www.google.com/")
+                    header("Accept", "*/*")
+                    header("Accept-Language", "en-US,en;q=0.9")
                 }
             }.execute { response ->
                 if (response.status.value !in 200..299) {
@@ -94,14 +97,17 @@ class FileDownloader(private val context: Context, private val client: HttpClien
         emit(DownloadState.Downloading(0f))
         try {
             client.prepareGet(url) {
+                val blockedHeaders = setOf("host", "content-length", "connection", "accept-encoding", "transfer-encoding")
                 httpHeaders?.forEach { (key, value) ->
-                    header(key, value)
+                    if (key.isNotBlank() && value.isNotBlank() && !blockedHeaders.contains(key.lowercase())) {
+                        header(key, value)
+                    }
                 }
-                if (httpHeaders == null || !httpHeaders.containsKey(io.ktor.http.HttpHeaders.UserAgent)) {
+                val hasUa = httpHeaders?.keys?.any { it.equals("User-Agent", ignoreCase = true) } == true
+                if (!hasUa) {
                     header(io.ktor.http.HttpHeaders.UserAgent, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
-                    header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-                    header("Accept-Language", "en-us,en;q=0.5")
-                    header("Referer", "https://www.google.com/")
+                    header("Accept", "*/*")
+                    header("Accept-Language", "en-US,en;q=0.9")
                 }
             }.execute { response ->
                 if (response.status.value !in 200..299) {
