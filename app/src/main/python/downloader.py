@@ -58,7 +58,7 @@ def extract_playlist(url, cookies_path=None, user_agent=None, custom_headers_jso
             'playlistend': 150,
             'skip_download': True,
             'ignoreerrors': True,
-            'extractor_args': {'youtube': ['player_client=android,web,tv_embedded,ios']}
+            'extractor_args': {'youtube': {'player_client': ['android_vr', 'android', 'ios', 'web']}}
         }
 
         headers = {
@@ -156,7 +156,7 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None, user_agent
             'extract_flat': False,
             'retries': 3,
             'extractor_args': {
-                'youtube': ['player_client=android,web,tv_embedded,ios']
+                'youtube': {'player_client': ['android_vr', 'android', 'ios', 'web']}
             }
         }
         
@@ -175,20 +175,21 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None, user_agent
             # We MUST strictly enforce compatible codecs for Android MediaMuxer!
             # MP4 Muxer strictly requires AVC (H.264) + AAC (M4A).
             # WEBM Muxer strictly requires VP9/VP8 + Opus/Vorbis (WEBM).
-            if quality != 'max':
-                q_val = str(quality).replace('p', '')
+            q_val = str(quality).replace('p', '').strip()
+            if q_val.isdigit():
                 ydl_opts['format'] = (
                     f'bestvideo[vcodec^=avc][height={q_val}]+bestaudio[ext=m4a]/'
                     f'bestvideo[vcodec^=vp9][height={q_val}]+bestaudio[ext=webm]/'
                     f'bestvideo[vcodec^=avc][height<={q_val}]+bestaudio[ext=m4a]/'
                     f'bestvideo[vcodec^=vp9][height<={q_val}]+bestaudio[ext=webm]/'
-                    f'best[height<={q_val}]'
+                    f'best[height<={q_val}]/'
+                    f'bestvideo+bestaudio/best'
                 )
             else:
                 ydl_opts['format'] = (
                     'bestvideo[vcodec^=avc]+bestaudio[ext=m4a]/'
                     'bestvideo[vcodec^=vp9]+bestaudio[ext=webm]/'
-                    'best'
+                    'bestvideo+bestaudio/best'
                 )
 
         if cookies_path and os.path.exists(cookies_path):

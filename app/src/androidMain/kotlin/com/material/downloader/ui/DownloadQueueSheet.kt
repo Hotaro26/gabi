@@ -48,25 +48,6 @@ fun DownloadQueueSheet(
     onClearCompleted: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-    val coroutineScope = rememberCoroutineScope()
-    val animatedProgress = remember { Animatable(0f) }
-
-    PredictiveBackHandler(enabled = true) { progress: Flow<BackEventCompat> ->
-        try {
-            progress.collect { backEvent ->
-                animatedProgress.snapTo(backEvent.progress)
-            }
-            animatedProgress.animateTo(1f, tween(durationMillis = 150))
-            coroutineScope.launch {
-                sheetState.hide()
-                onDismiss()
-            }
-        } catch (e: CancellationException) {
-            animatedProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
-        } finally {
-            animatedProgress.snapTo(0f)
-        }
-    }
 
     val orderedQueueItems = remember(queueItems) {
         queueItems.sortedBy { item ->
@@ -80,7 +61,6 @@ fun DownloadQueueSheet(
         }
     }
 
-    val p = animatedProgress.value
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -88,6 +68,24 @@ fun DownloadQueueSheet(
         tonalElevation = 8.dp,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
+        val animatedProgress = remember { Animatable(0f) }
+
+        PredictiveBackHandler(enabled = true) { progress: Flow<BackEventCompat> ->
+            try {
+                progress.collect { backEvent ->
+                    animatedProgress.snapTo(backEvent.progress)
+                }
+                animatedProgress.animateTo(1f, tween(durationMillis = 150))
+                sheetState.hide()
+                onDismiss()
+            } catch (e: CancellationException) {
+                animatedProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+            } finally {
+                animatedProgress.snapTo(0f)
+            }
+        }
+
+        val p = animatedProgress.value
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -107,13 +105,21 @@ fun DownloadQueueSheet(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Rounded.QueueMusic,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Rounded.QueueMusic,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = "Download Queue",
                         style = MaterialTheme.typography.titleLarge,
@@ -121,10 +127,13 @@ fun DownloadQueueSheet(
                     )
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     if (queueItems.any { it.status == QueueItemStatus.COMPLETED || it.status == QueueItemStatus.ERROR }) {
-                        IconButton(onClick = onClearCompleted) {
-                            Icon(Icons.Rounded.DeleteSweep, contentDescription = "Clear Finished")
+                        FilledTonalIconButton(
+                            onClick = onClearCompleted,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(Icons.Rounded.DeleteSweep, contentDescription = "Clear Finished", modifier = Modifier.size(18.dp))
                         }
                     }
                     IconButton(onClick = onDismiss) {
@@ -133,7 +142,58 @@ fun DownloadQueueSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Parallel Downloads Control Bar
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(
+                            imageVector = Icons.Rounded.Bolt,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "Parallel Downloads",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf(1, 2, 3, 4).forEach { count ->
+                            val isSelected = maxConcurrency == count
+                            Surface(
+                                onClick = { onConcurrencyChange(count) },
+                                shape = CircleShape,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = "$count",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Queue List or Empty State
             if (orderedQueueItems.isEmpty()) {
@@ -303,35 +363,68 @@ private fun QueueItemCard(
                 }
 
                 // Controls
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     when (item.status) {
                         QueueItemStatus.DOWNLOADING -> {
-                            IconButton(onClick = onPause) {
-                                Icon(Icons.Rounded.Pause, contentDescription = "Pause", tint = MaterialTheme.colorScheme.primary)
+                            FilledTonalIconButton(
+                                onClick = onPause,
+                                modifier = Modifier.size(34.dp)
+                            ) {
+                                Icon(Icons.Rounded.Pause, contentDescription = "Pause", modifier = Modifier.size(18.dp))
                             }
-                            IconButton(onClick = onCancel) {
-                                Icon(Icons.Rounded.Stop, contentDescription = "Stop", tint = MaterialTheme.colorScheme.error)
+                            FilledTonalIconButton(
+                                onClick = onCancel,
+                                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                ),
+                                modifier = Modifier.size(34.dp)
+                            ) {
+                                Icon(Icons.Rounded.Stop, contentDescription = "Stop", modifier = Modifier.size(18.dp))
                             }
                         }
                         QueueItemStatus.PAUSED -> {
-                            IconButton(onClick = onResume) {
-                                Icon(Icons.Rounded.PlayArrow, contentDescription = "Resume", tint = MaterialTheme.colorScheme.primary)
+                            FilledTonalIconButton(
+                                onClick = onResume,
+                                modifier = Modifier.size(34.dp)
+                            ) {
+                                Icon(Icons.Rounded.PlayArrow, contentDescription = "Resume", modifier = Modifier.size(18.dp))
                             }
-                            IconButton(onClick = onCancel) {
-                                Icon(Icons.Rounded.Stop, contentDescription = "Stop", tint = MaterialTheme.colorScheme.error)
+                            FilledTonalIconButton(
+                                onClick = onCancel,
+                                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                ),
+                                modifier = Modifier.size(34.dp)
+                            ) {
+                                Icon(Icons.Rounded.Stop, contentDescription = "Stop", modifier = Modifier.size(18.dp))
                             }
                         }
                         QueueItemStatus.QUEUED -> {
-                            IconButton(onClick = onCancel) {
-                                Icon(Icons.Rounded.Stop, contentDescription = "Stop", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            FilledTonalIconButton(
+                                onClick = onCancel,
+                                modifier = Modifier.size(34.dp)
+                            ) {
+                                Icon(Icons.Rounded.Stop, contentDescription = "Stop", modifier = Modifier.size(18.dp))
                             }
                         }
                         QueueItemStatus.ERROR -> {
-                            IconButton(onClick = onRetry) {
-                                Icon(Icons.Rounded.Refresh, contentDescription = "Retry", tint = MaterialTheme.colorScheme.error)
+                            FilledTonalIconButton(
+                                onClick = onRetry,
+                                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                ),
+                                modifier = Modifier.size(34.dp)
+                            ) {
+                                Icon(Icons.Rounded.Refresh, contentDescription = "Retry", modifier = Modifier.size(18.dp))
                             }
-                            IconButton(onClick = onCancel) {
-                                Icon(Icons.Rounded.Close, contentDescription = "Dismiss")
+                            IconButton(
+                                onClick = onCancel,
+                                modifier = Modifier.size(34.dp)
+                            ) {
+                                Icon(Icons.Rounded.Close, contentDescription = "Dismiss", modifier = Modifier.size(18.dp))
                             }
                         }
                         QueueItemStatus.COMPLETED -> {
@@ -339,7 +432,7 @@ private fun QueueItemCard(
                                 imageVector = Icons.Rounded.CheckCircle,
                                 contentDescription = "Completed",
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(12.dp)
+                                modifier = Modifier.padding(8.dp).size(22.dp)
                             )
                         }
                     }

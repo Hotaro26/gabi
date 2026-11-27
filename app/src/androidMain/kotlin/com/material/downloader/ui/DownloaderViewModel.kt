@@ -887,23 +887,29 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                     val urlObj = service.getStreamExtractor(url)
                     urlObj.fetchPage()
                     
-                    val videoOnlyStreams = urlObj.videoOnlyStreams
-                    val progressiveStreams = urlObj.videoStreams
-                    val qualityClean = quality.replace("p", "")
+                    val videoOnlyStreams = urlObj.videoOnlyStreams.filter { it.isUrl && !it.content.isNullOrBlank() }
+                    val progressiveStreams = urlObj.videoStreams.filter { it.isUrl && !it.content.isNullOrBlank() }
+                    val validAudioStreams = urlObj.audioStreams.filter { it.isUrl && !it.content.isNullOrBlank() }
+                    val qualityClean = quality.replace("p", "").trim()
+                    val isBestQuality = quality.equals("best", ignoreCase = true) ||
+                        quality.equals("max", ignoreCase = true) ||
+                        quality.isBlank()
 
                     val selectedVideo = if (mode == "audio") {
                         null
                     } else {
-                        val matchedVideoOnly = if (quality == "best" || quality.isBlank()) {
+                        val matchedVideoOnly = if (isBestQuality) {
                             videoOnlyStreams.maxByOrNull { it.resolution.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0 }
                         } else {
                             videoOnlyStreams.find { it.resolution.contains(qualityClean) }
+                                ?: videoOnlyStreams.maxByOrNull { it.resolution.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0 }
                         }
                         
-                        val matchedProgressive = if (quality == "best" || quality.isBlank()) {
+                        val matchedProgressive = if (isBestQuality) {
                             progressiveStreams.maxByOrNull { it.resolution.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0 }
                         } else {
                             progressiveStreams.find { it.resolution.contains(qualityClean) }
+                                ?: progressiveStreams.maxByOrNull { it.resolution.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0 }
                         }
                         
                         val videoOnlyRes = matchedVideoOnly?.resolution?.replace(Regex("[^0-9]"), "")?.toIntOrNull() ?: 0
@@ -912,18 +918,18 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                         if (videoOnlyRes > progressiveRes) {
                             matchedVideoOnly
                         } else {
-                            matchedProgressive ?: matchedVideoOnly ?: progressiveStreams.maxByOrNull { it.resolution.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0 }
+                            matchedProgressive ?: matchedVideoOnly
                         }
                     }
 
-                    val m4aAudioStreams = urlObj.audioStreams.filter { it.getFormat()?.suffix == "m4a" }
+                    val m4aAudioStreams = validAudioStreams.filter { it.getFormat()?.suffix == "m4a" }
                     val englishAudio = m4aAudioStreams.filter { it.audioLocale?.language == "en" }
                     val defaultAudio = m4aAudioStreams.filter { it.audioLocale == null }
                     
                     val bestAudio = englishAudio.maxByOrNull { it.averageBitrate }
                         ?: defaultAudio.maxByOrNull { it.averageBitrate }
                         ?: m4aAudioStreams.maxByOrNull { it.averageBitrate }
-                        ?: urlObj.audioStreams.maxByOrNull { it.averageBitrate }
+                        ?: validAudioStreams.maxByOrNull { it.averageBitrate }
 
                     val isMuxingRequired = selectedVideo != null && videoOnlyStreams.contains(selectedVideo)
                     
@@ -958,7 +964,9 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                         com.material.downloader.api.ExtractionResult(status = "error", message = "No streams found")
                     }
                 } catch (e: Exception) {
-                    com.material.downloader.api.ExtractionResult(status = "error", message = e.message ?: "NewPipe extraction failed")
+                    val msg = e.message ?: "NewPipe extraction failed"
+                    logToConsole("NewPipe extractor failed: $msg")
+                    com.material.downloader.api.ExtractionResult(status = "error", message = msg)
                 }
             } else {
                 logToConsole("Executing $engine extractor in Python...")
@@ -1010,7 +1018,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                         result = currentResult
                         break
                     } else {
-                        logToConsole("[WARNING] Extractor $currentEngine failed. ${if (enginesToTry.last() != currentEngine) "Trying next candidate..." else "All candidates exhausted."}")
+                        logToConsole("[WARNING] Extractor $currentEngine failed (${currentResult.message}). ${if (enginesToTry.last() != currentEngine) "Trying next candidate..." else "All candidates exhausted."}")
                         result = currentResult
                     }
                 }

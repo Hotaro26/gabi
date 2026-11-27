@@ -1114,26 +1114,6 @@ fun MainDownloaderTab(
 
     if (showDownloadingDetailsSheet) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        val coroutineScope = rememberCoroutineScope()
-        val sheetBackProgress = remember { Animatable(0f) }
-
-        PredictiveBackHandler(enabled = true) { progress: Flow<BackEventCompat> ->
-            try {
-                progress.collect { backEvent ->
-                    sheetBackProgress.snapTo(backEvent.progress)
-                }
-                sheetBackProgress.animateTo(1f, tween(150))
-                coroutineScope.launch {
-                    sheetState.hide()
-                    showDownloadingDetailsSheet = false
-                }
-            } catch (e: CancellationException) {
-                sheetBackProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
-            } finally {
-                sheetBackProgress.snapTo(0f)
-            }
-        }
-        val sp = sheetBackProgress.value
         ModalBottomSheet(
             onDismissRequest = { showDownloadingDetailsSheet = false },
             sheetState = sheetState,
@@ -1141,6 +1121,22 @@ fun MainDownloaderTab(
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             windowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
         ) {
+            val sheetBackProgress = remember { Animatable(0f) }
+            PredictiveBackHandler(enabled = true) { progress: Flow<BackEventCompat> ->
+                try {
+                    progress.collect { backEvent ->
+                        sheetBackProgress.snapTo(backEvent.progress)
+                    }
+                    sheetBackProgress.animateTo(1f, tween(150))
+                    sheetState.hide()
+                    showDownloadingDetailsSheet = false
+                } catch (e: CancellationException) {
+                    sheetBackProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+                } finally {
+                    sheetBackProgress.snapTo(0f)
+                }
+            }
+            val sp = sheetBackProgress.value
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -2075,8 +2071,8 @@ fun MainDownloaderTab(
         // Terminal CLI Component
         AnimatedVisibility(
             visible = showTerminalCard,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically()
+            enter = fadeIn(animationSpec = tween(260, easing = FastOutSlowInEasing)) + scaleIn(initialScale = 0.95f, animationSpec = tween(260, easing = FastOutSlowInEasing)),
+            exit = fadeOut(animationSpec = tween(200)) + scaleOut(targetScale = 0.95f, animationSpec = tween(200))
         ) {
             Column {
                 Spacer(Modifier.height(16.dp))
@@ -4200,26 +4196,6 @@ fun LogsTab(
     if (selectedLog != null && selectedLog?.path != null) {
         val log = selectedLog!!
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        val coroutineScope = rememberCoroutineScope()
-        val sheetBackProgress = remember { Animatable(0f) }
-
-        PredictiveBackHandler(enabled = true) { progress: Flow<BackEventCompat> ->
-            try {
-                progress.collect { backEvent ->
-                    sheetBackProgress.snapTo(backEvent.progress)
-                }
-                sheetBackProgress.animateTo(1f, tween(150))
-                coroutineScope.launch {
-                    sheetState.hide()
-                    selectedLog = null
-                }
-            } catch (e: CancellationException) {
-                sheetBackProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
-            } finally {
-                sheetBackProgress.snapTo(0f)
-            }
-        }
-        val sp = sheetBackProgress.value
         val ext = log.path?.substringAfterLast('.', "") ?: ""
         val isGallery = ext.equals("jpg", true) || ext.equals("png", true) || ext.equals("jpeg", true) || ext.equals("webp", true) || ext.equals("gif", true) || (log.title.contains("Gallery", true) && !ext.equals("mp4", true))
 
@@ -4230,6 +4206,22 @@ fun LogsTab(
             shape = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp),
             windowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
         ) {
+            val sheetBackProgress = remember { Animatable(0f) }
+            PredictiveBackHandler(enabled = true) { progress: Flow<BackEventCompat> ->
+                try {
+                    progress.collect { backEvent ->
+                        sheetBackProgress.snapTo(backEvent.progress)
+                    }
+                    sheetBackProgress.animateTo(1f, tween(150))
+                    sheetState.hide()
+                    selectedLog = null
+                } catch (e: CancellationException) {
+                    sheetBackProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+                } finally {
+                    sheetBackProgress.snapTo(0f)
+                }
+            }
+            val sp = sheetBackProgress.value
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -4536,26 +4528,6 @@ fun CookiesSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, co
 
     if (showNewCookieSheet) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        val coroutineScope = rememberCoroutineScope()
-        val sheetBackProgress = remember { Animatable(0f) }
-
-        PredictiveBackHandler(enabled = true) { progress: Flow<BackEventCompat> ->
-            try {
-                progress.collect { backEvent ->
-                    sheetBackProgress.snapTo(backEvent.progress)
-                }
-                sheetBackProgress.animateTo(1f, tween(150))
-                coroutineScope.launch {
-                    sheetState.hide()
-                    showNewCookieSheet = false
-                }
-            } catch (e: CancellationException) {
-                sheetBackProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
-            } finally {
-                sheetBackProgress.snapTo(0f)
-            }
-        }
-        val sp = sheetBackProgress.value
         var tempUrl by remember { mutableStateOf("https://") }
         var selectedTag by remember { mutableStateOf<String?>(null) }
         var tagExpanded by remember { mutableStateOf(false) }
@@ -4567,6 +4539,22 @@ fun CookiesSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, co
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             windowInsets = WindowInsets(0, 0, 0, 0)
         ) {
+            val sheetBackProgress = remember { Animatable(0f) }
+            PredictiveBackHandler(enabled = true) { progress: Flow<BackEventCompat> ->
+                try {
+                    progress.collect { backEvent ->
+                        sheetBackProgress.snapTo(backEvent.progress)
+                    }
+                    sheetBackProgress.animateTo(1f, tween(150))
+                    sheetState.hide()
+                    showNewCookieSheet = false
+                } catch (e: CancellationException) {
+                    sheetBackProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+                } finally {
+                    sheetBackProgress.snapTo(0f)
+                }
+            }
+            val sp = sheetBackProgress.value
             Column(
                 modifier = Modifier
                     .fillMaxWidth()

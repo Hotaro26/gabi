@@ -191,26 +191,6 @@ fun NewPipeTab(
 
     if (selectedItem != null) {
         val item = selectedItem!!
-        val coroutineScope = rememberCoroutineScope()
-        val sheetBackProgress = remember { androidx.compose.animation.core.Animatable(0f) }
-
-        androidx.activity.compose.PredictiveBackHandler(enabled = true) { progress: kotlinx.coroutines.flow.Flow<androidx.activity.BackEventCompat> ->
-            try {
-                progress.collect { backEvent ->
-                    sheetBackProgress.snapTo(backEvent.progress)
-                }
-                sheetBackProgress.animateTo(1f, androidx.compose.animation.core.tween(150))
-                coroutineScope.launch {
-                    sheetState.hide()
-                    selectedItem = null
-                }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                sheetBackProgress.animateTo(0f, androidx.compose.animation.core.spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow))
-            } finally {
-                sheetBackProgress.snapTo(0f)
-            }
-        }
-        val sp = sheetBackProgress.value
 
         ModalBottomSheet(
             onDismissRequest = { selectedItem = null },
@@ -218,6 +198,23 @@ fun NewPipeTab(
             containerColor = MaterialTheme.colorScheme.surface,
             windowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
         ) {
+            val sheetBackProgress = remember { androidx.compose.animation.core.Animatable(0f) }
+
+            androidx.activity.compose.PredictiveBackHandler(enabled = true) { progress: kotlinx.coroutines.flow.Flow<androidx.activity.BackEventCompat> ->
+                try {
+                    progress.collect { backEvent ->
+                        sheetBackProgress.snapTo(backEvent.progress)
+                    }
+                    sheetBackProgress.animateTo(1f, androidx.compose.animation.core.tween(150))
+                    sheetState.hide()
+                    selectedItem = null
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    sheetBackProgress.animateTo(0f, androidx.compose.animation.core.spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow))
+                } finally {
+                    sheetBackProgress.snapTo(0f)
+                }
+            }
+            val sp = sheetBackProgress.value
             Column(
                 modifier = Modifier
                     .fillMaxWidth()

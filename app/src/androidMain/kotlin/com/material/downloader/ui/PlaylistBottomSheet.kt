@@ -43,25 +43,6 @@ fun PlaylistBottomSheet(
     onDownloadSelected: (quality: String, mode: String, engine: String) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-    val coroutineScope = rememberCoroutineScope()
-    val animatedProgress = remember { Animatable(0f) }
-
-    PredictiveBackHandler(enabled = true) { progress: Flow<BackEventCompat> ->
-        try {
-            progress.collect { backEvent ->
-                animatedProgress.snapTo(backEvent.progress)
-            }
-            animatedProgress.animateTo(1f, tween(durationMillis = 150))
-            coroutineScope.launch {
-                sheetState.hide()
-                onDismiss()
-            }
-        } catch (e: CancellationException) {
-            animatedProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
-        } finally {
-            animatedProgress.snapTo(0f)
-        }
-    }
 
     var selectedMode by remember { mutableStateOf("auto") } // "auto" (video) or "audio"
     var selectedQuality by remember { mutableStateOf("720") }
@@ -70,7 +51,6 @@ fun PlaylistBottomSheet(
     val selectedCount = playlistInfo.items.count { it.isSelected }
     val allSelected = selectedCount == playlistInfo.items.size && playlistInfo.items.isNotEmpty()
 
-    val p = animatedProgress.value
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -78,6 +58,24 @@ fun PlaylistBottomSheet(
         tonalElevation = 8.dp,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
+        val animatedProgress = remember { Animatable(0f) }
+
+        PredictiveBackHandler(enabled = true) { progress: Flow<BackEventCompat> ->
+            try {
+                progress.collect { backEvent ->
+                    animatedProgress.snapTo(backEvent.progress)
+                }
+                animatedProgress.animateTo(1f, tween(durationMillis = 150))
+                sheetState.hide()
+                onDismiss()
+            } catch (e: CancellationException) {
+                animatedProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+            } finally {
+                animatedProgress.snapTo(0f)
+            }
+        }
+
+        val p = animatedProgress.value
         Column(
             modifier = Modifier
                 .fillMaxWidth()
