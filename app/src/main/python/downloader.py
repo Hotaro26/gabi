@@ -315,15 +315,37 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None, user_agent
                             target_headers = fmt.get('http_headers')
                             break
 
+                # Robust metadata extraction across major platforms (YouTube, Instagram, TikTok, Twitter/X)
+                raw_title = video.get('title')
+                if not raw_title or str(raw_title).strip() == '' or raw_title == 'video':
+                    desc = video.get('description')
+                    if desc and str(desc).strip():
+                        raw_title = str(desc).strip().split('\n')[0][:80]
+                    else:
+                        raw_title = video.get('id') or 'Media'
+
+                raw_author = (video.get('uploader') or 
+                              video.get('uploader_id') or 
+                              video.get('channel') or 
+                              video.get('creator') or 
+                              'Unknown')
+
+                raw_thumb = video.get('thumbnail')
+                if not raw_thumb and video.get('thumbnails'):
+                    try:
+                        raw_thumb = video['thumbnails'][-1].get('url') or video['thumbnails'][0].get('url')
+                    except Exception:
+                        raw_thumb = None
+
                 return json.dumps({
                     'available_qualities': sorted_qualities,
                     'http_headers': target_headers,
                     'status': 'success',
                     'url': download_url,
                     'audio_url': audio_url,
-                    'title': video.get('title', 'video'),
-                    'author': video.get('uploader') or video.get('channel') or 'Unknown',
-                    'thumbnail': video.get('thumbnail'),
+                    'title': str(raw_title),
+                    'author': str(raw_author),
+                    'thumbnail': raw_thumb,
                     'size': video.get('filesize_approx') or video.get('filesize') or 0,
                     'ext': 'mp3' if mode == 'audio' else video.get('ext', 'mp4'),
                     'is_playlist': False

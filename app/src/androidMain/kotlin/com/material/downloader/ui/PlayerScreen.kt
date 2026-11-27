@@ -28,7 +28,10 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.MergingMediaSource
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.ui.PlayerView
 import androidx.compose.ui.draw.clip
 import coil.compose.AsyncImage
@@ -49,6 +52,7 @@ fun PlayerScreen(
     var streamUrl by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isMusicMode by remember { mutableStateOf(false) }
 
     val exoPlayer = remember { ExoPlayer.Builder(context).build() }
 
@@ -58,14 +62,47 @@ fun PlayerScreen(
                 val service = NewPipe.getServiceByUrl(url)
                 val extractor = service.getStreamExtractor(url)
                 extractor.fetchPage()
-                
-                val bestVideo = extractor.videoStreams.maxByOrNull { it.resolution.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0 }
+
+                // Check for progressive muxed video (video + audio together)
+                val muxedVideo = extractor.videoStreams?.maxByOrNull { 
+                    it.resolution.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0 
+                }
+
+                // Check separate video and audio streams
+                val videoOnly = extractor.videoOnlyStreams?.maxByOrNull { 
+                    it.resolution.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0 
+                }
+                val bestAudio = extractor.audioStreams?.maxByOrNull { 
+                    it.averageBitrate 
+                }
                 
                 withContext(Dispatchers.Main) {
                     streamExtractor = extractor
-                    streamUrl = bestVideo?.content
-                    if (streamUrl != null) {
-                        exoPlayer.setMediaItem(MediaItem.fromUri(Uri.parse(streamUrl)))
+                    if (muxedVideo != null) {
+                        streamUrl = muxedVideo.content
+                        exoPlayer.setMediaItem(MediaItem.fromUri(Uri.parse(muxedVideo.content)))
+                        exoPlayer.prepare()
+                        exoPlayer.playWhenReady = true
+                    } else if (videoOnly != null && bestAudio != null) {
+                        streamUrl = videoOnly.content
+                        val dataSourceFactory = DefaultDataSource.Factory(context)
+                        val videoSource = ProgressiveMediaSource.Factory(dataSourceFactory)
+                            .createMediaSource(MediaItem.fromUri(Uri.parse(videoOnly.content)))
+                        val audioSource = ProgressiveMediaSource.Factory(dataSourceFactory)
+                            .createMediaSource(MediaItem.fromUri(Uri.parse(bestAudio.content)))
+                        val mergedSource = MergingMediaSource(videoSource, audioSource)
+                        exoPlayer.setMediaSource(mergedSource)
+                        exoPlayer.prepare()
+                        exoPlayer.playWhenReady = true
+                    } else if (videoOnly != null) {
+                        streamUrl = videoOnly.content
+                        exoPlayer.setMediaItem(MediaItem.fromUri(Uri.parse(videoOnly.content)))
+                        exoPlayer.prepare()
+                        exoPlayer.playWhenReady = true
+                    } else if (bestAudio != null) {
+                        streamUrl = bestAudio.content
+                        isMusicMode = true
+                        exoPlayer.setMediaItem(MediaItem.fromUri(Uri.parse(bestAudio.content)))
                         exoPlayer.prepare()
                         exoPlayer.playWhenReady = true
                     } else {
@@ -118,8 +155,6 @@ fun PlayerScreen(
             }
         }
     }
-
-    var isMusicMode by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {

@@ -242,6 +242,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
     val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
 
     var playingUrl by remember { mutableStateOf<String?>(null) }
+    var currentSettingsScreen by remember { mutableStateOf("Main") }
     val animatedPlayerProgress = remember { Animatable(0f) }
     var isPredictivePlayerActive by remember { mutableStateOf(false) }
 
@@ -383,7 +384,12 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                 }
             },
             bottomBar = {
-                if (!isExpanded) {
+                val isSubScreenOpen = (selectedTab == 3 && currentSettingsScreen != "Main")
+                AnimatedVisibility(
+                    visible = !isExpanded && !isSubScreenOpen && playingUrl == null,
+                    enter = fadeIn(tween(200)) + slideInVertically(tween(250)) { it },
+                    exit = fadeOut(tween(150)) + slideOutVertically(tween(200)) { it }
+                ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -753,11 +759,20 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             onDelete = viewModel::deleteLog,
                             contentPadding = padding
                         )
-                        3 -> SettingsTab(viewModel, contentPadding = padding, isSearchActive = isSettingsSearchActive, searchQuery = settingsSearchQuery, onQueryChange = { settingsSearchQuery = it })
+                        3 -> SettingsTab(
+                            viewModel = viewModel, 
+                            contentPadding = padding, 
+                            isSearchActive = isSettingsSearchActive, 
+                            searchQuery = settingsSearchQuery, 
+                            onQueryChange = { settingsSearchQuery = it },
+                            currentScreen = currentSettingsScreen,
+                            onScreenChange = { currentSettingsScreen = it }
+                        )
                     }
                 }
             }
         }
+    }
 
         if (showSpeechNotSupportedDialog) {
             AlertDialog(
@@ -982,7 +997,6 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
             }
         }
     }
-}
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -2491,9 +2505,16 @@ fun SettingsListItem(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = PaddingValues(0.dp),
-    onYoutubeSearch: () -> Unit = {}, isSearchActive: Boolean = false, searchQuery: String = "", onQueryChange: (String) -> Unit = {}) {
-    var currentScreen by remember { mutableStateOf("Main") }
+fun SettingsTab(
+    viewModel: DownloaderViewModel, 
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    onYoutubeSearch: () -> Unit = {}, 
+    isSearchActive: Boolean = false, 
+    searchQuery: String = "", 
+    onQueryChange: (String) -> Unit = {},
+    currentScreen: String = "Main",
+    onScreenChange: (String) -> Unit = {}
+) {
     val customHeaders by viewModel.customHeaders.collectAsState()
 
     val animatedBackProgress = remember { Animatable(0f) }
@@ -2518,7 +2539,7 @@ fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = 
                 targetValue = 1f,
                 animationSpec = tween(durationMillis = 180)
             )
-            currentScreen = "Main"
+            onScreenChange("Main")
         } catch (e: CancellationException) {
             // Cancelled swipe: spring back smoothly
             animatedBackProgress.animateTo(
@@ -2534,7 +2555,7 @@ fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = 
     val onNavigateToSubScreen: (String) -> Unit = { screen ->
         coroutineScope.launch {
             animatedBackProgress.snapTo(1f)
-            currentScreen = screen
+            onScreenChange(screen)
             animatedBackProgress.animateTo(0f, tween(durationMillis = 240))
         }
     }
@@ -2542,14 +2563,14 @@ fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = 
     val onBackFromSubScreen: () -> Unit = {
         coroutineScope.launch {
             animatedBackProgress.animateTo(1f, tween(durationMillis = 180))
-            currentScreen = "Main"
+            onScreenChange("Main")
             animatedBackProgress.snapTo(0f)
         }
     }
     
     LaunchedEffect(isSearchActive) {
         if (isSearchActive && currentScreen != "Main") {
-            currentScreen = "Main"
+            onScreenChange("Main")
         }
     }
 
@@ -2661,48 +2682,72 @@ fun SettingsMainList(
         )
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState()).padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text(
-            text = "Settings",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier
-        )
+    val scrollState = rememberScrollState()
+    val isScrolled by remember { derivedStateOf { scrollState.value > 10 } }
+    val elevation by animateDpAsState(if (isScrolled) 4.dp else 0.dp, label = "settings_elevation")
+    val surfaceColor by animateColorAsState(
+        if (isScrolled) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.background,
+        label = "settings_surface_color"
+    )
 
-        androidx.compose.animation.AnimatedVisibility(
-            visible = isSearchActive,
-            enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
-            exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
+    Column(modifier = Modifier.fillMaxSize()) {
+        Surface(
+            tonalElevation = elevation,
+            shadowElevation = elevation,
+            color = surfaceColor,
+            modifier = Modifier.fillMaxWidth().zIndex(1f)
         ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = onQueryChange,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Search settings...") },
-                leadingIcon = { Icon(Icons.Default.Search, "Search") },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { onQueryChange("") }) {
-                            Icon(Icons.Default.Clear, "Clear")
-                        }
-                    }
-                },
-                shape = RoundedCornerShape(100),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color.Transparent,
-                    unfocusedBorderColor = Color.Transparent,
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
-                ),
-                singleLine = true
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 12.dp, start = 16.dp, end = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Settings",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = isSearchActive,
+                    enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+                    exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
+                ) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = onQueryChange,
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Search settings...") },
+                        leadingIcon = { Icon(Icons.Default.Search, "Search") },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { onQueryChange("") }) {
+                                    Icon(Icons.Default.Clear, "Clear")
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(100),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color.Transparent,
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        singleLine = true
+                    )
+                }
+            }
         }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+                .verticalScroll(scrollState)
+                .padding(top = 8.dp, bottom = 24.dp + contentPadding.calculateBottomPadding()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
 
         if (isSearchActive && searchQuery.isNotEmpty()) {
             val results = allSettings.filter { it.first.contains(searchQuery, ignoreCase = true) || it.second.contains(searchQuery, ignoreCase = true) }
@@ -2826,6 +2871,7 @@ fun SettingsMainList(
         }
         }
     }
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -2843,22 +2889,52 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
             }
         }
     }
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            
-            .padding(horizontal = 24.dp)
-            .verticalScroll(scrollState).padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-            ) { Icon(Icons.Default.ArrowBack, "Back") }
-            Spacer(Modifier.width(16.dp))
-            Text(stringResource(R.string.customisation), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+    val isScrolled by remember { derivedStateOf { scrollState.value > 10 } }
+    val elevation by animateDpAsState(if (isScrolled) 4.dp else 0.dp, label = "customisation_elevation")
+    val surfaceColor by animateColorAsState(
+        if (isScrolled) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.background,
+        label = "customisation_surface_color"
+    )
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Surface(
+            tonalElevation = elevation,
+            shadowElevation = elevation,
+            color = surfaceColor,
+            modifier = Modifier.fillMaxWidth().zIndex(1f)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        top = 16.dp + contentPadding.calculateTopPadding(),
+                        bottom = 12.dp,
+                        start = 24.dp,
+                        end = 24.dp
+                    )
+            ) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                ) { Icon(Icons.Default.ArrowBack, "Back") }
+                Spacer(Modifier.width(16.dp))
+                Text(
+                    stringResource(R.string.customisation),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp)
+                .verticalScroll(scrollState)
+                .padding(top = 16.dp, bottom = 24.dp + contentPadding.calculateBottomPadding()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
         
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -3178,6 +3254,7 @@ fun CustomisationScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, cont
             }
         }
     }
+    }
 }
 
 @Composable
@@ -3292,23 +3369,54 @@ fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, 
             }
         )
     }
-    
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            
-            .padding(horizontal = 24.dp)
-            .verticalScroll(rememberScrollState()).padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-            ) { Icon(Icons.Default.ArrowBack, "Back") }
-            Spacer(Modifier.width(16.dp))
-            Text(stringResource(R.string.downloads), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+
+    val scrollState = rememberScrollState()
+    val isScrolled by remember { derivedStateOf { scrollState.value > 10 } }
+    val elevation by animateDpAsState(if (isScrolled) 4.dp else 0.dp, label = "downloads_elevation")
+    val surfaceColor by animateColorAsState(
+        if (isScrolled) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.background,
+        label = "downloads_surface_color"
+    )
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Surface(
+            tonalElevation = elevation,
+            shadowElevation = elevation,
+            color = surfaceColor,
+            modifier = Modifier.fillMaxWidth().zIndex(1f)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        top = 16.dp + contentPadding.calculateTopPadding(),
+                        bottom = 12.dp,
+                        start = 24.dp,
+                        end = 24.dp
+                    )
+            ) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                ) { Icon(Icons.Default.ArrowBack, "Back") }
+                Spacer(Modifier.width(16.dp))
+                Text(
+                    stringResource(R.string.downloads),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp)
+                .verticalScroll(scrollState)
+                .padding(top = 16.dp, bottom = 24.dp + contentPadding.calculateBottomPadding()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
         
         Text(stringResource(R.string.download_repository), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text(stringResource(R.string.files_will_be_saved_in_your_se), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -3508,6 +3616,7 @@ fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, 
             }
         }
     }
+    }
 }
 
 fun saveCookiesToNetscapeFormat(context: android.content.Context, url: String, cookieString: String?, fileName: String): String {
@@ -3598,6 +3707,7 @@ fun CookieExtractorDialog(initialUrl: String = "https://youtube.com", fileName: 
         }
     }
 }
+
 @Composable
 fun DeveloperScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentPadding: PaddingValues, target: String? = null) {
     val context = LocalContext.current
@@ -3612,21 +3722,53 @@ fun DeveloperScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentP
             .build()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp)
-            .verticalScroll(rememberScrollState()).padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-            ) { Icon(Icons.Default.ArrowBack, "Back") }
-            Spacer(Modifier.width(16.dp))
-            Text(stringResource(R.string.developer), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+    val scrollState = rememberScrollState()
+    val isScrolled by remember { derivedStateOf { scrollState.value > 10 } }
+    val elevation by animateDpAsState(if (isScrolled) 4.dp else 0.dp, label = "developer_elevation")
+    val surfaceColor by animateColorAsState(
+        if (isScrolled) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.background,
+        label = "developer_surface_color"
+    )
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Surface(
+            tonalElevation = elevation,
+            shadowElevation = elevation,
+            color = surfaceColor,
+            modifier = Modifier.fillMaxWidth().zIndex(1f)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        top = 16.dp + contentPadding.calculateTopPadding(),
+                        bottom = 12.dp,
+                        start = 24.dp,
+                        end = 24.dp
+                    )
+            ) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                ) { Icon(Icons.Default.ArrowBack, "Back") }
+                Spacer(Modifier.width(16.dp))
+                Text(
+                    stringResource(R.string.developer),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp)
+                .verticalScroll(scrollState)
+                .padding(top = 16.dp, bottom = 24.dp + contentPadding.calculateBottomPadding()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
         
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -3736,6 +3878,7 @@ fun DeveloperScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, contentP
             }
         }
     }
+    }
 }
 
 @Composable
@@ -3785,23 +3928,54 @@ fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues, target: Str
             shape = RoundedCornerShape(24.dp)
         )
     }
-    
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            
-            .padding(horizontal = 24.dp)
-            .verticalScroll(rememberScrollState()).padding(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-            ) { Icon(Icons.Default.ArrowBack, "Back") }
-            Spacer(Modifier.width(16.dp))
-            Text(stringResource(R.string.support), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+
+    val scrollState = rememberScrollState()
+    val isScrolled by remember { derivedStateOf { scrollState.value > 10 } }
+    val elevation by animateDpAsState(if (isScrolled) 4.dp else 0.dp, label = "support_elevation")
+    val surfaceColor by animateColorAsState(
+        if (isScrolled) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.background,
+        label = "support_surface_color"
+    )
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Surface(
+            tonalElevation = elevation,
+            shadowElevation = elevation,
+            color = surfaceColor,
+            modifier = Modifier.fillMaxWidth().zIndex(1f)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        top = 16.dp + contentPadding.calculateTopPadding(),
+                        bottom = 12.dp,
+                        start = 24.dp,
+                        end = 24.dp
+                    )
+            ) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                ) { Icon(Icons.Default.ArrowBack, "Back") }
+                Spacer(Modifier.width(16.dp))
+                Text(
+                    stringResource(R.string.support),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp)
+                .verticalScroll(scrollState)
+                .padding(top = 16.dp, bottom = 24.dp + contentPadding.calculateBottomPadding()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
         
         Surface(
             modifier = Modifier.fillMaxWidth(),
@@ -3881,6 +4055,7 @@ fun SupportScreen(onBack: () -> Unit, contentPadding: PaddingValues, target: Str
                 }
             }
         }
+    }
     }
 }
 
@@ -4252,29 +4427,55 @@ fun CookiesSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, co
         }
     })
     
-    // Let's use LazyColumn for the whole screen
-    LazyColumn(
-        state = reorderState.listState,
-        modifier = Modifier
-            .fillMaxSize()
-            .reorderable(reorderState)
-            .padding(horizontal = 24.dp),
-        contentPadding = PaddingValues(top = 16.dp + contentPadding.calculateTopPadding(), bottom = 24.dp + contentPadding.calculateBottomPadding()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+    val isScrolled by remember { derivedStateOf { reorderState.listState.firstVisibleItemIndex > 0 || reorderState.listState.firstVisibleItemScrollOffset > 10 } }
+    val elevation by animateDpAsState(if (isScrolled) 4.dp else 0.dp, label = "cookies_elevation")
+    val surfaceColor by animateColorAsState(
+        if (isScrolled) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.background,
+        label = "cookies_surface_color"
+    )
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Surface(
+            tonalElevation = elevation,
+            shadowElevation = elevation,
+            color = surfaceColor,
+            modifier = Modifier.fillMaxWidth().zIndex(1f)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        top = 16.dp + contentPadding.calculateTopPadding(),
+                        bottom = 12.dp,
+                        start = 24.dp,
+                        end = 24.dp
+                    )
+            ) {
                 IconButton(
                     onClick = onBack,
                     modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                 ) { Icon(Icons.Default.ArrowBack, "Back") }
                 Spacer(Modifier.width(16.dp))
-                Text(stringResource(R.string.cookies), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    stringResource(R.string.cookies),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
-        
-        item {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+
+        LazyColumn(
+            state = reorderState.listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .reorderable(reorderState)
+                .padding(horizontal = 24.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp + contentPadding.calculateBottomPadding()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.use_cookies), style = MaterialTheme.typography.titleMedium)
                 Switch(
                     checked = viewModel.useCookies.value,
@@ -4428,6 +4629,7 @@ fun CookiesSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, co
                 }
             }
         }
+    }
     }
 }
 @Composable

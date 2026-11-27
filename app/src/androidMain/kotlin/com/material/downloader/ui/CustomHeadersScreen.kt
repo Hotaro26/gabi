@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
@@ -38,40 +39,56 @@ fun CustomHeadersScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp)
-            .padding(
-                top = 16.dp + contentPadding.calculateTopPadding(),
-                bottom = 24.dp + contentPadding.calculateBottomPadding()
-            ),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(bottom = 24.dp + contentPadding.calculateBottomPadding())
     ) {
-        // Top Bar
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
+        // Pinned Top Bar
+        Surface(
+            tonalElevation = 3.dp,
+            shadowElevation = 3.dp,
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.fillMaxWidth().zIndex(1f)
         ) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        top = 16.dp + contentPadding.calculateTopPadding(),
+                        bottom = 14.dp,
+                        start = 24.dp,
+                        end = 24.dp
+                    )
             ) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-            }
-            Spacer(Modifier.width(16.dp))
-            Column {
-                Text(
-                    text = "Network Headers",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Injected into Ktor, yt-dlp & gallery-dl",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                ) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                }
+                Spacer(Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = "Network Headers",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Injected into Ktor, yt-dlp & gallery-dl",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
 
-        // Presets Card
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp)
+                .padding(top = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Presets Card
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
@@ -242,4 +259,5 @@ fun CustomHeadersScreen(
             }
         }
     }
+}
 }
