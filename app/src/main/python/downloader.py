@@ -57,8 +57,7 @@ def extract_playlist(url, cookies_path=None, user_agent=None, custom_headers_jso
             'extract_flat': 'in_playlist',
             'playlistend': 150,
             'skip_download': True,
-            'ignoreerrors': True,
-            'extractor_args': {'youtube': {'player_client': ['android_vr', 'android', 'ios', 'web']}}
+            'ignoreerrors': True
         }
 
         headers = {
@@ -154,10 +153,7 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None, user_agent
             'nocheckcertificate': True,
             'socket_timeout': 45,
             'extract_flat': False,
-            'retries': 3,
-            'extractor_args': {
-                'youtube': {'player_client': ['android_vr', 'android', 'ios', 'web']}
-            }
+            'retries': 3
         }
         
         default_headers = {
@@ -318,6 +314,16 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None, user_agent
                         best_direct = sorted(direct_prog, key=lambda x: x.get('height') or 0)[-1]
                         download_url = best_direct.get('url')
                         audio_url = None
+                    else:
+                        # Prefer single m3u8 progressive format if available so we don't try to MediaMuxer two m3u8 playlists
+                        m3u8_prog = [
+                            f for f in video['formats']
+                            if f.get('url') and f.get('vcodec') != 'none' and f.get('acodec') != 'none'
+                        ]
+                        if m3u8_prog:
+                            best_m3u8 = sorted(m3u8_prog, key=lambda x: x.get('height') or 0)[-1]
+                            download_url = best_m3u8.get('url')
+                            audio_url = None
 
                 # Extract available qualities
                 qualities = set()
@@ -531,7 +537,8 @@ def download_video(url, output_path, cookies_path=None, custom_headers_json=None
             'outtmpl': output_path,
             'quiet': True,
             'no_warnings': True,
-            'extractor_args': {'youtube': ['player_client=android,web,tv_embedded,ios']}
+            'nocheckcertificate': True,
+            'hls_prefer_native': True
         }
         if cookies_path:
             ydl_opts['cookiefile'] = cookies_path

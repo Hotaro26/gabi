@@ -1325,6 +1325,40 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                         if (tempAudioFile.exists()) tempAudioFile.delete()
                         if (tempMuxedFile.exists()) tempMuxedFile.delete()
                     }
+                } else if (downloadUrl.contains(".m3u8", ignoreCase = true)) {
+                    // HLS m3u8 stream: use yt-dlp's native Python HLS downloader
+                    val cacheDir = getApplication<Application>().cacheDir
+                    val tempHlsFile = java.io.File(cacheDir, "temp_hls_${notificationId}_${System.currentTimeMillis()}.$extension")
+                    try {
+                        notificationHelper.showProgressNotification(notificationId, "$title (HLS)", 10)
+                        onProgress(0.1f, 0L, 0L, 0L)
+                        val cookiesPath = if (useCookies.value) prefs.getString("yt_dlp_cookies_path", null) else null
+                        val dlRes = extractor.downloadVideo(downloadUrl, tempHlsFile.absolutePath, cookiesPath, getCustomHeadersJson())
+                        if (dlRes["status"] != "success" || !tempHlsFile.exists() || tempHlsFile.length() == 0L) {
+                            throw Exception(dlRes["message"] ?: "HLS download failed")
+                        }
+
+                        val targetUri = if (selectedFolderUri.value != null) {
+                            downloader.createSafUri(Uri.parse(selectedFolderUri.value), fileName)
+                        } else {
+                            downloader.createMediaStoreUri(fileName, targetPath)
+                        } ?: throw Exception("Could not create destination file")
+
+                        getApplication<Application>().contentResolver.openOutputStream(targetUri)?.use { outStream ->
+                            tempHlsFile.inputStream().use { inStream ->
+                                inStream.copyTo(outStream)
+                            }
+                        }
+
+                        downloader.finalizeFile(targetUri, fileName)
+                        val cachedThumb = saveThumbnailToCache(item.thumbnail ?: result.thumbnail, targetUri.toString())
+                        logDao.insertLog(DownloadLog(title = title, url = url, status = "Success", path = targetUri.toString(), thumbnailPath = cachedThumb, author = result.author ?: item.author))
+                        notificationHelper.showProgressNotification(notificationId, title, 100)
+                        onProgress(1f, 0L, 0L, 0L)
+                        return@withContext Result.success(targetUri.toString())
+                    } finally {
+                        if (tempHlsFile.exists()) tempHlsFile.delete()
+                    }
                 } else {
                     var savedUriStr: String? = null
                     downloader.downloadFile(
