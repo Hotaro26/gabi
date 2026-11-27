@@ -195,7 +195,7 @@ Gabi is crafted by **Hotaro**. If this project helps you save media, consider st
 * **Discord Community:** `flawed_mango`
 * **Buy Me a Coffee:** [buymeacoffee.com/oi.hotaro](https://www.buymeacoffee.com/oi.hotaro)
 
-<p align="center">
+<p align="">
   <a href="https://www.buymeacoffee.com/oi.hotaro">
     <img src="https://github.com/user-attachments/assets/f62638ee-9ad9-42c6-b275-a620b4cabe25" width="160" alt="Buy Me A Coffee" />
   </a>
