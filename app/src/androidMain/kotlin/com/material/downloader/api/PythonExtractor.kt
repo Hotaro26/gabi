@@ -2,6 +2,7 @@ package com.material.downloader.api
 
 import com.chaquo.python.Python
 import com.material.downloader.model.PlaylistItem
+import com.material.downloader.util.GabiLogger
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -20,9 +21,11 @@ class PythonExtractor {
         customHeadersJson: String? = null
     ): ExtractionResult {
         return try {
+            GabiLogger.d("PythonExtractor", "Starting extraction: url=$url, quality=$quality, mode=$mode, engine=$engine")
             val resultJson = module.callAttr("extract_info", url, quality, mode, engine, cookiesPath, userAgent, customHeadersJson).toString()
             json.decodeFromString<ExtractionResult>(resultJson)
         } catch (e: Exception) {
+            GabiLogger.e("PythonExtractor", "Extraction failed for $url: ${e.message}", e)
             ExtractionResult(status = "error", message = e.message ?: "Python execution failed")
         }
     }
@@ -34,18 +37,22 @@ class PythonExtractor {
         customHeadersJson: String? = null
     ): ExtractionResult {
         return try {
+            GabiLogger.d("PythonExtractor", "Starting playlist extraction: url=$url")
             val resultJson = module.callAttr("extract_playlist", url, cookiesPath, userAgent, customHeadersJson).toString()
             json.decodeFromString<ExtractionResult>(resultJson)
         } catch (e: Exception) {
+            GabiLogger.e("PythonExtractor", "Playlist extraction failed for $url: ${e.message}", e)
             ExtractionResult(status = "error", message = e.message ?: "Playlist extraction failed")
         }
     }
 
     fun downloadVideo(url: String, outputPath: String, cookiesPath: String? = null, customHeadersJson: String? = null): Map<String, String> {
         return try {
+            GabiLogger.d("PythonExtractor", "Starting downloadVideo: url=$url -> $outputPath")
             val resultJson = module.callAttr("download_video", url, outputPath, cookiesPath, customHeadersJson).toString()
             json.decodeFromString<Map<String, String>>(resultJson)
         } catch (e: Exception) {
+            GabiLogger.e("PythonExtractor", "downloadVideo failed: ${e.message}", e)
             mapOf("status" to "error", "message" to (e.message ?: "Python execution failed"))
         }
     }

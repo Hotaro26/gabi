@@ -22,6 +22,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -953,8 +954,12 @@ fun MainDownloaderTab(
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     
-    BackHandler(enabled = showFullscreenLogs) {
-        showFullscreenLogs = false
+    PredictiveBackHandler(enabled = showFullscreenLogs) { progress ->
+        try {
+            progress.collect { /* in progress */ }
+            showFullscreenLogs = false
+        } catch (_: kotlinx.coroutines.CancellationException) {
+        }
     }
     
     val clipboardManager = LocalClipboardManager.current
@@ -2273,8 +2278,12 @@ fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = 
     var currentScreen by remember { mutableStateOf("Main") }
     val customHeaders by viewModel.customHeaders.collectAsState()
 
-    BackHandler(enabled = currentScreen != "Main") {
-        currentScreen = "Main"
+    PredictiveBackHandler(enabled = currentScreen != "Main") { progress ->
+        try {
+            progress.collect { /* in progress */ }
+            currentScreen = "Main"
+        } catch (_: kotlinx.coroutines.CancellationException) {
+        }
     }
     
     LaunchedEffect(isSearchActive) {

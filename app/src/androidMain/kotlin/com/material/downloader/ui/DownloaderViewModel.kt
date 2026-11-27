@@ -330,7 +330,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     fun logToConsole(message: String) {
         val timestamp = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
         _consoleLogs.value = _consoleLogs.value + "[$timestamp] $message"
-        android.util.Log.d("GabiApp", message)
+        com.material.downloader.util.GabiLogger.i(message)
     }
 
     fun clearConsole() {

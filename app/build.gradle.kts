@@ -93,12 +93,13 @@ kotlin {
 
 android {
     namespace = "com.material.downloader"
-    compileSdk = 34
+    compileSdk = 36
+    buildToolsVersion = "36.0.0"
 
     defaultConfig {
         applicationId = "com.material.downloader"
-        minSdk = 24
-        targetSdk = 34
+        minSdk = 26
+        targetSdk = 37
         versionCode = 13
         versionName = "4.6.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

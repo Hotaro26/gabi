@@ -34,6 +34,7 @@ import kotlinx.coroutines.delay
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        com.material.downloader.util.GabiLogger.installCrashHandler(application)
         val splashScreen = installSplashScreen()
         var keepSplash = true
         lifecycleScope.launch {
