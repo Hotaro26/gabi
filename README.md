@@ -9,12 +9,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Hotaro26/gabi/releases"><img src="https://img.shields.io/github/v/release/Hotaro26/gabi?color=E55B2B&style=flat-square" alt="Latest Release" /></a>
-  <img src="https://img.shields.io/badge/Android-8.0%2B%20(API%2026%2B)-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android 8.0+" />
-  <img src="https://img.shields.io/badge/Kotlin-2.0%2B-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin 2.0+" />
-  <img src="https://img.shields.io/badge/UI-Material%203-4285F4?style=flat-square" alt="Material 3" />
+  <a href="https://github.com/Hotaro26/gabi/releases"><img src="https://img.shields.io/github/v/release/Hotaro26/gabi.svg?color=E55B2B&style=flat-square" alt="Latest Release" /></a>
+  <img src="https://img.shields.io/badge/Android-8.0%2B_(API_26%2B)-3DDC84.svg?style=flat-square&logo=android&logoColor=white" alt="Android 8.0+" />
+  <img src="https://img.shields.io/badge/Kotlin-2.0%2B-7F52FF.svg?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin 2.0+" />
+  <img src="https://img.shields.io/badge/UI-Material_3-4285F4.svg?style=flat-square" alt="UI: Material 3" />
   <a href="LICENSE-MIT"><img src="https://img.shields.io/badge/License-MIT-green.svg?style=flat-square" alt="License: MIT" /></a>
-  <a href="https://github.com/Hotaro26/gabi/stargazers"><img src="https://img.shields.io/github/stars/Hotaro26/gabi?style=flat-square&color=yellow" alt="Stars" /></a>
+  <a href="https://github.com/Hotaro26/gabi/stargazers"><img src="https://img.shields.io/badge/Stars-116%2B-yellow.svg?style=flat-square&logo=github" alt="GitHub Stars" /></a>
 </p>
 
 <p align="center">
