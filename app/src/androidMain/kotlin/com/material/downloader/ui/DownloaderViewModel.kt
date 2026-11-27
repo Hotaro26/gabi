@@ -418,6 +418,46 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
 
     private val downloader = FileDownloader(application, client)
 
+    private var currentDownloadJob: Job? = null
+    private var lastNotificationId: Int? = null
+
+    private val activeTempFiles = java.util.Collections.synchronizedList(mutableListOf<java.io.File>())
+    private val activeDownloadUris = java.util.Collections.synchronizedList(mutableListOf<Uri>())
+
+    private val _uiState = MutableStateFlow<DownloadState>(DownloadState.Idle)
+    val uiState: StateFlow<DownloadState> = _uiState
+
+    private val _previewMetadata = MutableStateFlow<ExtractionResult?>(null)
+    val previewMetadata: StateFlow<ExtractionResult?> = _previewMetadata
+
+    // Playlist State
+    private val _playlistInfo = MutableStateFlow<PlaylistInfo?>(null)
+    val playlistInfo: StateFlow<PlaylistInfo?> = _playlistInfo
+
+    // Parallel Download Queue
+    var maxParallelDownloads = mutableIntStateOf(prefs.getInt("max_parallel_downloads", 2))
+
+    val queueManager: DownloadQueueManager by lazy {
+        DownloadQueueManager(
+            scope = viewModelScope,
+            downloadWorker = { item, onProgress ->
+                executeSingleQueueItem(item, onProgress)
+            }
+        ).apply {
+            setMaxConcurrency(maxParallelDownloads.intValue)
+        }
+    }
+
+    val queueItems: StateFlow<List<QueueItem>> get() = queueManager.queue
+
+    fun updateMaxParallelDownloads(count: Int) {
+        val safe = count.coerceIn(1, 5)
+        maxParallelDownloads.intValue = safe
+        prefs.edit().putInt("max_parallel_downloads", safe).apply()
+        queueManager.setMaxConcurrency(safe)
+        logToConsole("Max concurrent downloads set to $safe")
+    }
+
     init {
         loadCookieSessions()
         loadCustomHeaders()
@@ -519,22 +559,6 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    private var currentDownloadJob: Job? = null
-    private var lastNotificationId: Int? = null
-
-    private val activeTempFiles = java.util.Collections.synchronizedList(mutableListOf<java.io.File>())
-    private val activeDownloadUris = java.util.Collections.synchronizedList(mutableListOf<Uri>())
-
-    private val _uiState = MutableStateFlow<DownloadState>(DownloadState.Idle)
-    val uiState: StateFlow<DownloadState> = _uiState
-
-    private val _previewMetadata = MutableStateFlow<ExtractionResult?>(null)
-    val previewMetadata: StateFlow<ExtractionResult?> = _previewMetadata
-
-    // Playlist State
-    private val _playlistInfo = MutableStateFlow<PlaylistInfo?>(null)
-    val playlistInfo: StateFlow<PlaylistInfo?> = _playlistInfo
-
     fun togglePlaylistItem(itemId: String) {
         _playlistInfo.value?.let { current ->
             val updated = current.items.map {
@@ -554,30 +578,6 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     fun dismissPlaylist() {
         _playlistInfo.value = null
     }
-
-    // Parallel Download Queue
-    var maxParallelDownloads = mutableIntStateOf(prefs.getInt("max_parallel_downloads", 2))
-
-    fun updateMaxParallelDownloads(count: Int) {
-        val safe = count.coerceIn(1, 5)
-        maxParallelDownloads.intValue = safe
-        prefs.edit().putInt("max_parallel_downloads", safe).apply()
-        queueManager.setMaxConcurrency(safe)
-        logToConsole("Max concurrent downloads set to $safe")
-    }
-
-    val queueManager: DownloadQueueManager by lazy {
-        DownloadQueueManager(
-            scope = viewModelScope,
-            downloadWorker = { item, onProgress ->
-                executeSingleQueueItem(item, onProgress)
-            }
-        ).apply {
-            setMaxConcurrency(maxParallelDownloads.intValue)
-        }
-    }
-
-    val queueItems: StateFlow<List<QueueItem>> by lazy { queueManager.queue }
 
     fun enqueueDownload(
         url: String, 
