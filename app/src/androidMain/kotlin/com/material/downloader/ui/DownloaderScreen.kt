@@ -21,8 +21,13 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.BackEventCompat
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.CancellationException
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -230,22 +235,33 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
         )
     }
 
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
+
     var playingUrl by remember { mutableStateOf<String?>(null) }
-    
-    if (playingUrl != null) {
-        PlayerScreen(
-            url = playingUrl!!,
-            onBack = { playingUrl = null },
-            onDownload = { dlUrl ->
-                playingUrl = null
-                url = dlUrl
-                engine = "newpipe"
-                selectedTab = 0
+    val animatedPlayerProgress = remember { Animatable(0f) }
+    var isPredictivePlayerActive by remember { mutableStateOf(false) }
+
+    PredictiveBackHandler(enabled = playingUrl != null) { progress: Flow<BackEventCompat> ->
+        isPredictivePlayerActive = true
+        try {
+            progress.collect { backEvent ->
+                animatedPlayerProgress.snapTo(backEvent.progress)
             }
-        )
-        return
+            animatedPlayerProgress.animateTo(1f, tween(durationMillis = 180))
+            playingUrl = null
+        } catch (e: CancellationException) {
+            animatedPlayerProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+        } finally {
+            isPredictivePlayerActive = false
+            animatedPlayerProgress.snapTo(0f)
+        }
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Row(modifier = Modifier.fillMaxSize()) {
         if (isExpanded) {
             NavigationRail(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)) {
@@ -922,7 +938,51 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                 onApplyPreset = { viewModel.applyHeaderPreset(it) }
             )
         }
+
+        // Top layer: PlayerScreen with predictive slide transition
+        val isPlayerVisible = playingUrl != null || isPredictivePlayerActive || animatedPlayerProgress.value > 0f
+        if (isPlayerVisible && playingUrl != null) {
+            val p = animatedPlayerProgress.value
+            val playerOffsetX = screenWidthPx * p
+            val playerScale = 1f - (p * 0.05f)
+            val playerCorners = (p * 28).dp
+            val playerAlpha = 1f - (p * 0.15f)
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zIndex(200f)
+                    .graphicsLayer {
+                        translationX = playerOffsetX
+                        scaleX = playerScale
+                        scaleY = playerScale
+                        alpha = playerAlpha
+                        clip = p > 0f
+                        shape = RoundedCornerShape(playerCorners)
+                        shadowElevation = if (p > 0f) 24.dp.toPx() else 0f
+                    }
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                PlayerScreen(
+                    url = playingUrl!!,
+                    onBack = {
+                        coroutineScope.launch {
+                            animatedPlayerProgress.animateTo(1f, tween(durationMillis = 180))
+                            playingUrl = null
+                            animatedPlayerProgress.snapTo(0f)
+                        }
+                    },
+                    onDownload = { dlUrl ->
+                        playingUrl = null
+                        url = dlUrl
+                        engine = "newpipe"
+                        selectedTab = 0
+                    }
+                )
+            }
+        }
     }
+}
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -953,12 +1013,25 @@ fun MainDownloaderTab(
     var duplicateWarningUrl by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+    val density = LocalDensity.current
+    val screenWidthPx = with(density) { LocalConfiguration.current.screenWidthDp.dp.toPx() }
     
-    PredictiveBackHandler(enabled = showFullscreenLogs) { progress ->
+    val animatedLogsProgress = remember { Animatable(0f) }
+    var isPredictiveLogsActive by remember { mutableStateOf(false) }
+
+    PredictiveBackHandler(enabled = showFullscreenLogs) { progress: Flow<BackEventCompat> ->
+        isPredictiveLogsActive = true
         try {
-            progress.collect { /* in progress */ }
+            progress.collect { backEvent ->
+                animatedLogsProgress.snapTo(backEvent.progress)
+            }
+            animatedLogsProgress.animateTo(1f, tween(durationMillis = 180))
             showFullscreenLogs = false
-        } catch (_: kotlinx.coroutines.CancellationException) {
+        } catch (e: CancellationException) {
+            animatedLogsProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+        } finally {
+            isPredictiveLogsActive = false
+            animatedLogsProgress.snapTo(0f)
         }
     }
     
@@ -1956,12 +2029,34 @@ fun MainDownloaderTab(
         }
     }
 
-    if (showFullscreenLogs) {
-        Dialog(
-            properties = DialogProperties(usePlatformDefaultWidth = false),
-            onDismissRequest = { showFullscreenLogs = false }
+    val isLogsVisible = showFullscreenLogs || isPredictiveLogsActive || animatedLogsProgress.value > 0f
+    if (isLogsVisible) {
+        val p = animatedLogsProgress.value
+        val logsOffsetX = screenWidthPx * p
+        val logsScale = 1f - (p * 0.05f)
+        val logsCorners = (p * 28).dp
+        val logsAlpha = 1f - (p * 0.15f)
+        val currentTerminalTheme = viewModel.terminalTheme.value
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(100f)
+                .graphicsLayer {
+                    translationX = logsOffsetX
+                    scaleX = logsScale
+                    scaleY = logsScale
+                    alpha = logsAlpha
+                    clip = p > 0f
+                    shape = RoundedCornerShape(logsCorners)
+                    shadowElevation = if (p > 0f) 24.dp.toPx() else 0f
+                }
+                .background(Color(currentTerminalTheme.background))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { }
         ) {
-            val currentTerminalTheme = viewModel.terminalTheme.value
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = Color(currentTerminalTheme.background)
@@ -1974,7 +2069,13 @@ fun MainDownloaderTab(
                             .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = { showFullscreenLogs = false }) {
+                        IconButton(onClick = { 
+                            coroutineScope.launch {
+                                animatedLogsProgress.animateTo(1f, tween(durationMillis = 180))
+                                showFullscreenLogs = false
+                                animatedLogsProgress.snapTo(0f)
+                            }
+                        }) {
                             Icon(
                                 imageVector = Icons.Default.ArrowBack,
                                 contentDescription = "Back",
@@ -2278,11 +2379,54 @@ fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = 
     var currentScreen by remember { mutableStateOf("Main") }
     val customHeaders by viewModel.customHeaders.collectAsState()
 
-    PredictiveBackHandler(enabled = currentScreen != "Main") { progress ->
+    val animatedBackProgress = remember { Animatable(0f) }
+    var isPredictiveBackActive by remember { mutableStateOf(false) }
+    var backSwipeEdge by remember { mutableIntStateOf(BackEventCompat.EDGE_LEFT) }
+    val coroutineScope = rememberCoroutineScope()
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
+
+    val isSubScreenVisible = currentScreen != "Main" || isPredictiveBackActive || animatedBackProgress.value > 0f
+
+    PredictiveBackHandler(enabled = currentScreen != "Main") { progress: Flow<BackEventCompat> ->
+        isPredictiveBackActive = true
         try {
-            progress.collect { /* in progress */ }
+            progress.collect { backEvent ->
+                backSwipeEdge = backEvent.swipeEdge
+                animatedBackProgress.snapTo(backEvent.progress)
+            }
+            // Finished swipe: animate smoothly off-screen
+            animatedBackProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 180)
+            )
             currentScreen = "Main"
-        } catch (_: kotlinx.coroutines.CancellationException) {
+        } catch (e: CancellationException) {
+            // Cancelled swipe: spring back smoothly
+            animatedBackProgress.animateTo(
+                targetValue = 0f,
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+            )
+        } finally {
+            isPredictiveBackActive = false
+            animatedBackProgress.snapTo(0f)
+        }
+    }
+
+    val onNavigateToSubScreen: (String) -> Unit = { screen ->
+        coroutineScope.launch {
+            animatedBackProgress.snapTo(1f)
+            currentScreen = screen
+            animatedBackProgress.animateTo(0f, tween(durationMillis = 240))
+        }
+    }
+
+    val onBackFromSubScreen: () -> Unit = {
+        coroutineScope.launch {
+            animatedBackProgress.animateTo(1f, tween(durationMillis = 180))
+            currentScreen = "Main"
+            animatedBackProgress.snapTo(0f)
         }
     }
     
@@ -2292,49 +2436,83 @@ fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = 
         }
     }
 
+    val p = animatedBackProgress.value
+
     // currentScreen format: "ScreenName" or "ScreenName?target=CardTitle"
     val screenName = currentScreen.substringBefore("?")
     val target = if (currentScreen.contains("?target=")) currentScreen.substringAfter("?target=") else null
 
-    AnimatedContent(
-        targetState = screenName,
-        transitionSpec = {
-            if (targetState != "Main") {
-                (slideInHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { it } + fadeIn()).togetherWith(
-                    slideOutHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { -it } + fadeOut()
-                )
-            } else {
-                (slideInHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { -it } + fadeIn()).togetherWith(
-                    slideOutHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMedium)) { it } + fadeOut()
-                )
-            }.using(SizeTransform(clip = false))
-        },
-        label = "settings_nav"
-    ) { screen ->
-        when (screen) {
-            "Main" -> SettingsMainList(
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Base layer: Settings Main List with subtle scale and alpha parallax
+        val baseScale = if (currentScreen != "Main") 0.94f + (p * 0.06f) else 1f
+        val baseAlpha = if (currentScreen != "Main") 0.6f + (p * 0.4f) else 1f
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX = baseScale
+                    scaleY = baseScale
+                    alpha = baseAlpha
+                }
+        ) {
+            SettingsMainList(
                 viewModel = viewModel, 
-                onNavigate = { currentScreen = it }, 
+                onNavigate = onNavigateToSubScreen, 
                 contentPadding = contentPadding,
                 isSearchActive = isSearchActive,
                 searchQuery = searchQuery,
                 onQueryChange = onQueryChange
             )
-            "Customisation" -> CustomisationScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding, target)
-            "Downloads" -> DownloadsSettingsScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding, target)
-            "Cookies" -> CookiesSettingsScreen(viewModel, onBack = { currentScreen = "Main" }, contentPadding, target)
-            "CustomHeaders" -> {
-                CustomHeadersDialog(
-                    customHeaders = customHeaders,
-                    onDismiss = { currentScreen = "Main" },
-                    onAddHeader = { k, v -> viewModel.addCustomHeader(k, v) },
-                    onRemoveHeader = { viewModel.removeCustomHeader(it) },
-                    onToggleHeader = { viewModel.toggleCustomHeader(it) },
-                    onApplyPreset = { viewModel.applyHeaderPreset(it) }
-                )
+        }
+
+        // Top layer: Sub-screen with predictive slide transition
+        if (isSubScreenVisible && currentScreen != "Main") {
+            val keyOffsetX = screenWidthPx * p
+            val keyScale = 1f - (p * 0.05f)
+            val keyCorners = (p * 28).dp
+            val keyAlpha = 1f - (p * 0.15f)
+
+            // currentScreen format: "ScreenName" or "ScreenName?target=CardTitle"
+            val screenName = currentScreen.substringBefore("?")
+            val target = if (currentScreen.contains("?target=")) currentScreen.substringAfter("?target=") else null
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        translationX = keyOffsetX
+                        scaleX = keyScale
+                        scaleY = keyScale
+                        alpha = keyAlpha
+                        clip = p > 0f
+                        shape = RoundedCornerShape(keyCorners)
+                        shadowElevation = if (p > 0f) 24.dp.toPx() else 0f
+                    }
+                    .background(MaterialTheme.colorScheme.background)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { }
+            ) {
+                when (screenName) {
+                    "Customisation" -> CustomisationScreen(viewModel, onBack = onBackFromSubScreen, contentPadding, target)
+                    "Downloads" -> DownloadsSettingsScreen(viewModel, onBack = onBackFromSubScreen, contentPadding, target)
+                    "Cookies" -> CookiesSettingsScreen(viewModel, onBack = onBackFromSubScreen, contentPadding, target)
+                    "CustomHeaders" -> {
+                        CustomHeadersDialog(
+                            customHeaders = customHeaders,
+                            onDismiss = onBackFromSubScreen,
+                            onAddHeader = { k, v -> viewModel.addCustomHeader(k, v) },
+                            onRemoveHeader = { viewModel.removeCustomHeader(it) },
+                            onToggleHeader = { viewModel.toggleCustomHeader(it) },
+                            onApplyPreset = { viewModel.applyHeaderPreset(it) }
+                        )
+                    }
+                    "Developer" -> DeveloperScreen(viewModel = viewModel, onBack = onBackFromSubScreen, contentPadding, target)
+                    "Support" -> SupportScreen(onBack = onBackFromSubScreen, contentPadding, target)
+                }
             }
-            "Developer" -> DeveloperScreen(viewModel = viewModel, onBack = { currentScreen = "Main" }, contentPadding, target)
-            "Support" -> SupportScreen(onBack = { currentScreen = "Main" }, contentPadding, target)
         }
     }
 }
