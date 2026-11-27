@@ -119,13 +119,11 @@ or Just ⭐ star the project!
 
 ---
 ## Donate
-You can support Gabi development through [buy me a coffee](www.buymeacoffee.com/oi.hotaro)
+You can support Gabi development through [buy me a coffee](https://buymeacoffee.com/oi.hotaro)
 
-<a href="buymeacoffee.com/oi.hotaro)
-">
-  <img src="https://github.com/user-attachments/assets/f62638ee-9ad9-42c6-b275-a620b4cabe25" width="128px">
+<a href="https://buymeacoffee.com/oi.hotaro">
+  <img src="https://github.com/user-attachments/assets/f62638ee-9ad9-42c6-b275-a620b4cabe25" width="128" />
 </a>
-
 ##  License
 
 Gabi uses several open-source libraries. Please check the "Licenses" section in the app settings for full details. 
