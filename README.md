@@ -86,16 +86,16 @@ Gabi automatically pairs each link with the most efficient extraction engine:
 <div align="center">
   <table>
     <tr>
-      <td align="center"><img src="https://github.com/user-attachments/assets/61de43f7-8d98-4f78-bd7c-499fdbe9caf6" width="180" alt="Home Screen" /><br /><sub><b>Home & Input</b></sub></td>
-      <td align="center"><img src="https://github.com/user-attachments/assets/088cfadf-cb43-44a0-8387-aa33e428419a" width="180" alt="Metadata Preview" /><br /><sub><b>Video Preview</b></sub></td>
-      <td align="center"><img src="https://github.com/user-attachments/assets/ac151180-b4be-4018-8a30-dc2ff46167a8" width="180" alt="Download Progress" /><br /><sub><b>Download Status</b></sub></td>
-      <td align="center"><img src="https://github.com/user-attachments/assets/adeaf938-cbfd-4a4c-bf34-988e51b2087b" width="180" alt="Format Selection" /><br /><sub><b>Format Selector</b></sub></td>
+      <td align="center"><img src="https://github.com/user-attachments/assets/61de43f7-8d98-4f78-bd7c-499fdbe9caf6" width="180" alt="Home Screen" /></td>
+      <td align="center"><img src="https://github.com/user-attachments/assets/088cfadf-cb43-44a0-8387-aa33e428419a" width="180" alt="Metadata Preview" /></td>
+      <td align="center"><img src="https://github.com/user-attachments/assets/ac151180-b4be-4018-8a30-dc2ff46167a8" width="180" alt="Download Progress" /></td>
+      <td align="center"><img src="https://github.com/user-attachments/assets/adeaf938-cbfd-4a4c-bf34-988e51b2087b" width="180" alt="Format Selection" /></td>
     </tr>
     <tr>
-      <td align="center"><img src="https://github.com/user-attachments/assets/f71b11c0-90be-4912-a1f4-d06fd02611d9" width="180" alt="Settings & Themes" /><br /><sub><b>Theming & Customization</b></sub></td>
-      <td align="center"><img src="https://github.com/user-attachments/assets/c4513fe2-b71a-4fe0-8b9a-370779714cc7" width="180" alt="Gallery Preview" /><br /><sub><b>Image Gallery Mode</b></sub></td>
-      <td align="center"><img src="https://github.com/user-attachments/assets/67db7c74-f38a-4abd-a1b7-45afafbd6863" width="180" alt="Download Logs" /><br /><sub><b>Download History</b></sub></td>
-      <td align="center"><img src="https://github.com/user-attachments/assets/245a40ce-37b3-49de-a7f6-4e80333e3fde" width="180" alt="Engines Configuration" /><br /><sub><b>Engine Preferences</b></sub></td>
+      <td align="center"><img src="https://github.com/user-attachments/assets/f71b11c0-90be-4912-a1f4-d06fd02611d9" width="180" alt="Settings & Themes" /></td>
+      <td align="center"><img src="https://github.com/user-attachments/assets/c4513fe2-b71a-4fe0-8b9a-370779714cc7" width="180" alt="Gallery Preview" /></td>
+      <td align="center"><img src="https://github.com/user-attachments/assets/67db7c74-f38a-4abd-a1b7-45afafbd6863" width="180" alt="Download Logs" /></td>
+      <td align="center"><img src="https://github.com/user-attachments/assets/245a40ce-37b3-49de-a7f6-4e80333e3fde" width="180" alt="Engines Configuration" /></td>
     </tr>
   </table>
 
