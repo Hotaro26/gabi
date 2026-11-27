@@ -100,8 +100,8 @@ android {
         applicationId = "com.material.downloader"
         minSdk = 26
         targetSdk = 37
-        versionCode = 13
-        versionName = "4.6.1"
+        versionCode = 14
+        versionName = "4.7.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
 
@@ -114,10 +114,15 @@ android {
         create("release") {
             val keystoreFile = project.rootProject.file("keys/gabi-release.jks")
             if (keystoreFile.exists()) {
+                val localProperties = Properties()
+                val localPropsFile = project.rootProject.file("local.properties")
+                if (localPropsFile.exists()) {
+                    localProperties.load(FileInputStream(localPropsFile))
+                }
                 storeFile = keystoreFile
-                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
-                keyAlias = System.getenv("KEY_ALIAS") ?: ""
-                keyPassword = System.getenv("KEY_PASSWORD") ?: ""
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: localProperties.getProperty("KEYSTORE_PASSWORD") ?: "gabi123"
+                keyAlias = System.getenv("KEY_ALIAS") ?: localProperties.getProperty("KEY_ALIAS") ?: "gabi"
+                keyPassword = System.getenv("KEY_PASSWORD") ?: localProperties.getProperty("KEY_PASSWORD") ?: "gabi123"
             }
         }
     }

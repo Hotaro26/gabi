@@ -2500,13 +2500,14 @@ fun SettingsTab(viewModel: DownloaderViewModel, contentPadding: PaddingValues = 
                     "Downloads" -> DownloadsSettingsScreen(viewModel, onBack = onBackFromSubScreen, contentPadding, target)
                     "Cookies" -> CookiesSettingsScreen(viewModel, onBack = onBackFromSubScreen, contentPadding, target)
                     "CustomHeaders" -> {
-                        CustomHeadersDialog(
+                        CustomHeadersScreen(
                             customHeaders = customHeaders,
-                            onDismiss = onBackFromSubScreen,
+                            onBack = onBackFromSubScreen,
                             onAddHeader = { k, v -> viewModel.addCustomHeader(k, v) },
                             onRemoveHeader = { viewModel.removeCustomHeader(it) },
                             onToggleHeader = { viewModel.toggleCustomHeader(it) },
-                            onApplyPreset = { viewModel.applyHeaderPreset(it) }
+                            onApplyPreset = { viewModel.applyHeaderPreset(it) },
+                            contentPadding = contentPadding
                         )
                     }
                     "Developer" -> DeveloperScreen(viewModel = viewModel, onBack = onBackFromSubScreen, contentPadding, target)
