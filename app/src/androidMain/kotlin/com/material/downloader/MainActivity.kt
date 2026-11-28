@@ -43,24 +43,32 @@ class MainActivity : AppCompatActivity() {
         }
         splashScreen.setKeepOnScreenCondition { keepSplash }
         super.onCreate(savedInstanceState)
-        
+        com.material.downloader.api.PythonExtractor.appContext = applicationContext
+
         CoroutineScope(Dispatchers.IO).launch {
-            if (!Python.isStarted()) {
-                Python.start(AndroidPlatform(this@MainActivity))
-                val py = Python.getInstance()
-                val customPath = java.io.File(filesDir, "python_packages").absolutePath
-                py.getModule("sys").get("path")?.callAttr("insert", 0, customPath)
+            try {
+                com.material.downloader.api.PythonExtractor.ensureStarted(applicationContext)
+            } catch (e: Throwable) {
+                com.material.downloader.util.GabiLogger.e("MainActivity", "Python init failed", e)
             }
         }
-        
-        org.schabi.newpipe.extractor.NewPipe.init(com.material.downloader.api.OkHttpDownloader())
 
-        val imageLoader = coil.ImageLoader.Builder(this)
-            .components {
-                add(coil.decode.VideoFrameDecoder.Factory())
-            }
-            .build()
-        coil.Coil.setImageLoader(imageLoader)
+        try {
+            org.schabi.newpipe.extractor.NewPipe.init(com.material.downloader.api.OkHttpDownloader())
+        } catch (e: Throwable) {
+            com.material.downloader.util.GabiLogger.e("MainActivity", "NewPipe init failed", e)
+        }
+
+        try {
+            val imageLoader = coil.ImageLoader.Builder(applicationContext)
+                .components {
+                    add(coil.decode.VideoFrameDecoder.Factory())
+                }
+                .build()
+            coil.Coil.setImageLoader(imageLoader)
+        } catch (e: Throwable) {
+            com.material.downloader.util.GabiLogger.e("MainActivity", "Coil init failed", e)
+        }
 
         enableEdgeToEdge()
         setContent {

@@ -69,6 +69,10 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
     private val logDao = db.downloadLogDao()
     private val notificationHelper = NotificationHelper(application)
 
+    init {
+        com.material.downloader.util.DownloadArchiveManager.init(application)
+    }
+
     private suspend fun saveThumbnailToCache(thumbnailUrl: String?, mediaPath: String?): String? = withContext(Dispatchers.IO) {
         try {
             val context = getApplication<Application>()
@@ -359,9 +363,47 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
         return prefs.getString(key, defaultValue) ?: defaultValue
     }
 
+    var filenameTemplate = mutableStateOf(prefs.getString("filename_template", "{author} - {title}") ?: "{author} - {title}")
+
+    fun setFilenameTemplate(template: String) {
+        val cleaned = template.trim().ifEmpty { "{author} - {title}" }
+        filenameTemplate.value = cleaned
+        prefs.edit().putString("filename_template", cleaned).apply()
+    }
+
+    fun buildFormattedFileName(
+        title: String,
+        author: String?,
+        ext: String,
+        index: Int? = null,
+        mediaId: String? = null
+    ): String {
+        val safeAuthor = (author?.takeIf { it.isNotBlank() } ?: "Unknown")
+            .replace(Regex("[\\\\/:*?\"<>|\\u0000-\\u001F]"), "_")
+            .trim()
+        val safeTitle = title.ifBlank { "Media" }
+            .replace(Regex("[\\\\/:*?\"<>|\\u0000-\\u001F]"), "_")
+            .trim()
+        val safeId = (mediaId ?: "")
+            .replace(Regex("[\\\\/:*?\"<>|\\u0000-\\u001F]"), "_")
+            .trim()
+
+        val rendered = filenameTemplate.value
+            .replace("{author}", safeAuthor)
+            .replace("{title}", safeTitle)
+            .replace("{id}", safeId)
+            .replace(Regex("\\s+"), " ")
+            .trim(' ', '.', '-', '_')
+            .ifEmpty { "gabi_media" }
+            .take(120)
+
+        val suffix = if (index != null) " ($index)" else ""
+        return "${rendered}${suffix}.$ext"
+    }
+
     suspend fun hasDownloadedUrl(url: String): Boolean {
         return withContext(Dispatchers.IO) {
-            logDao.hasUrl(url) > 0
+            com.material.downloader.util.DownloadArchiveManager.isArchived(getApplication(), url)
         }
     }
 
@@ -1200,8 +1242,12 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
             val title = dlRes.title?.takeIf { it.isNotBlank() } ?: item.title
             val author = dlRes.author?.takeIf { it.isNotBlank() } ?: item.author
             val ext = dlRes.ext?.takeIf { it.isNotBlank() } ?: (if (item.mode == "audio") "m4a" else "mp4")
-            val sanitizedTitle = title.replace(Regex("[^a-zA-Z0-9._-]"), "_").trim('_').ifEmpty { "gabi_media" }.take(64)
-            val fileName = "${sanitizedTitle}_${System.currentTimeMillis()}.$ext"
+            val fileName = buildFormattedFileName(
+                title = title,
+                author = author,
+                ext = ext,
+                mediaId = dlRes.media_id
+            )
             val targetPath = when {
                 item.mode == "audio" && downloadPath.value.startsWith("Download") -> "Music/Gabi"
                 else -> downloadPath.value
@@ -1228,7 +1274,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
             val targetUri = if (selectedFolderUri.value != null) {
                 downloader.createSafUri(Uri.parse(selectedFolderUri.value), fileName)
             } else {
-                downloader.createMediaStoreUri(fileName, targetPath)
+                downloader.createMediaStoreUri(fileName, targetPath, title, author)
             } ?: return@withContext Result.failure(Exception("Could not create destination file"))
 
             getApplication<Application>().contentResolver.openOutputStream(targetUri)?.use { outStream ->
@@ -1237,7 +1283,13 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                 }
             } ?: return@withContext Result.failure(Exception("Could not open output stream"))
 
-            downloader.finalizeFile(targetUri, fileName)
+            downloader.finalizeFile(targetUri, fileName, title, author)
+            com.material.downloader.util.DownloadArchiveManager.addSuccessEntry(
+                context = getApplication(),
+                url = item.url,
+                extractorKey = dlRes.extractor,
+                mediaId = dlRes.media_id
+            )
             val cachedThumb = saveThumbnailToCache(item.thumbnail ?: dlRes.thumbnail, targetUri.toString())
             logDao.insertLog(
                 DownloadLog(
@@ -1333,8 +1385,13 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                 for ((index, downloadUrl) in urlsToDownload.withIndex()) {
                     val extension = result.ext ?: "jpg"
                     val title = result.title ?: item.title
-                    val sanitizedTitle = title.replace(Regex("[^a-zA-Z0-9]"), "_")
-                    val fileName = "${sanitizedTitle}_${index + 1}_${System.currentTimeMillis()}.$extension"
+                    val author = result.author ?: item.author
+                    val fileName = buildFormattedFileName(
+                        title = title,
+                        author = author,
+                        ext = extension,
+                        index = index + 1
+                    )
                     val targetPath = when {
                         isGallery && downloadPath.value == "Downloads/Gabi" -> "Pictures/Gabi"
                         mode == "audio" && downloadPath.value == "Downloads/Gabi" -> "Music/Gabi"
@@ -1346,7 +1403,9 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                         fileName = fileName,
                         relativePath = targetPath,
                         customFolderUri = selectedFolderUri.value,
-                        httpHeaders = mergedHeaders
+                        httpHeaders = mergedHeaders,
+                        title = title,
+                        author = author
                     ).collect { state ->
                         if (state is DownloadState.Downloading) {
                             val fileProgress = state.progress
@@ -1357,13 +1416,19 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                         if (state is DownloadState.Success) {
                             succeededCount++
                             val savedUri = Uri.parse(state.path)
-                            downloader.finalizeFile(savedUri, fileName)
+                            downloader.finalizeFile(savedUri, fileName, title, author)
                             if (firstSavedUri == null) firstSavedUri = state.path
                         }
                     }
                 }
 
                 if (succeededCount > 0) {
+                    com.material.downloader.util.DownloadArchiveManager.addSuccessEntry(
+                        context = getApplication(),
+                        url = url,
+                        extractorKey = result.extractor,
+                        mediaId = result.media_id
+                    )
                     val cachedThumb = saveThumbnailToCache(item.thumbnail ?: result.thumbnail, null)
                     logDao.insertLog(DownloadLog(title = "${result.title ?: item.title} ($succeededCount images)", url = url, status = "Success", thumbnailPath = cachedThumb, author = result.author ?: item.author))
                     notificationHelper.showProgressNotification(notificationId, result.title ?: item.title, 100)
@@ -1377,8 +1442,13 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                 val downloadUrl = urlsToDownload.first()
                 val extension = result.ext ?: (if (isGallery) "jpg" else (if (mode == "audio") "mp3" else "mp4"))
                 val title = result.title ?: item.title
-                val sanitizedTitle = title.replace(Regex("[^a-zA-Z0-9._-]"), "_").trim('_').ifEmpty { "gabi_media" }.take(64)
-                val fileName = "${sanitizedTitle}_${System.currentTimeMillis()}.$extension"
+                val author = result.author ?: item.author
+                val fileName = buildFormattedFileName(
+                    title = title,
+                    author = author,
+                    ext = extension,
+                    mediaId = result.media_id
+                )
                 val targetPath = when {
                     isGallery && downloadPath.value.startsWith("Download") -> "Pictures/Gabi"
                     mode == "audio" && downloadPath.value.startsWith("Download") -> "Music/Gabi"
@@ -1427,7 +1497,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                         val targetUri = if (selectedFolderUri.value != null) {
                             downloader.createSafUri(Uri.parse(selectedFolderUri.value), fileName)
                         } else {
-                            downloader.createMediaStoreUri(fileName, targetPath)
+                            downloader.createMediaStoreUri(fileName, targetPath, title, author)
                         } ?: throw Exception("Could not create destination file")
 
                         getApplication<Application>().contentResolver.openOutputStream(targetUri)?.use { outStream ->
@@ -1436,7 +1506,13 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                             }
                         }
 
-                        downloader.finalizeFile(targetUri, fileName)
+                        downloader.finalizeFile(targetUri, fileName, title, author)
+                        com.material.downloader.util.DownloadArchiveManager.addSuccessEntry(
+                            context = getApplication(),
+                            url = url,
+                            extractorKey = result.extractor,
+                            mediaId = result.media_id
+                        )
                         val cachedThumb = saveThumbnailToCache(item.thumbnail ?: result.thumbnail, targetUri.toString())
                         logDao.insertLog(DownloadLog(title = title, url = url, status = "Success", path = targetUri.toString(), thumbnailPath = cachedThumb, author = result.author ?: item.author))
                         notificationHelper.showProgressNotification(notificationId, title, 100)
@@ -1463,7 +1539,7 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                         val targetUri = if (selectedFolderUri.value != null) {
                             downloader.createSafUri(Uri.parse(selectedFolderUri.value), fileName)
                         } else {
-                            downloader.createMediaStoreUri(fileName, targetPath)
+                            downloader.createMediaStoreUri(fileName, targetPath, title, author)
                         } ?: throw Exception("Could not create destination file")
 
                         getApplication<Application>().contentResolver.openOutputStream(targetUri)?.use { outStream ->
@@ -1472,7 +1548,13 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                             }
                         }
 
-                        downloader.finalizeFile(targetUri, fileName)
+                        downloader.finalizeFile(targetUri, fileName, title, author)
+                        com.material.downloader.util.DownloadArchiveManager.addSuccessEntry(
+                            context = getApplication(),
+                            url = url,
+                            extractorKey = result.extractor,
+                            mediaId = result.media_id
+                        )
                         val cachedThumb = saveThumbnailToCache(item.thumbnail ?: result.thumbnail, targetUri.toString())
                         logDao.insertLog(DownloadLog(title = title, url = url, status = "Success", path = targetUri.toString(), thumbnailPath = cachedThumb, author = result.author ?: item.author))
                         notificationHelper.showProgressNotification(notificationId, title, 100)
@@ -1488,7 +1570,9 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                         fileName = fileName,
                         relativePath = targetPath,
                         customFolderUri = selectedFolderUri.value,
-                        httpHeaders = mergedHeaders
+                        httpHeaders = mergedHeaders,
+                        title = title,
+                        author = author
                     ).collect { state ->
                         if (state is DownloadState.Downloading) {
                             onProgress(state.progress, state.speedBps, state.downloadedBytes, state.totalBytes)
@@ -1497,7 +1581,13 @@ class DownloaderViewModel(application: Application) : AndroidViewModel(applicati
                         if (state is DownloadState.Success) {
                             savedUriStr = state.path
                             val savedUri = Uri.parse(state.path)
-                            downloader.finalizeFile(savedUri, fileName)
+                            downloader.finalizeFile(savedUri, fileName, title, author)
+                            com.material.downloader.util.DownloadArchiveManager.addSuccessEntry(
+                                context = getApplication(),
+                                url = url,
+                                extractorKey = result.extractor,
+                                mediaId = result.media_id
+                            )
                             val cachedThumb = saveThumbnailToCache(item.thumbnail ?: result.thumbnail, state.path)
                             logDao.insertLog(DownloadLog(title = title, url = url, status = "Success", path = state.path, thumbnailPath = cachedThumb, author = result.author ?: item.author))
                             notificationHelper.showProgressNotification(notificationId, title, 100)

@@ -578,63 +578,7 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             }
                         }
 
-                        // Queue FAB
-                        val hasActiveQueue = queueItems.isNotEmpty()
-                        val queueFabSize by animateDpAsState(
-                            if (selectedTab == 0 || hasActiveQueue) 52.dp else 0.dp,
-                            androidx.compose.animation.core.spring(
-                                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-                                stiffness = androidx.compose.animation.core.Spring.StiffnessLow
-                            ),
-                            label = "queue_fab_size"
-                        )
-                        val queueSpacerSize by animateDpAsState(
-                            if (selectedTab == 0 || hasActiveQueue) 10.dp else 0.dp,
-                            androidx.compose.animation.core.spring(
-                                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-                                stiffness = androidx.compose.animation.core.Spring.StiffnessLow
-                            ),
-                            label = "queue_spacer_size"
-                        )
-
-                        if (queueFabSize > 0.dp) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Spacer(Modifier.width(queueSpacerSize))
-                                TooltipBox(
-                                    positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                                    tooltip = { PlainTooltip { Text("Download Queue") } },
-                                    state = rememberTooltipState()
-                                ) {
-                                    val activeCount = queueItems.count {
-                                        it.status == com.material.downloader.model.QueueItemStatus.DOWNLOADING ||
-                                        it.status == com.material.downloader.model.QueueItemStatus.QUEUED
-                                    }
-                                    BadgedBox(
-                                        badge = {
-                                            if (activeCount > 0) {
-                                                Badge { Text("$activeCount") }
-                                            }
-                                        }
-                                    ) {
-                                        FloatingActionButton(
-                                            onClick = {
-                                                coroutineScope.launch {
-                                                    animatedQueueProgress.snapTo(1f)
-                                                    showQueueScreen = true
-                                                    animatedQueueProgress.animateTo(0f, tween(durationMillis = 220))
-                                                }
-                                            },
-                                            modifier = Modifier.size(queueFabSize),
-                                            shape = CircleShape,
-                                            containerColor = if (activeCount > 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                                            contentColor = if (activeCount > 0) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                                        ) {
-                                            Icon(Icons.Rounded.QueueMusic, contentDescription = "Download Queue")
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        // Queue FAB moved to top-right corner of Home screen
                         
                         val isVoiceVisible = selectedTab == 1
                         val voiceFabSize by animateDpAsState(if (isVoiceVisible) 52.dp else 0.dp, androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy, stiffness = androidx.compose.animation.core.Spring.StiffnessLow))
@@ -793,6 +737,50 @@ fun DownloaderScreen(viewModel: DownloaderViewModel = viewModel()) {
                             currentScreen = currentSettingsScreen,
                             onScreenChange = { currentSettingsScreen = it }
                         )
+                    }
+                }
+
+                // Download Queue circle at top-right corner of Home screen
+                if (selectedTab == 0) {
+                    val activeCount = queueItems.count {
+                        it.status == com.material.downloader.model.QueueItemStatus.DOWNLOADING ||
+                        it.status == com.material.downloader.model.QueueItemStatus.QUEUED
+                    }
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .statusBarsPadding()
+                            .padding(top = 12.dp, end = 20.dp)
+                    ) {
+                        TooltipBox(
+                            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                            tooltip = { PlainTooltip { Text("Download Queue") } },
+                            state = rememberTooltipState()
+                        ) {
+                            BadgedBox(
+                                badge = {
+                                    if (activeCount > 0) {
+                                        Badge { Text("$activeCount") }
+                                    }
+                                }
+                            ) {
+                                FloatingActionButton(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            animatedQueueProgress.snapTo(1f)
+                                            showQueueScreen = true
+                                            animatedQueueProgress.animateTo(0f, tween(durationMillis = 220))
+                                        }
+                                    },
+                                    modifier = Modifier.size(48.dp),
+                                    shape = CircleShape,
+                                    containerColor = if (activeCount > 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                    contentColor = if (activeCount > 0) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                ) {
+                                    Icon(Icons.Rounded.QueueMusic, contentDescription = "Download Queue")
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -3592,6 +3580,229 @@ fun DownloadsSettingsScreen(viewModel: DownloaderViewModel, onBack: () -> Unit, 
         }
 
         Spacer(Modifier.height(16.dp))
+        Text("Filename & Metadata", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("Customize how downloaded files are named. Author and Title are also saved in file metadata.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        var showTemplateDialog by remember { mutableStateOf(false) }
+        val currentTemplate = viewModel.filenameTemplate.value
+        val previewFilename = remember(currentTemplate) {
+            viewModel.buildFormattedFileName(title = "Sample Video Title", author = "Creator Name", ext = "mp4")
+        }
+
+        if (showTemplateDialog) {
+            var tempTemplate by remember(currentTemplate) { mutableStateOf(currentTemplate) }
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showTemplateDialog = false },
+                title = { Text("Filename Template") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "Available tokens: {author}, {title}, {id}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        OutlinedTextField(
+                            value = tempTemplate,
+                            onValueChange = { tempTemplate = it },
+                            singleLine = true,
+                            label = { Text("Template") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        val quickPresets = listOf("{author} - {title}", "{title} - {author}", "{title}", "{author}_{title}_{id}")
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            quickPresets.take(2).forEach { preset ->
+                                FilterChip(
+                                    selected = tempTemplate == preset,
+                                    onClick = { tempTemplate = preset },
+                                    label = { Text(preset, maxLines = 1) }
+                                )
+                            }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            quickPresets.drop(2).forEach { preset ->
+                                FilterChip(
+                                    selected = tempTemplate == preset,
+                                    onClick = { tempTemplate = preset },
+                                    label = { Text(preset, maxLines = 1) }
+                                )
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        viewModel.setFilenameTemplate(tempTemplate)
+                        showTemplateDialog = false
+                    }) { Text("Save") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showTemplateDialog = false }) { Text("Cancel") }
+                }
+            )
+        }
+
+        OutlinedCard(
+            onClick = { showTemplateDialog = true },
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Filename Template: $currentTemplate", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Text("Preview: $previewFilename", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+        Text("Download Archive (Duplicate Prevention)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("Tracks completed media IDs in download_archive.txt even if files are moved or deleted.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        val archiveEnabled by com.material.downloader.util.DownloadArchiveManager.archiveEnabled.collectAsState()
+        val archiveCount by com.material.downloader.util.DownloadArchiveManager.archiveCount.collectAsState()
+        var showEditArchiveDialog by remember { mutableStateOf(false) }
+        var showClearArchiveDialog by remember { mutableStateOf(false) }
+
+        val archiveImportLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.OpenDocument()
+        ) { uri ->
+            uri?.let {
+                try {
+                    val added = context.contentResolver.openInputStream(it)?.use { stream ->
+                        com.material.downloader.util.DownloadArchiveManager.importFromStream(context, stream)
+                    } ?: 0
+                    android.widget.Toast.makeText(context, "Imported $added archive entries", android.widget.Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    android.widget.Toast.makeText(context, "Import failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        val archiveExportLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.CreateDocument("text/plain")
+        ) { uri ->
+            uri?.let {
+                try {
+                    context.contentResolver.openOutputStream(it)?.use { stream ->
+                        com.material.downloader.util.DownloadArchiveManager.exportToStream(context, stream)
+                    }
+                    android.widget.Toast.makeText(context, "Exported download_archive.txt", android.widget.Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    android.widget.Toast.makeText(context, "Export failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        if (showEditArchiveDialog) {
+            var archiveText by remember { mutableStateOf(com.material.downloader.util.DownloadArchiveManager.readAllText(context)) }
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showEditArchiveDialog = false },
+                title = { Text("Edit download_archive.txt") },
+                text = {
+                    OutlinedTextField(
+                        value = archiveText,
+                        onValueChange = { archiveText = it },
+                        modifier = Modifier.fillMaxWidth().height(220.dp),
+                        placeholder = { Text("platform media_id") }
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        com.material.downloader.util.DownloadArchiveManager.writeAllText(context, archiveText)
+                        showEditArchiveDialog = false
+                        android.widget.Toast.makeText(context, "Archive saved", android.widget.Toast.LENGTH_SHORT).show()
+                    }) { Text("Save") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showEditArchiveDialog = false }) { Text("Cancel") }
+                }
+            )
+        }
+
+        if (showClearArchiveDialog) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showClearArchiveDialog = false },
+                title = { Text("Clear Download Archive?") },
+                text = { Text("This will remove all $archiveCount entries from download_archive.txt.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        com.material.downloader.util.DownloadArchiveManager.clear(context)
+                        showClearArchiveDialog = false
+                        android.widget.Toast.makeText(context, "Archive cleared", android.widget.Toast.LENGTH_SHORT).show()
+                    }) { Text("Clear", color = MaterialTheme.colorScheme.error) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showClearArchiveDialog = false }) { Text("Cancel") }
+                }
+            )
+        }
+
+        OutlinedCard(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                        Text("Prevent Duplicate Downloads", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                        Text("$archiveCount entries in download_archive.txt", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(
+                        checked = archiveEnabled,
+                        onCheckedChange = { com.material.downloader.util.DownloadArchiveManager.setEnabled(context, it) }
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilledTonalButton(
+                        onClick = { archiveImportLauncher.launch(arrayOf("text/plain", "*/*")) },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Import") }
+                    FilledTonalButton(
+                        onClick = { archiveExportLauncher.launch("download_archive.txt") },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Export") }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { showEditArchiveDialog = true },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Edit") }
+                    OutlinedButton(
+                        onClick = { showClearArchiveDialog = true },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Clear") }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
         Text(stringResource(R.string.extraction_credentials), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text(stringResource(R.string.import_cookies_txt_for_private), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         
@@ -4231,7 +4442,23 @@ fun LogsTab(
                                             maxLines = 1, 
                                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                         )
-                                        Spacer(Modifier.height(4.dp))
+                                        if (!log.author.isNullOrBlank()) {
+                                            Text(
+                                                log.author,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                            )
+                                        }
+                                        Text(
+                                            log.url,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.outline,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                        )
+                                        Spacer(Modifier.height(2.dp))
                                         Text(
                                             log.status, 
                                             style = MaterialTheme.typography.bodySmall, 
@@ -4247,7 +4474,7 @@ fun LogsTab(
         }
     }
 
-    if (selectedLog != null && selectedLog?.path != null) {
+    if (selectedLog != null) {
         val log = selectedLog!!
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         val ext = log.path?.substringAfterLast('.', "") ?: ""
@@ -4290,14 +4517,14 @@ fun LogsTab(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                if (isGallery) {
+                if (log.path != null && isGallery) {
                     coil.compose.AsyncImage(
                         model = log.path,
                         contentDescription = null,
                         modifier = Modifier.fillMaxWidth().height(300.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp)),
                         contentScale = androidx.compose.ui.layout.ContentScale.Fit
                     )
-                } else {
+                } else if (log.path != null) {
                     val streamUrlToPlay = log.path ?: ""
                     if (streamUrlToPlay.isNotBlank()) {
                         val exoPlayer = remember { androidx.media3.exoplayer.ExoPlayer.Builder(context).build() }
@@ -4341,18 +4568,49 @@ fun LogsTab(
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                    modifier = Modifier.clickable {
-                        clipboardManager.setText(androidx.compose.ui.text.buildAnnotatedString { append(log.url) })
-                        android.widget.Toast.makeText(context, "URL Copied", android.widget.Toast.LENGTH_SHORT).show()
-                    }
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    Text(
+                        text = log.url,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 3,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilledTonalButton(
+                        onClick = {
+                            clipboardManager.setText(androidx.compose.ui.text.buildAnnotatedString { append(log.url) })
+                            android.widget.Toast.makeText(context, "URL Copied", android.widget.Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
                     ) {
-                        Icon(Icons.Default.Link, contentDescription = "Link", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(stringResource(R.string.copy_original_url), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(Icons.Default.Link, contentDescription = "Copy URL", modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.copy_original_url), maxLines = 1)
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(log.url))
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                android.widget.Toast.makeText(context, "Cannot open URL", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                    ) {
+                        Icon(Icons.Default.OpenInNew, contentDescription = "Open Source", modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Open Source", maxLines = 1)
                     }
                 }
                 

@@ -25,7 +25,9 @@ class FileDownloader(private val context: Context, private val client: HttpClien
         relativePath: String = "Movies/ExpressiveDownloader",
         customFolderUri: String? = null,
         onUriCreated: ((Uri) -> Unit)? = null,
-        httpHeaders: Map<String, String>? = null
+        httpHeaders: Map<String, String>? = null,
+        title: String? = null,
+        author: String? = null
     ): Flow<DownloadState> = flow {
         emit(DownloadState.Downloading(0f))
         
@@ -54,7 +56,7 @@ class FileDownloader(private val context: Context, private val client: HttpClien
                 val uri = if (customFolderUri != null) {
                     createSafUri(Uri.parse(customFolderUri), fileName)
                 } else {
-                    createMediaStoreUri(fileName, relativePath)
+                    createMediaStoreUri(fileName, relativePath, title, author)
                 } ?: throw Exception("Could not create destination file")
                 
                 onUriCreated?.invoke(uri)
@@ -165,11 +167,22 @@ class FileDownloader(private val context: Context, private val client: HttpClien
         }
     }
 
-    fun createMediaStoreUri(fileName: String, relativePath: String): Uri? {
+    fun createMediaStoreUri(
+        fileName: String,
+        relativePath: String,
+        title: String? = null,
+        author: String? = null
+    ): Uri? {
         val mimeType = getMimeTypeFromExtension(fileName)
         val contentValues = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
             put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+            if (!title.isNullOrBlank()) {
+                put(MediaStore.MediaColumns.TITLE, title)
+            }
+            if (!author.isNullOrBlank()) {
+                put(MediaStore.MediaColumns.ARTIST, author)
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
                 put(MediaStore.MediaColumns.IS_PENDING, 1)
@@ -202,11 +215,21 @@ class FileDownloader(private val context: Context, private val client: HttpClien
         return file?.uri
     }
 
-    suspend fun finalizeFile(uri: Uri, fileName: String) {
+    suspend fun finalizeFile(
+        uri: Uri,
+        fileName: String,
+        title: String? = null,
+        author: String? = null
+    ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val mimeType = getMimeTypeFromExtension(fileName)
             val contentValues = ContentValues().apply {
                 put(MediaStore.MediaColumns.IS_PENDING, 0)
+                if (!title.isNullOrBlank()) {
+                    put(MediaStore.MediaColumns.TITLE, title)
+                }
+                if (!author.isNullOrBlank()) {
+                    put(MediaStore.MediaColumns.ARTIST, author)
+                }
             }
             try {
                 context.contentResolver.update(uri, contentValues, null, null)

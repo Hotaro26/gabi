@@ -378,7 +378,9 @@ def extract_video(url, quality='720', mode='auto', cookies_path=None, user_agent
                     'thumbnail': raw_thumb,
                     'size': video.get('filesize_approx') or video.get('filesize') or 0,
                     'ext': 'mp3' if mode == 'audio' else video.get('ext', 'mp4'),
-                    'is_playlist': False
+                    'is_playlist': False,
+                    'extractor': str(video.get('extractor_key') or info.get('extractor_key') or ''),
+                    'media_id': str(video.get('id') or info.get('id') or '')
                 })
             except Exception as e:
                 return json.dumps({'status': 'error', 'message': f"yt-dlp error: {str(e)}"})
@@ -426,17 +428,65 @@ def extract_gallery(url, cookies_path=None, custom_headers_json=None):
 
                 is_video_file = detected_ext in ('mp4', 'webm', 'mov') and len(direct_urls) == 1
 
+                def _pick_gallery_author(meta):
+                    if not isinstance(meta, dict):
+                        return 'Unknown'
+                    for key in ('author', 'pinner', 'user', 'account', 'owner', 'artist', 'creator', 'uploader', 'channel'):
+                        val = meta.get(key)
+                        if isinstance(val, dict):
+                            for sub in ('full_name', 'name', 'nick', 'username', 'screen_name', 'id'):
+                                s = val.get(sub)
+                                if s and str(s).strip():
+                                    return str(s).strip()
+                        elif val and str(val).strip():
+                            return str(val).strip()
+                    board = meta.get('board')
+                    if isinstance(board, dict):
+                        b_owner = board.get('owner')
+                        if isinstance(b_owner, dict):
+                            for sub in ('full_name', 'username', 'name'):
+                                s = b_owner.get(sub)
+                                if s and str(s).strip():
+                                    return str(s).strip()
+                    for key in ('username', 'author_name', 'screen_name', 'uploader_id', 'subcategory'):
+                        val = meta.get(key)
+                        if val and str(val).strip():
+                            return str(val).strip()
+                    return 'Unknown'
+
+                def _pick_gallery_title(meta):
+                    if not isinstance(meta, dict):
+                        return 'Pinterest Video' if is_video_file else 'Gallery Image'
+                    for key in ('title', 'description', 'alt_text', 'content', 'caption', 'summary'):
+                        val = meta.get(key)
+                        if val and str(val).strip() and str(val).strip().lower() not in ('none', 'null', 'video'):
+                            return str(val).strip().split('\n')[0][:100]
+                    board = meta.get('board')
+                    if isinstance(board, dict) and board.get('name'):
+                        return str(board['name']).strip()
+                    media_id = meta.get('id') or meta.get('post_id') or meta.get('pin_id')
+                    if media_id:
+                        return f"{'Video' if is_video_file else 'Gallery'} {media_id}"
+                    return 'Pinterest Video' if is_video_file else 'Gallery Image'
+
+                resolved_author = _pick_gallery_author(first_meta)
+                resolved_title = _pick_gallery_title(first_meta)
+                resolved_id = str(first_meta.get('id') or first_meta.get('post_id') or first_meta.get('pin_id') or '')
+                resolved_extractor = str(first_meta.get('category') or 'gallery_dl')
+
                 return json.dumps({
                     'status': 'success',
                     'urls': direct_urls if not is_video_file else None,
                     'url': direct_urls[0] if is_video_file else None,
-                    'title': first_meta.get('title') or ('Pinterest Video' if is_video_file else 'Gallery Image'),
-                    'author': first_meta.get('author') or first_meta.get('uploader') or 'Unknown',
+                    'title': resolved_title,
+                    'author': resolved_author,
                     'thumbnail': direct_urls[0] if not is_video_file else first_meta.get('thumbnail'),
                     'size': 0,
                     'ext': detected_ext,
                     'is_gallery': not is_video_file,
-                    'is_playlist': False
+                    'is_playlist': False,
+                    'extractor': resolved_extractor,
+                    'media_id': resolved_id
                 })
             else:
                 return json.dumps({'status': 'error', 'message': 'No images found in gallery'})
@@ -682,7 +732,9 @@ def download_media_ytdlp(url, output_dir, quality='720', mode='auto', cookies_pa
                         'title': str(raw_title),
                         'author': str(raw_author),
                         'thumbnail': raw_thumb,
-                        'ext': vid_ext
+                        'ext': vid_ext,
+                        'extractor': str(video.get('extractor_key') or info.get('extractor_key') or ''),
+                        'media_id': str(video.get('id') or info.get('id') or '')
                     })
 
         # Single file download (progressive MP4/WEBM, HLS assembled by yt-dlp, or audio-only)
@@ -708,7 +760,9 @@ def download_media_ytdlp(url, output_dir, quality='720', mode='auto', cookies_pa
             'title': str(raw_title),
             'author': str(raw_author),
             'thumbnail': raw_thumb,
-            'ext': final_ext
+            'ext': final_ext,
+            'extractor': str(video.get('extractor_key') or info.get('extractor_key') or ''),
+            'media_id': str(video.get('id') or info.get('id') or '')
         })
     except Exception as e:
         return json.dumps({'status': 'error', 'message': str(e)})
